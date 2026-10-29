@@ -19,7 +19,12 @@ export class EmailEngineModule {
 
     return {
       module: EmailEngineModule,
-      imports: useRedis ? [BullModule.registerQueue({ name: "email" })] : [],
+      imports: useRedis
+        ? [
+            BullModule.forRoot({ connection: { url: process.env.REDIS_URL } }),
+            BullModule.registerQueue({ name: "email" }),
+          ]
+        : [],
       controllers: [EmailEngineController],
       providers: [EmailEngineService, EmailSenderService, RemindersService, ...(useRedis ? [EmailProcessor] : [])],
     };
