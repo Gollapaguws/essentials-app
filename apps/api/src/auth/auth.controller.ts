@@ -6,6 +6,7 @@ import { IsEmail, IsOptional, IsString } from "class-validator";
 class RequestMagicDto {
   @IsEmail() email!: string;
   @IsOptional() @IsString() mobile?: boolean;
+  @IsOptional() @IsString() redirect?: "web" | "mobile" | "site";
 }
 class VerifyDto {
   @IsString() token!: string;
@@ -23,7 +24,7 @@ export class AuthController {
   @Post("magic-link")
   @HttpCode(200)
   request(@Body() dto: RequestMagicDto) {
-    return this.auth.requestMagicLink(dto.email, dto.mobile);
+    return this.auth.requestMagicLink(dto.email, dto.redirect ?? (dto.mobile ? "mobile" : "web"));
   }
 
   @Post("verify")

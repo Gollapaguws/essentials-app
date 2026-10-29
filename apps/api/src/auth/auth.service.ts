@@ -27,14 +27,19 @@ export class AuthService {
     return createHmac("sha256", this.secret()).update(JSON.stringify(payload)).digest("hex");
   }
 
-  async requestMagicLink(email: string, mobileRedirect = false) {
+  async requestMagicLink(email: string, redirect?: "web" | "mobile" | "site") {
     email = email.toLowerCase().trim();
     const ttlMin = parseInt(this.config.get("MAGIC_LINK_TTL_MINUTES") ?? "15", 10);
     const exp = Date.now() + ttlMin * 60_000;
     const nonce = randomBytes(8).toString("hex");
     const sig = this.signToken({ email, exp, nonce });
     const token = `${Buffer.from(JSON.stringify({ email, exp, nonce })).toString("base64url")}.${sig}`;
-    const base = mobileRedirect ? this.config.get("MOBILE_URL")! : this.config.get("APP_URL")!;
+    const baseByTarget = {
+      web: this.config.get("APP_URL")!,
+      mobile: this.config.get("MOBILE_URL")!,
+      site: this.config.get("SITE_URL") ?? "https://essentialsedm.com",
+    };
+    const base = baseByTarget[redirect ?? "web"];
     const link = `${base}/auth/verify?token=${token}`;
 
     // Send regardless of account existence (no enumeration); template copy covers both cases.
