@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 import type { MailProvider, SendEmailInput } from "./mail-provider.interface";
 
 /**
@@ -7,7 +8,7 @@ import type { MailProvider, SendEmailInput } from "./mail-provider.interface";
  * (see docs/email-deliverability.md). DKIM recommended (opendkim).
  */
 export class SmtpProvider implements MailProvider {
-  private transport: nodemailer.Transporter;
+  private transport: Transporter;
   private from: string;
 
   constructor(from: string, host = "127.0.0.1", port = 25) {
