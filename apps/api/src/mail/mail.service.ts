@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import type { MailProvider, SendEmailInput } from "./mail-provider.interface";
 import { ConsoleMailProvider } from "./console.provider";
 import { ListmonkProvider } from "./listmonk.provider";
+import { SmtpProvider } from "./smtp.provider";
 import { wrapTemplate } from "./templates";
 import { Resend } from "resend";
 
@@ -20,7 +21,9 @@ export class MailService implements MailProvider {
         ? new ResendProvider(this.config.get("RESEND_API_KEY")!)
         : name === "listmonk"
           ? new ListmonkProvider()
-          : new ConsoleMailProvider();
+          : name === "smtp"
+            ? new SmtpProvider(this.from, this.config.get("SMTP_HOST") ?? "127.0.0.1", parseInt(this.config.get("SMTP_PORT") ?? "25", 10))
+            : new ConsoleMailProvider();
     this.logger.log(`mail provider: ${this.provider.constructor.name}`);
   }
 
