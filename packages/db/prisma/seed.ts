@@ -115,6 +115,12 @@ async function main() {
         referralCode: `GST-${String(i).padStart(3, "0")}`,
       },
     });
+    // guests grant email consent at signup
+    await prisma.consent.upsert({
+      where: { email_channel: { email: u.email, channel: "email" } },
+      update: { status: "granted" },
+      create: { email: u.email, userId: u.id, status: "granted", source: "signup" },
+    });
     await prisma.guestList.upsert({
       where: { eventId_userId: { eventId: demoEvent.id, userId: u.id } },
       update: {},
