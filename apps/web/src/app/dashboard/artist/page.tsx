@@ -52,6 +52,14 @@ export default function ArtistPortal() {
     } catch (err: any) { setError(err.message); }
   };
 
+  /** Phase 4 in-app payment: hosted checkout behind the provider interface. */
+  const payNow = async (invoiceId: string) => {
+    try {
+      const r = await api.post<{ checkoutUrl: string; provider: string }>(`/payments/checkout/${invoiceId}`);
+      window.location.href = r.checkoutUrl;
+    } catch (err: any) { setError(err.message); }
+  };
+
   return (
     <>
       <TopNav />
@@ -123,6 +131,7 @@ export default function ArtistPortal() {
                 <p className="text-neutral-500 text-xs">{inv.items.length} items</p>
               </div>
               <div className="flex gap-2">
+                <button onClick={() => payNow(inv.id)} className="bg-neon text-bg font-black rounded-lg px-3 text-xs">PAY NOW</button>
                 <a href={`${process.env.NEXT_PUBLIC_API_URL}/invoices/${inv.id}/print`} target="_blank" className="text-neon underline text-sm">Print/PDF</a>
                 <button onClick={() => paymentLink(inv.id, "payfast")} className="border border-line rounded-lg px-3 text-xs">PayFast link</button>
                 <button onClick={() => paymentLink(inv.id, "stripe")} className="border border-line rounded-lg px-3 text-xs">Stripe link</button>

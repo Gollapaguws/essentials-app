@@ -10,6 +10,7 @@ const links = [
   { href: "/dashboard/venue", label: "Venue Portal" },
   { href: "/dashboard/promotions", label: "Promotions" },
   { href: "/dashboard/artist", label: "Artist Portal" },
+  { href: "/dashboard/insights", label: "Insights" },
 ];
 
 export function TopNav() {
