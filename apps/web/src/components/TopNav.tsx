@@ -9,6 +9,7 @@ const links = [
   { href: "/dashboard/email", label: "Email Engine" },
   { href: "/dashboard/venue", label: "Venue Portal" },
   { href: "/dashboard/promotions", label: "Promotions" },
+  { href: "/dashboard/artist", label: "Artist Portal" },
 ];
 
 export function TopNav() {

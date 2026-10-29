@@ -11,6 +11,7 @@ import { AnalyticsModule } from "./analytics/analytics.module";
 import { VenuesModule } from "./venues/venues.module";
 import { SocialModule } from "./social/social.module";
 import { PromotionsModule } from "./promotions/promotions.module";
+import { ArtistsModule } from "./artists/artists.module";
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { PromotionsModule } from "./promotions/promotions.module";
     VenuesModule,
     SocialModule,
     PromotionsModule,
+    ArtistsModule,
     AnalyticsModule,
   ],
 })
