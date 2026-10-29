@@ -1,0 +1,422 @@
+// ESSENTIALS — Prisma schema
+// Phase 1 implemented; Phase 2-4 fields are present but UI/API is added later.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  promoter
+  guest
+  artist
+  venue_manager
+}
+
+enum VibeTag {
+  Chill
+  Party
+  Networking
+}
+
+enum EventStatus {
+  draft
+  pending_venue_approval
+  approved
+  live
+  completed
+  cancelled
+}
+
+enum GuestListStatus {
+  attending
+  waitlisted
+  checked_in
+}
+
+enum TableBookingStatus {
+  pending
+  confirmed
+  seated
+  cancelled
+}
+
+enum CampaignStatus {
+  draft
+  scheduled
+  sending
+  sent
+}
+
+enum ConsentChannel {
+  email
+}
+
+enum ConsentStatus {
+  granted
+  revoked
+}
+
+enum ArtistBookingStatus {
+  pending
+  confirmed
+  cancelled
+}
+
+enum InvoiceStatus {
+  draft
+  sent
+  paid
+  overdue
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  avatar        String?
+  role          Role     @default(guest)
+  musicTastes   String[] @default([]) // House, Techno, Hip-Hop, Afro, Amapiano
+  vibeTag       VibeTag?
+  verifiedBadge Boolean  @default(false)
+  referralCode  String   @unique @default(cuid())
+  referredById  String?
+  referredBy    User?    @relation("Referrals", fields: [referredById], references: [id])
+  referrals     User[]   @relation("Referrals")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  managedVenues   Venue[]        @relation("VenueManagers")
+  promotedEvents  Event[]        @relation("EventPromoter")
+  guestLists      GuestList[]
+  tableBookings   TableBooking[] @relation("Booker")
+  tablesBookedFor TableBooking[] @relation("PromoterOfBooking")
+  matches1        Match[]        @relation("MatchUser1")
+  matches2        Match[]        @relation("MatchUser2")
+  groupMessages   GroupMessage[]
+  loyaltyVisits   LoyaltyVisit[]
+  referralsGiven  Referral[]     @relation("Referrer")
+  artistProfile   ArtistProfile?
+  consentRecords  Consent[]
+  emailEvents     EmailEvent[]
+
+  @@index([role])
+}
+
+model Venue {
+  id        String       @id @default(cuid())
+  name      String
+  address   String?
+  lat       Float
+  lng       Float
+  capacity  Int
+  amenities String[]     @default([])
+  managerId String?
+  manager   User?        @relation("VenueManagers", fields: [managerId], references: [id])
+  events    Event[]
+  tables    VenueTable[]
+  // Phase 2: staff/door ops via DoorLog
+  doorLogs  DoorLog[]
+  createdAt DateTime     @default(now())
+
+  @@index([managerId])
+}
+
+model Event {
+  id                      String          @id @default(cuid())
+  venueId                 String
+  promoterId              String
+  title                   String
+  description             String?
+  date                    DateTime
+  lineup                  Json            @default("[]") // [{artistName, slot}]
+  capacity                Int
+  dressCode               String?
+  ticketUrl               String?
+  status                  EventStatus     @default(draft)
+  revenueSplitPromoterPct Int             @default(50)
+  venue                   Venue           @relation(fields: [venueId], references: [id])
+  promoter                User            @relation("EventPromoter", fields: [promoterId], references: [id])
+  guestLists              GuestList[]
+  tableBookings           TableBooking[]
+  groupChat               EventGroupChat?
+  campaigns               Campaign[]
+  artistBookings          ArtistBooking[]
+  matches                 Match[]
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  @@index([venueId])
+  @@index([promoterId])
+  @@index([date, status])
+}
+
+model GuestList {
+  id               String          @id @default(cuid())
+  eventId          String
+  userId           String
+  status           GuestListStatus @default(attending)
+  qrCode           String?         @unique // signed token, rendered as QR on door pass
+  headcount        Int             @default(1)
+  sourceCampaignId String?
+  sourceCampaign   Campaign?       @relation(fields: [sourceCampaignId], references: [id])
+  event            Event           @relation(fields: [eventId], references: [id])
+  user             User            @relation(fields: [userId], references: [id])
+  checkedInAt      DateTime?
+  createdAt        DateTime        @default(now())
+
+  @@unique([eventId, userId])
+  @@index([eventId, status])
+}
+
+model VenueTable {
+  id          String         @id @default(cuid())
+  venueId     String
+  tableNumber String
+  capacity    Int
+  minSpend    Int            @default(0)
+  venue       Venue          @relation(fields: [venueId], references: [id])
+  bookings    TableBooking[]
+
+  @@unique([venueId, tableNumber])
+}
+
+model TableBooking {
+  id                 String             @id @default(cuid())
+  eventId            String
+  userId             String
+  promoterId         String
+  venueTableId       String
+  tableNumber        String
+  bottleServiceNotes String?
+  status             TableBookingStatus @default(pending)
+  value              Int                @default(0) // minor units / currency per config
+  venueRevenuePct    Int                @default(30)
+  sourceCampaignId   String?
+  sourceCampaign     Campaign?          @relation(fields: [sourceCampaignId], references: [id])
+  event              Event              @relation(fields: [eventId], references: [id])
+  user               User               @relation("Booker", fields: [userId], references: [id])
+  promoter           User               @relation("PromoterOfBooking", fields: [promoterId], references: [id])
+  venueTable         VenueTable         @relation(fields: [venueTableId], references: [id])
+  createdAt          DateTime           @default(now())
+
+  @@index([eventId])
+  @@index([promoterId])
+}
+
+model Match {
+  id                    String @id @default(cuid())
+  eventId               String
+  user1Id               String
+  user2Id               String
+  sharedMusicTasteScore Int
+  // Phase 2: smart matching UI + AI icebreakers
+  event                 Event  @relation(fields: [eventId], references: [id])
+  user1                 User   @relation("MatchUser1", fields: [user1Id], references: [id])
+  user2                 User   @relation("MatchUser2", fields: [user2Id], references: [id])
+
+  @@unique([eventId, user1Id, user2Id])
+}
+
+model EventGroupChat {
+  id       String         @id @default(cuid())
+  eventId  String         @unique
+  messages GroupMessage[]
+  event    Event          @relation(fields: [eventId], references: [id])
+}
+
+model GroupMessage {
+  id           String         @id @default(cuid())
+  chatId       String
+  userId       String
+  body         String
+  // Phase 2: AI icebreakers flag
+  isIcebreaker Boolean        @default(false)
+  chat         EventGroupChat @relation(fields: [chatId], references: [id])
+  user         User           @relation(fields: [userId], references: [id])
+  createdAt    DateTime       @default(now())
+
+  @@index([chatId, createdAt])
+}
+
+model LoyaltyVisit {
+  id               String  @id @default(cuid())
+  userId           String
+  eventId          String
+  visits           Int     @default(1) // running count snapshot
+  freeEntryAwarded Boolean @default(false)
+  user             User    @relation(fields: [userId], references: [id])
+
+  @@unique([userId, eventId])
+}
+
+model Referral {
+  id           String   @id @default(cuid())
+  referrerId   String
+  refereeEmail String
+  refereeId    String?
+  rewardType   String? // e.g. free_entry, bottle_discount
+  rewardIssued Boolean  @default(false)
+  referrer     User     @relation("Referrer", fields: [referrerId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([referrerId])
+}
+
+// ===== Email engine (Phase 1) =====
+model Campaign {
+  id            String         @id @default(cuid())
+  name          String
+  flow          String // welcome_series | weekly_drop | reminder_24h | reminder_1h | winback | one_off
+  status        CampaignStatus @default(draft)
+  segmentId     String?
+  segment       EmailSegment?  @relation(fields: [segmentId], references: [id])
+  eventId       String?
+  event         Event?         @relation(fields: [eventId], references: [id])
+  subject       String
+  sentCount     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  emailJobs     EmailJob[]
+  guestLists    GuestList[]
+  tableBookings TableBooking[]
+
+  @@index([flow, status])
+}
+
+model EmailSegment {
+  id        String     @id @default(cuid())
+  name      String
+  // JSON filter: {musicTastes:[], minAttendedEvents, vibeTag, ...}
+  filter    Json       @default("{}")
+  campaigns Campaign[]
+  createdAt DateTime   @default(now())
+}
+
+model EmailJob {
+  id         String   @id @default(cuid())
+  campaignId String
+  userId     String
+  status     String   @default("queued") // queued | sent | failed | skipped
+  error      String?
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([campaignId, status])
+}
+
+model EmailEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String
+  type      String // delivered | open | click | bounce | unsubscribe
+  meta      Json     @default("{}")
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([email, type])
+}
+
+model Consent {
+  id        String         @id @default(cuid())
+  userId    String?
+  email     String
+  channel   ConsentChannel @default(email)
+  status    ConsentStatus  @default(granted)
+  source    String // signup | invite | preference_center
+  updatedAt DateTime       @updatedAt
+  User      User?          @relation(fields: [userId], references: [id])
+
+  @@unique([email, channel])
+}
+
+// ===== Artist portal (Phase 3 — SCHEMA ONLY) =====
+model ArtistProfile {
+  id                          String          @id @default(cuid())
+  userId                      String          @unique
+  stageName                   String
+  vehicleConsumptionLPer100km Float           @default(8)
+  travelRatePerKm             Float           @default(2.5)
+  user                        User            @relation(fields: [userId], references: [id])
+  bookings                    ArtistBooking[]
+  invoices                    Invoice[]
+}
+
+model ArtistBooking {
+  id                String              @id @default(cuid())
+  eventId           String
+  artistId          String
+  startAt           DateTime
+  endAt             DateTime
+  setupBufferMin    Int                 @default(60)
+  teardownBufferMin Int                 @default(45)
+  performanceFee    Int                 @default(0)
+  travelFee         Int                 @default(0)
+  status            ArtistBookingStatus @default(pending)
+  event             Event               @relation(fields: [eventId], references: [id])
+  artist            ArtistProfile       @relation(fields: [artistId], references: [id])
+  routeLegs         BookingRouteLeg[]
+}
+
+model BookingRouteLeg {
+  id                String        @id @default(cuid())
+  bookingId         String
+  distanceKm        Float
+  durationMinutes   Int
+  estimatedFuelCost Float
+  isConflict        Boolean       @default(false)
+  booking           ArtistBooking @relation(fields: [bookingId], references: [id])
+}
+
+model Invoice {
+  id       String        @id @default(cuid())
+  artistId String
+  number   String        @unique
+  status   InvoiceStatus @default(draft)
+  total    Int           @default(0)
+  artist   ArtistProfile @relation(fields: [artistId], references: [id])
+  items    InvoiceItem[]
+  payments Payment[]
+}
+
+model InvoiceItem {
+  id        String  @id @default(cuid())
+  invoiceId String
+  label     String
+  amount    Int
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  invoiceId String
+  status    PaymentStatus @default(pending)
+  amount    Int
+  provider  String? // payfast | stripe
+  reference String?
+  invoice   Invoice       @relation(fields: [invoiceId], references: [id])
+}
+
+// ===== Phase 2 hook: door operations =====
+model DoorLog {
+  id        String   @id @default(cuid())
+  venue     Venue    @relation(fields: [venueId], references: [id])
+  venueId   String
+  eventId   String?
+  scannedBy String
+  qrToken   String
+  result    String // ok | duplicate | invalid | capacity_full
+  createdAt DateTime @default(now())
+
+  @@index([venueId, createdAt])
+}

@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "ESSENTIALS",
+    "slug": "essentials-app",
+    "scheme": "essentials",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A0A0A",
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": true }
+  }
+}

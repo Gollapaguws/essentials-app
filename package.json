@@ -1,0 +1,17 @@
+{
+  "name": "essentials",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:migrate": "npm run migrate --workspace @essentials/db",
+    "db:seed": "npm run seed --workspace @essentials/db",
+    "dev:api": "npm run dev --workspace @essentials/api",
+    "dev:web": "npm run dev --workspace @essentials/web",
+    "dev:mobile": "npm run dev --workspace @essentials/mobile",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

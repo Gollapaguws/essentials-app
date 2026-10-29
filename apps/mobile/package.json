@@ -1,0 +1,32 @@
+{
+  "name": "@essentials/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "build": "echo 'use eas build'"
+  },
+  "dependencies": {
+    "expo": "~51.0.0",
+    "expo-router": "~3.5.0",
+    "expo-linking": "~6.3.0",
+    "expo-status-bar": "~1.12.0",
+    "expo-secure-store": "~13.0.0",
+    "expo-clipboard": "~6.0.0",
+    "react": "18.2.0",
+    "react-native": "0.74.5",
+    "react-native-safe-area-context": "4.10.5",
+    "react-native-screens": "3.31.1",
+    "react-native-svg": "15.2.0",
+    "react-native-qrcode-svg": "^6.3.1",
+    "lucide-react-native": "^0.428.0",
+    "@essentials/api-client": "*"
+  },
+  "devDependencies": {
+    "@types/react": "~18.2.79",
+    "typescript": "^5.6.0"
+  }
+}
