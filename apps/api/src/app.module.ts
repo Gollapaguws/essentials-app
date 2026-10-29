@@ -16,6 +16,7 @@ import { PromotionsModule } from "./promotions/promotions.module";
 import { ArtistsModule } from "./artists/artists.module";
 import { PaymentsModule } from "./payments/payments.module";
 import { InsightsModule } from "./insights/insights.module";
+import { SiteModule } from "./site/site.module";
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { InsightsModule } from "./insights/insights.module";
     AnalyticsModule,
     PaymentsModule,
     InsightsModule,
+    SiteModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

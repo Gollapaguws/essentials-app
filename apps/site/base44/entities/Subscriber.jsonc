@@ -1,0 +1,26 @@
+{
+  "name": "Subscriber",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "description": "Email address of the person on the mailing list"
+    },
+    "source": {
+      "type": "string",
+      "default": "site_footer",
+      "description": "Where the signup came from"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "subscribed",
+        "unsubscribed"
+      ],
+      "default": "subscribed"
+    }
+  },
+  "required": [
+    "email"
+  ]
+}
