@@ -9,6 +9,7 @@ export default function EventDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [event, setEvent] = useState<EventSummary & { status?: string } | null>(null);
   const [rsvpState, setRsvpState] = useState<string | null>(null);
+  const [matches, setMatches] = useState<{ userId: string; name: string | null; sharedTastes: string[]; score: number }[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
@@ -19,6 +20,10 @@ export default function EventDetail() {
     } catch { setError("Couldn't load this event."); }
   };
   useEffect(() => { load(); }, [id]);
+
+  useEffect(() => {
+    api.get<any[]>(`/social/events/${id}/matches`).then(setMatches).catch(() => {});
+  }, [id, rsvpState]);
 
   const rsvp = async () => {
     try {
@@ -60,6 +65,19 @@ export default function EventDetail() {
         </Pressable>
       </View>
       {error && <Text style={{ color: colors.danger, marginTop: 12 }}>{error}</Text>}
+
+      <Text style={[s.section, { color: colors.muted }]}>PEOPLE LIKE YOU ARE GOING</Text>
+      {(matches.length ? matches : []).map((m) => (
+        <View key={m.userId} style={s.matchRow}>
+          <Text style={{ color: colors.text, fontWeight: "700", flex: 1 }}>{m.name ?? "Guest"}</Text>
+          <Text style={{ color: colors.neon, fontSize: 12 }}>{m.sharedTastes.join(" · ")}</Text>
+        </View>
+      ))}
+      {!matches.length && <Text style={{ color: colors.muted }}>RSVP to see who else is going.</Text>}
+
+      <Pressable style={[s.button, { backgroundColor: colors.border, marginTop: 16 }]} onPress={() => router.push(`/event/${id}/chat`)}>
+        <Text style={[s.buttonText, { color: colors.neon }]}>EVENT CHAT</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -68,6 +86,7 @@ const s = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg, padding: 20 },
   section: { marginTop: 20, marginBottom: 6, fontWeight: "800", letterSpacing: 1, fontSize: 12 },
   lineupRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  matchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
   button: { backgroundColor: colors.neon, borderRadius: 10, padding: 16, alignItems: "center" },
   buttonText: { color: colors.bg, fontWeight: "900", letterSpacing: 2 },
 });

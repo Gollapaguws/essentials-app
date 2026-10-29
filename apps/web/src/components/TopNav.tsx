@@ -7,6 +7,8 @@ const links = [
   { href: "/dashboard", label: "Analytics" },
   { href: "/dashboard/events", label: "Events" },
   { href: "/dashboard/email", label: "Email Engine" },
+  { href: "/dashboard/venue", label: "Venue Portal" },
+  { href: "/dashboard/promotions", label: "Promotions" },
 ];
 
 export function TopNav() {

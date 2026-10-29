@@ -8,6 +8,9 @@ import { TablesModule } from "./tables/tables.module";
 import { LoyaltyModule } from "./loyalty/loyalty.module";
 import { EmailEngineModule } from "./email-engine/email-engine.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
+import { VenuesModule } from "./venues/venues.module";
+import { SocialModule } from "./social/social.module";
+import { PromotionsModule } from "./promotions/promotions.module";
 
 @Module({
   imports: [
@@ -19,6 +22,9 @@ import { AnalyticsModule } from "./analytics/analytics.module";
     TablesModule,
     LoyaltyModule,
     EmailEngineModule.register(),
+    VenuesModule,
+    SocialModule,
+    PromotionsModule,
     AnalyticsModule,
   ],
 })

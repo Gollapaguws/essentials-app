@@ -22,6 +22,7 @@ export default function Layout() {
         <Stack.Screen name="event/[id]" options={{ title: "EVENT" }} />
         <Stack.Screen name="event/[id]/pass" options={{ title: "DOOR PASS" }} />
         <Stack.Screen name="event/[id]/tables" options={{ title: "VIP TABLES" }} />
+        <Stack.Screen name="event/[id]/chat" options={{ title: "EVENT CHAT" }} />
       </Stack>
     </>
   );

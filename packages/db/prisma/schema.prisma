@@ -154,6 +154,7 @@ model Event {
   campaigns               Campaign[]
   artistBookings          ArtistBooking[]
   matches                 Match[]
+  promotions              Promotion[]
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
 
@@ -338,6 +339,35 @@ model Consent {
   User      User?          @relation(fields: [userId], references: [id])
 
   @@unique([email, channel])
+}
+
+// ===== Phase 2: promotions engine =====
+model Promotion {
+  id          String                @id @default(cuid())
+  eventId     String
+  code        String                @unique
+  kind        String                @default("discount") // discount | free_entry | bottle_upgrade
+  discountPct Int                   @default(0)
+  maxUses     Int                   @default(100)
+  uses        Int                   @default(0)
+  active      Boolean               @default(true)
+  expiresAt   DateTime?
+  event       Event                 @relation(fields: [eventId], references: [id])
+  redemptions PromotionRedemption[]
+  createdAt   DateTime              @default(now())
+
+  @@index([eventId, active])
+}
+
+model PromotionRedemption {
+  id          String    @id @default(cuid())
+  promotionId String
+  userId      String
+  guestListId String?
+  promotion   Promotion @relation(fields: [promotionId], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@unique([promotionId, userId])
 }
 
 // ===== Artist portal (Phase 3 — SCHEMA ONLY) =====
