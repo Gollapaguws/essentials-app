@@ -2,6 +2,7 @@ import { Controller, Post, Body, Get, Query, HttpCode, UseGuards } from "@nestjs
 import { AuthGuard } from "@nestjs/passport";
 import { AuthService } from "./auth.service";
 import { CurrentUser } from "../common/auth.decorator";
+import type { JwtUser } from "../common/roles.guard";
 import type { Role } from "@prisma/client";
 import { IsEmail, IsOptional, IsString } from "class-validator";
 
