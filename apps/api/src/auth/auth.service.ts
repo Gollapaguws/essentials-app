@@ -16,7 +16,6 @@ import { emailTemplates } from "../mail/templates";
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly logger = new Logger(AuthService.name);
 
   constructor(private jwt: JwtService, private config: ConfigService, private mail: MailService) {}
 
