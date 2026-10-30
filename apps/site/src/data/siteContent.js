@@ -33,3 +33,17 @@ export const visuals = [
   { src: v("b7cba7c77_reach-out.jpg"), label: "REACH OUT" },
   { src: v("568c1cfce_dont-spend-your-frifays.jpg"), label: "DON'T SPEND YOUR FRIDAYS" },
 ];
+// Editable defaults (server overrides via admin editor, GET /api/site/content)
+export const defaultContent = {
+  tagline: "All sound. No filler. Underground rooms, real sound systems and lineups built for the floor.",
+  ctaLabel: "GET ON THE LIST",
+  city: "JOHANNESBURG",
+  quote: "WE BUILD ROOMS,\nNOT PLAYLISTS.",
+  manifestoP1:
+    "ESSENTIALS is a music events company running warehouse parties, club nights and open-format sessions across South Africa. We book the records that move a floor, not the ones that chase a trend — house, techno, amapiano, hip-hop and everything in between, in the same room, on the same night.",
+  manifestoP2:
+    "Every event is built the same way: a sound system that can carry a low end, a lineup with range, and a door that stays open until the last record.",
+  events: [],
+  footerLeft: "© 2026 ESSENTIALS — JOHANNESBURG",
+  footerRight: "ALL SOUND. NO FILLER.",
+};

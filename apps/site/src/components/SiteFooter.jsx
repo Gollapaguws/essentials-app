@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useSiteContent } from "@/lib/useSiteContent";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
 
 export default function SiteFooter() {
+  const c = useSiteContent();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
@@ -64,7 +66,7 @@ export default function SiteFooter() {
 
       <div className="noir-foot">
         <span className="noir-micro">© 2026 ESSENTIALS — JOHANNESBURG</span>
-        <span className="noir-micro">ALL SOUND. NO FILLER.</span>
+        <span className="noir-micro">{c.footerRight}</span>
       </div>
     </footer>
   );

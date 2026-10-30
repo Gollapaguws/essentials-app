@@ -450,3 +450,10 @@ model DoorLog {
 
   @@index([venueId, createdAt])
 }
+
+// ===== Front-page content (admin editor) =====
+model SiteContent {
+  key       String   @id // "front_page"
+  value     Json
+  updatedAt DateTime @updatedAt
+}

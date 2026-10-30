@@ -11,6 +11,7 @@ const links = [
   { href: "/dashboard/promotions", label: "Promotions" },
   { href: "/dashboard/artist", label: "Artist Portal" },
   { href: "/dashboard/insights", label: "Insights" },
+  { href: "/dashboard/editor", label: "Front Page" },
 ];
 
 export function TopNav() {
