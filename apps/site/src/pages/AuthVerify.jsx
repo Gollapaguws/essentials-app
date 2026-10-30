@@ -22,7 +22,9 @@ export default function AuthVerify() {
 
   useEffect(() => {
     if (state.status === "done") {
-      setTimeout(() => navigate("/", { replace: true }), 800);
+      // privileged roles go straight to the dashboard; guests stay on the site
+      const target = state.user?.role && state.user.role !== "guest" ? "/dashboard" : "/";
+      setTimeout(() => navigate(target, { replace: true }), 800);
     }
   }, [state.status, navigate]);
 
@@ -40,7 +42,13 @@ export default function AuthVerify() {
   return (
     <div className="noir" style={{ minHeight: "80vh", display: "grid", placeItems: "center", padding: 24 }}>
       {state.status === "verifying" && <p style={{ letterSpacing: 2 }}>VERIFYING…</p>}
-      {state.status === "done" && <p style={{ letterSpacing: 2 }}>WELCOME. TAKING YOU IN →</p>}
+      {state.status === "done" && (
+        <p style={{ letterSpacing: 2 }}>
+          {state.user?.role && state.user.role !== "guest"
+            ? "WELCOME — ENTERING THE DASHBOARD →"
+            : "WELCOME. TAKING YOU IN →"}
+        </p>
+      )}
       {state.status === "EXPIRED" && <p>Link expired. <a href="/login" style={{ textDecoration: "underline" }}>Request a new one</a>.</p>}
       {state.status === "invalid" && <p>Missing token. <a href="/login" style={{ textDecoration: "underline" }}>Back to sign in</a>.</p>}
       {state.status === "NO_ACCOUNT" && (

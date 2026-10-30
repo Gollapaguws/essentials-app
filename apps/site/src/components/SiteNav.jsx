@@ -12,10 +12,11 @@ const links = [
 export default function SiteNav() {
   const [open, setOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoggedIn(!!getToken());
-    const onStorage = () => setLoggedIn(!!getToken());
+    fetchMe().then((u) => { setLoggedIn(!!u); setRole(u?.role ?? null); });
+    const onStorage = () => fetchMe().then((u) => { setLoggedIn(!!u); setRole(u?.role ?? null); });
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
@@ -33,6 +34,11 @@ export default function SiteNav() {
           {link.label}
         </a>
       ))}
+      {loggedIn && role && role !== "guest" && (
+        <a href="/dashboard" onClick={() => setOpen(false)} className="noir-navlink" style={{ color: "#FFD873" }}>
+          DASHBOARD ({role.toUpperCase()})
+        </a>
+      )}
       {loggedIn ? (
         <button type="button" onClick={out} className="noir-navlink" style={{ background: "none", border: 0, color: "inherit", cursor: "pointer", textAlign: "left" }}>
           SIGN OUT
@@ -52,6 +58,9 @@ export default function SiteNav() {
           ESSENTIALS
         </a>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {!open && loggedIn && role && role !== "guest" && (
+            <a href="/dashboard" className="noir-menu" style={{ letterSpacing: 2, color: "#FFD873" }}>DASHBOARD</a>
+          )}
           {!open && (
             loggedIn ? (
               <button type="button" onClick={out} className="noir-menu" style={{ letterSpacing: 2 }}>SIGN OUT</button>

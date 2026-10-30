@@ -18,6 +18,17 @@ export async function api(path, init) {
   return res.json();
 }
 
+/** Current session via /auth/me; null if no/invalid token. */
+export async function fetchMe() {
+  if (!getToken()) return null;
+  try {
+    const { user } = await api("/auth/me");
+    return user;
+  } catch {
+    return null;
+  }
+}
+
 export async function requestMagicLink(email) {
   return api("/auth/magic-link", { method: "POST", body: JSON.stringify({ email, redirect: "site" }) });
 }

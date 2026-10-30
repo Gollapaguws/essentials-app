@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, setToken } from "@essentials/api-client";
 
@@ -10,6 +10,18 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false);
   const [token, setToken] = useState("");
   const router = useRouter();
+
+  // already signed in (site or dashboard) with a privileged role? go straight in
+  useEffect(() => {
+    if (!localStorage.getItem("essentials_token")) return;
+    api
+      .get<{ user: { role: string } }>("/auth/me")
+      .then(({ user }) => {
+        if (["promoter", "admin", "venue_manager", "artist"].includes(user.role)) router.replace("/dashboard");
+        else localStorage.removeItem("essentials_token");
+      })
+      .catch(() => localStorage.removeItem("essentials_token"));
+  }, [router]);
 
   const verify = async () => {
     const res = await api.post<{ accessToken: string; user: { role: string } }>("/auth/verify", { token });
