@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { getToken, signOut } from "@/lib/auth";
+import { fetchMe, signOut } from "@/lib/auth";
 
 const links = [
   { label: "EVENTS", href: "#lineup" },
@@ -12,7 +12,7 @@ const links = [
 export default function SiteNav() {
   const [open, setOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
-  const [role, setRole] = useState<string | null>(null);
+  const [role, setRole] = useState(null);
 
   useEffect(() => {
     fetchMe().then((u) => { setLoggedIn(!!u); setRole(u?.role ?? null); });
