@@ -70,23 +70,35 @@ export class AuthService {
     return this.issueTokens(user.id, user.email, user.role as Role);
   }
 
-  /** Redeem an invite code/link. Creates the account and binds referral. */
-  async redeemInvite(code: string, email: string, role: Role = "guest") {
+  /** Redeem an invite code. Role is decided server-side: admin Invite record > referrer (guest). */
+  async redeemInvite(code: string, email: string, role?: Role) {
     email = email.toLowerCase().trim();
-    if (!["guest", "promoter", "artist", "venue_manager"].includes(role)) {
-      throw new BadRequestException("Invalid role for invite");
-    }
-    const inviter = await prisma.user.findUnique({ where: { referralCode: code } });
-    if (!inviter) throw new BadRequestException("Invalid invite code");
     if (await prisma.user.findUnique({ where: { email } })) {
       throw new BadRequestException("Account already exists — sign in instead");
+    }
+
+    // admin-issued invites grant their configured role; user referral codes grant guest
+    const invite = await prisma.invite.findUnique({ where: { code } });
+    let grantedRole: Role;
+    let inviterId: string | null = null;
+    if (invite) {
+      if (invite.revoked) throw new BadRequestException("This invite has been revoked");
+      if (invite.expiresAt && invite.expiresAt < new Date()) throw new BadRequestException("This invite has expired");
+      if (invite.uses >= invite.maxUses) throw new BadRequestException("This invite has been fully used");
+      grantedRole = invite.role;
+      await prisma.invite.update({ where: { id: invite.id }, data: { uses: { increment: 1 } } });
+    } else {
+      const inviter = await prisma.user.findUnique({ where: { referralCode: code } });
+      if (!inviter) throw new BadRequestException("Invalid invite code");
+      grantedRole = "guest";
+      inviterId = inviter.id;
     }
 
     const user = await prisma.user.create({
       data: {
         email,
-        role,
-        referredById: inviter.id,
+        role: grantedRole,
+        referredById: inviterId,
         referralCode: `E-${randomBytes(4).toString("hex").toUpperCase()}`,
       },
     });
@@ -96,10 +108,10 @@ export class AuthService {
       create: { email, userId: user.id, status: "granted", source: "invite" },
     });
     await prisma.referral.create({
-      data: { referrerId: inviter.id, refereeEmail: email, refereeId: user.id },
+      data: { referrerId: inviterId ?? user.id, refereeEmail: email, refereeId: user.id },
     });
     await this.mail.send({ to: email, subject: "Welcome to ESSENTIALS", html: emailTemplates.welcomeSeries(user.name ?? "there", `${this.config.get("APP_URL")}/profile`) });
-    return this.issueTokens(user.id, user.email, role);
+    return this.issueTokens(user.id, user.email, grantedRole);
   }
 
   async issueTokens(id: string, email: string, role: Role) {

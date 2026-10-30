@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { verifyMagicLink, redeemInvite } from "@/lib/auth";
 
+const storedInvite = () => localStorage.getItem("essentials_invite") ?? "";
+
 /** Magic-link callback: verifies the token; falls back to invite-code onboarding for new accounts. */
 export default function AuthVerify() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const token = params.get("token");
   const [state, setState] = useState({ status: "verifying" });
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(() => storedInvite());
   const [email, setEmail] = useState("");
 
   useEffect(() => {
@@ -28,6 +30,7 @@ export default function AuthVerify() {
     e.preventDefault();
     try {
       await redeemInvite(code, email);
+      localStorage.removeItem("essentials_invite");
       navigate("/", { replace: true });
     } catch {
       setState({ status: "NO_ACCOUNT", error: "Invalid code or email already registered." });
@@ -43,7 +46,11 @@ export default function AuthVerify() {
       {state.status === "NO_ACCOUNT" && (
         <form onSubmit={join} style={{ maxWidth: 400, width: "100%", display: "grid", gap: 12 }}>
           <h1 style={{ letterSpacing: 3 }}>NEW HERE?</h1>
-          <p style={{ opacity: 0.7 }}>No account for that email yet — enter your invite code to join ESSENTIALS.</p>
+          <p style={{ opacity: 0.7 }}>
+            {storedInvite()
+              ? "Your invite is attached — confirm your email to finish creating your account."
+              : "No account for that email yet — enter your invite code to join ESSENTIALS."}
+          </p>
           <input placeholder="Invite code" required value={code} onChange={(e) => setCode(e.target.value)}
             style={{ padding: 14, borderRadius: 8, border: "1px solid rgba(255,255,255,.2)", background: "transparent", color: "inherit" }} />
           <input placeholder="you@email.com" type="email" required value={email} onChange={(e) => setEmail(e.target.value)}

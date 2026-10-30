@@ -36,7 +36,8 @@ export class AuthController {
   @Post("invite/redeem")
   @HttpCode(200)
   redeem(@Body() dto: RedeemInviteDto) {
-    return this.auth.redeemInvite(dto.code, dto.email, dto.role ?? "guest");
+    // role is resolved server-side from the invite record (never trusted from client)
+    return this.auth.redeemInvite(dto.code, dto.email);
   }
 
   /** Web/mobile verify pages redirect here with ?token= to complete sign-in. */

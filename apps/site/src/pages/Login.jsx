@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { requestMagicLink } from "@/lib/auth";
 
 export default function Login() {
+  const [params] = useSearchParams();
+  const inviteCode = params.get("invite") ?? "";
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState(null);
@@ -12,6 +15,7 @@ export default function Login() {
     setBusy(true);
     setError(null);
     try {
+      if (inviteCode) localStorage.setItem("essentials_invite", inviteCode);
       await requestMagicLink(email);
       setSent(true);
     } catch {

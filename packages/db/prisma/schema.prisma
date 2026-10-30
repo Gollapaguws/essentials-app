@@ -457,3 +457,18 @@ model SiteContent {
   value     Json
   updatedAt DateTime @updatedAt
 }
+
+// ===== Admin-issued invites =====
+model Invite {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  role      Role
+  maxUses   Int       @default(1)
+  uses      Int       @default(0)
+  revoked   Boolean   @default(false)
+  expiresAt DateTime?
+  createdBy String
+  createdAt DateTime  @default(now())
+
+  @@index([role, revoked])
+}
