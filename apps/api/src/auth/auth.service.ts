@@ -16,6 +16,7 @@ import { emailTemplates } from "../mail/templates";
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly logger = new Logger(AuthService.name);
 
   constructor(private jwt: JwtService, private config: ConfigService, private mail: MailService) {}
 
@@ -110,7 +111,12 @@ export class AuthService {
     await prisma.referral.create({
       data: { referrerId: inviterId ?? user.id, refereeEmail: email, refereeId: user.id },
     });
-    await this.mail.send({ to: email, subject: "Welcome to ESSENTIALS", html: emailTemplates.welcomeSeries(user.name ?? "there", `${this.config.get("APP_URL")}/profile`) });
+    try {
+      await this.mail.send({ to: email, subject: "Welcome to ESSENTIALS", html: emailTemplates.welcomeSeries(user.name ?? "there", `${this.config.get("APP_URL")}/profile`) });
+    } catch (e) {
+      // non-fatal: welcome mail must not block account creation (e.g. local-domain users)
+      this.logger.warn(`welcome mail failed for ${email}: ${(e as Error).message}`);
+    }
     return this.issueTokens(user.id, user.email, grantedRole);
   }
 
