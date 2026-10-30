@@ -6,7 +6,6 @@ import { APP_GUARD } from "@nestjs/core";
 import { AuthModule } from "./auth/auth.module";
 import { MailModule } from "./mail/mail.module";
 import { EventsModule } from "./events/events.module";
-import { TablesModule } from "./tables/tables.module";
 import { LoyaltyModule } from "./loyalty/loyalty.module";
 import { EmailEngineModule } from "./email-engine/email-engine.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
@@ -26,7 +25,6 @@ import { SiteModule } from "./site/site.module";
     AuthModule,
     MailModule,
     EventsModule,
-    TablesModule,
     LoyaltyModule,
     EmailEngineModule.register(),
     VenuesModule,

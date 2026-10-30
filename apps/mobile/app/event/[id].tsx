@@ -50,19 +50,16 @@ export default function EventDetail() {
       ))}
       {event.dressCode && <><Text style={[s.section, { color: colors.muted }]}>DRESS CODE</Text><Text style={{ color: colors.text }}>{event.dressCode}</Text></>}
 
-      <View style={{ flexDirection: "row", gap: 10, marginTop: 24 }}>
+      <View style={{ marginTop: 24 }}>
         {!rsvpState ? (
-          <Pressable style={[s.button, { flex: 1 }]} onPress={rsvp}>
+          <Pressable style={[s.button]} onPress={rsvp}>
             <Text style={s.buttonText}>RSVP</Text>
           </Pressable>
         ) : (
-          <Pressable style={[s.button, rsvpState === "waitlisted" && { backgroundColor: colors.border }, { flex: 1 }]} onPress={() => router.push(`/event/${id}/pass`)} disabled={rsvpState === "waitlisted"}>
+          <Pressable style={[s.button, rsvpState === "waitlisted" && { backgroundColor: colors.border }]} onPress={() => router.push(`/event/${id}/pass`)} disabled={rsvpState === "waitlisted"}>
             <Text style={s.buttonText}>{rsvpState === "waitlisted" ? "WAITLISTED" : "DOOR PASS"}</Text>
           </Pressable>
         )}
-        <Pressable style={[s.button, { backgroundColor: colors.border, flex: 1 }]} onPress={() => router.push(`/event/${id}/tables`)}>
-          <Text style={[s.buttonText, { color: colors.neon }]}>VIP TABLES</Text>
-        </Pressable>
       </View>
       {error && <Text style={{ color: colors.danger, marginTop: 12 }}>{error}</Text>}
 

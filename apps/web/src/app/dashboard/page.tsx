@@ -34,10 +34,9 @@ export default function Dashboard() {
               <Stat label="Door (checked in)" value={data.totals.checkedIn} />
               <Stat label="No-show rate" value={`${data.totals.noShowRate}%`} />
               <Stat label="List→Door conversion" value={`${data.totals.listToDoorConversion}%`} />
-              <Stat label="Table revenue" value={`R${data.totals.tableRevenue.toLocaleString()}`} />
               <Stat label="Waitlisted" value={data.totals.waitlisted} />
             </div>
-            <OverviewCharts perEvent={data.perEvent} perVenue={data.perVenue} />
+            <OverviewCharts perEvent={data.perEvent} />
           </>
         )}
       </main>

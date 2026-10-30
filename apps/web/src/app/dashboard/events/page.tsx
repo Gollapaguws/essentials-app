@@ -54,7 +54,6 @@ export default function EventManager() {
                 <th className="text-left px-4 py-3">Date</th>
                 <th className="text-left px-4 py-3">Status</th>
                 <th className="text-left px-4 py-3">Guests</th>
-                <th className="text-left px-4 py-3">Tables</th>
               </tr>
             </thead>
             <tbody>
@@ -65,11 +64,10 @@ export default function EventManager() {
                   <td className="px-4 py-3">{new Date(e.date).toLocaleDateString()}</td>
                   <td className="px-4 py-3"><span className={e.status === "approved" || e.status === "live" ? "text-neon" : "text-neutral-400"}>{e.status}</span></td>
                   <td className="px-4 py-3">{e._count.guestLists}/{e.capacity}</td>
-                  <td className="px-4 py-3">{e._count.tableBookings}</td>
                 </tr>
               ))}
               {!events.length && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-neutral-500">No events yet. Seed the demo data to see one.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-neutral-500">No events yet. Seed the demo data to see one.</td></tr>
               )}
             </tbody>
           </table>
