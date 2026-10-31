@@ -41,7 +41,9 @@ export class AuthUserService {
       return { user: byUid, created: false };
     }
 
-    const byEmail = await prisma.user.findUnique({ where: { email } });
+    const byEmail =
+      (await prisma.user.findUnique({ where: { email } })) ??
+      (await prisma.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } }));
     if (byEmail) {
       const linked = await prisma.user.update({
         where: { id: byEmail.id },
