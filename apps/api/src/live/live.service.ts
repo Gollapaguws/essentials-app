@@ -58,12 +58,17 @@ export class LiveService implements OnModuleDestroy {
         this.logger.warn(`ingest stdin: ${e.code}`);
       }
     });
-    proc.stderr?.on("data", () => {}); // drain
+    let errTail = "";
+    proc.stderr?.on("data", (d) => { errTail = (errTail + d.toString()).slice(-300); });
     proc.on("error", (e) => {
       this.ingestDead = true;
       this.logger.error(`ingest ffmpeg: ${e.message}`);
     });
-    proc.on("exit", (code) => { this.ingestDead = true; this.ingestProc = null; this.logger.log(`ingest ffmpeg exited: ${code}`); });
+    proc.on("exit", (code) => {
+      this.ingestDead = true;
+      this.ingestProc = null;
+      this.logger.log(`ingest ffmpeg exited: ${code}${errTail ? " — " + errTail : ""}`);
+    });
     this.ingestProc = proc;
     this.logger.log("ingest ffmpeg started → " + RTSP_PUSH);
     void this.simulcast?.startAll().then((n) => { if (n) this.logger.log(`simulcast: ${n} platform(s) started`); });
