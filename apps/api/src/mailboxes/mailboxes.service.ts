@@ -55,6 +55,8 @@ export class MailboxesService {
 
     const add = await this.run("useradd", ["-m", "-s", "/usr/sbin/nologin", username]);
     if (add.code !== 0) throw new BadRequestException(`Could not create mailbox: ${add.out.trim()}`);
+    const pw = await this.run("chpasswd", [], `${username}:${password}`);
+    if (pw.code !== 0) throw new BadRequestException(`Mailbox created but password failed: ${pw.out.trim()}`);
     this.logger.log(`mailbox created: ${username}@${DOMAIN}`);
     return { username, email: `${username}@${DOMAIN}`, home: `/home/${username}`, created: new Date().toISOString() };
   }
