@@ -57,7 +57,7 @@ export default function Mailboxes() {
         <h1 className="text-2xl font-black tracking-wide">EMAIL MAILBOXES</h1>
         <p className="text-neutral-500 text-sm">
           Real mailboxes @essentialsedm.com — receive mail (SMTP), log in at{" "}
-          <a href="/webmail" target="_blank" className="text-neon underline">/webmail</a>, and work in
+          <a href="/webmail/" target="_blank" className="text-neon underline">/webmail</a>, and work in
           mail clients via IMAP. Admin login links for local mailboxes arrive in webmail.
         </p>
         {msg && <p className="text-neon text-sm">{msg}</p>}
@@ -100,7 +100,7 @@ export default function Mailboxes() {
                   <td className="px-4 py-3 text-neutral-500 text-xs">{m.home}</td>
                   <td className="px-4 py-3 space-x-3">
                     <button onClick={() => resetPw(m.username)} className="text-neon underline text-xs">Reset password</button>
-                    <a href="/webmail" target="_blank" className="text-neutral-300 underline text-xs">Webmail</a>
+                    <a href="/webmail/" target="_blank" className="text-neutral-300 underline text-xs">Webmail</a>
                     <button onClick={() => remove(m.username)} className="text-red-400 underline text-xs">Delete</button>
                   </td>
                 </tr>
