@@ -1,7 +1,11 @@
 import { Injectable, OnModuleDestroy, Logger } from "@nestjs/common";
 import { spawn, type ChildProcess } from "child_process";
 
-const RTSP_OUT = "rtsp://0.0.0.0:8554/essentials";
+// RTSP is served by a dedicated MediaMTX server (ffmpeg 6.1 on Ubuntu cannot
+// bind its own RTSP muxer). ffmpeg pushes as a client; MediaMTX serves it
+// on 0.0.0.0:8554 to any number of viewers.
+const RTSP_PUSH = "rtsp://127.0.0.1:8554/essentials";
+const RTSP_PUBLIC = "rtsp://essentialsedm.com:8554/essentials";
 const HLS_DIR = process.env.HLS_DIR ?? "/var/www/essentialsedm/hls";
 const HLS_PLAYLIST = `${HLS_DIR}/stream.m3u8`;
 
@@ -16,12 +20,14 @@ const HLS_PLAYLIST = `${HLS_DIR}/stream.m3u8`;
 export class LiveService implements OnModuleDestroy {
   private readonly logger = new Logger(LiveService.name);
   private ingestProc: ChildProcess | null = null;
+  private ingestDead = false;
   private sourceProc: ChildProcess | null = null;
   private sourceUrl: string | null = null;
 
   /** Start the ingest ffmpeg (idempotent). Called on WS connect. */
   startIngest(): boolean {
     if (this.ingestProc && !this.ingestProc.killed) return false;
+    this.ingestDead = false;
     const proc = spawn(
       "ffmpeg",
       [
@@ -33,22 +39,36 @@ export class LiveService implements OnModuleDestroy {
         "-tune", "zerolatency", "-fflags", "+flush_packets",
         "-muxdelay", "0",
         "-f", "rtsp", "-rtsp_transport", "tcp",
-        RTSP_OUT,
+        RTSP_PUSH,
       ],
       { stdio: ["pipe", "ignore", "pipe"] },
     );
-    proc.on("error", (e) => this.logger.error(`ingest ffmpeg: ${e.message}`));
-    proc.on("exit", (code) => { this.ingestProc = null; this.logger.log(`ingest ffmpeg exited: ${code}`); });
+    proc.stdin?.on("error", (e: NodeJS.ErrnoException) => {
+      // ffmpeg exiting mid-cast must never crash the API process
+      if (e.code !== "EPIPE" && e.code !== "ERR_STREAM_DESTROYED") {
+        this.logger.warn(`ingest stdin: ${e.code}`);
+      }
+    });
+    proc.stderr?.on("data", () => {}); // drain
+    proc.on("error", (e) => {
+      this.ingestDead = true;
+      this.logger.error(`ingest ffmpeg: ${e.message}`);
+    });
+    proc.on("exit", (code) => { this.ingestDead = true; this.ingestProc = null; this.logger.log(`ingest ffmpeg exited: ${code}`); });
     this.ingestProc = proc;
-    this.logger.log("ingest ffmpeg started → " + RTSP_OUT);
+    this.logger.log("ingest ffmpeg started → " + RTSP_PUSH);
     return true;
   }
 
   /** Write a raw frame. stream: 0 = video (h264), 1 = audio (aac/adts). */
   writeIngest(stream: 0 | 1, chunk: Buffer) {
     const proc = this.ingestProc;
-    if (!proc || proc.killed || !proc.stdin) return;
-    proc.stdin.write(chunk);
+    if (!proc || proc.killed || this.ingestDead || !proc.stdin) return;
+    proc.stdin.write(chunk, (e) => {
+      if (e && e.code !== "EPIPE" && e.code !== "ERR_STREAM_DESTROYED") {
+        this.logger.warn(`ingest write: ${e.code}`);
+      }
+    });
   }
 
   stopIngest() {
@@ -108,7 +128,7 @@ export class LiveService implements OnModuleDestroy {
   status() {
     return {
       live: !!(this.ingestProc && !this.ingestProc.killed),
-      rtspUrl: `rtsp://essentialsedm.com:8554/essentials`,
+      rtspUrl: RTSP_PUBLIC,
       source: this.sourceUrl,
       sourceUp: !!(this.sourceProc && !this.sourceProc.killed),
       hls: this.sourceUrl ? "https://essentialsedm.com/hls/stream.m3u8" : null,
