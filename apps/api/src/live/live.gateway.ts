@@ -37,6 +37,7 @@ export class LiveGateway {
         const session = await this.tokens.verify(token);
         const role = session.role ?? (await this.users.resolveRole(session.sub, session.email));
         if (role !== "admin") throw new Error("admin only");
+        if (session.aal !== "aal2") throw new Error("MFA required");
         this.live.startIngest();
         ws.on("message", (data: RawData) => {
           const buf = Buffer.isBuffer(data)
