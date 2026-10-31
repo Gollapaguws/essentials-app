@@ -1,5 +1,6 @@
 import { Injectable, OnModuleDestroy, Logger } from "@nestjs/common";
 import { spawn, type ChildProcess } from "child_process";
+import { mkdirSync } from "fs";
 
 // RTSP is served by a dedicated MediaMTX server (ffmpeg 6.1 on Ubuntu cannot
 // bind its own RTSP muxer). ffmpeg pushes as a client; MediaMTX serves it
@@ -98,6 +99,7 @@ export class LiveService implements OnModuleDestroy {
           ? ["-rtsp_transport", "tcp", ...reconnect, "-i", url]
           : [...reconnect, "-i", url];
 
+    mkdirSync(HLS_DIR, { recursive: true });
     const proc = spawn(
       "ffmpeg",
       [
