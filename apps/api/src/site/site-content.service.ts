@@ -39,7 +39,7 @@ export class SiteContentService {
     const value = (row?.value ?? {}) as Record<string, unknown>;
     const publishAt = value["lineupPublishAt"] as string | undefined;
     if (publishAt && new Date(publishAt) > new Date() && Array.isArray(value["events"])) {
-      value["events"] = []; // scheduled drop — hidden until publish time
+      value["events"] = []; // scheduled drop â€” hidden until publish time
     }
     return { ...value, updatedAt: row?.updatedAt ?? null };
   }

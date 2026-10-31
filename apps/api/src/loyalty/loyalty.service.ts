@@ -9,7 +9,7 @@ const LOYALTY_TARGET = 5; // 5 visits -> free entry
 @Injectable()
 export class LoyaltyService {
   constructor(private mail: MailService) {}
-  /** "3/5 events — 2 to free entry" */
+  /** "3/5 events â€” 2 to free entry" */
   async status(user: JwtUser) {
     const visits = await prisma.loyaltyVisit.count({ where: { userId: user.sub, freeEntryAwarded: false } });
     const total = await prisma.loyaltyVisit.count({ where: { userId: user.sub } });
@@ -20,7 +20,7 @@ export class LoyaltyService {
       target: LOYALTY_TARGET,
       remaining: Math.max(0, LOYALTY_TARGET - visits),
       freeEntries,
-      label: `${visits}/${LOYALTY_TARGET} events — ${Math.max(0, LOYALTY_TARGET - visits)} to free entry`,
+      label: `${visits}/${LOYALTY_TARGET} events â€” ${Math.max(0, LOYALTY_TARGET - visits)} to free entry`,
     };
   }
 
@@ -40,7 +40,7 @@ export class LoyaltyService {
     };
   }
 
-  /** Called when a referred guest checks in — progresses referrer's rewards. */
+  /** Called when a referred guest checks in â€” progresses referrer's rewards. */
   async recordVisit(userId: string, eventId: string) {
     if (await prisma.loyaltyVisit.findUnique({ where: { userId_eventId: { userId, eventId } } })) return;
     const count = await prisma.loyaltyVisit.count({ where: { userId } });
@@ -59,7 +59,7 @@ export class LoyaltyService {
             <p>${user.name ?? "there"}, ${LOYALTY_TARGET} visits done. Show this code at the door:</p>
             <p style="font-size:20px;font-weight:bold;letter-spacing:3px">${user.referralCode}</p>`;
           try {
-            await this.mail.send({ to: user.email, subject: "Your free entry � ESSENTIALS", html: wrapTemplate(html) });
+            await this.mail.send({ to: user.email, subject: "Your free entry — ESSENTIALS", html: wrapTemplate(html) });
           } catch {}
         }
       }

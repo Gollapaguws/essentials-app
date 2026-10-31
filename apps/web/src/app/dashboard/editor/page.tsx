@@ -62,7 +62,7 @@ export default function FrontPageEditor() {
     setError(null); setMsg(null);
     try {
       await api.post("/site/content", c);
-      setMsg("Saved — the front page updates on next load.");
+      setMsg("Saved â€” the front page updates on next load.");
     } catch (err: any) {
       setError(err.message);
     }
@@ -123,11 +123,11 @@ export default function FrontPageEditor() {
                   {["ANNOUNCED", "SELLING FAST", "SOLD OUT", "FREE"].map((s) => <option key={s}>{s}</option>)}
                 </select>
                 <button onClick={() => set({ events: (c.events ?? []).filter((_, j) => j !== i) })}
-                  className="text-red-400 font-bold px-2">×</button>
+                  className="text-red-400 font-bold px-2">Ã—</button>
               </div>
             </div>
           ))}
-          {!(c.events ?? []).length && <p className="text-neutral-500 text-sm">No events — the front page shows "DATES TBA".</p>}
+          {!(c.events ?? []).length && <p className="text-neutral-500 text-sm">No events â€” the front page shows "DATES TBA".</p>}
         </section>
 
         <section className="border border-line bg-surface rounded-xl p-4 space-y-4">
@@ -136,7 +136,7 @@ export default function FrontPageEditor() {
             <div key={i} className="flex items-center gap-2">
               <img src={src} alt="" className="w-16 h-10 object-cover rounded" />
               <input className={`${input} flex-1`} value={src} onChange={(ev) => set({ heroSlides: (c.heroSlides ?? []).map((s, j) => (j === i ? ev.target.value : s)) })} />
-              <button onClick={() => set({ heroSlides: (c.heroSlides ?? []).filter((_, j) => j !== i) })} className="text-red-400 font-bold px-2">�</button>
+              <button onClick={() => set({ heroSlides: (c.heroSlides ?? []).filter((_, j) => j !== i) })} className="text-red-400 font-bold px-2">×</button>
             </div>
           ))}
           <div className="flex gap-2">
@@ -148,7 +148,7 @@ export default function FrontPageEditor() {
               <img src={v.src} alt="" className="w-16 h-10 object-cover rounded" />
               <input className={`${input} flex-1`} placeholder="URL" value={v.src} onChange={(ev) => set({ visuals: (c.visuals ?? []).map((x, j) => (j === i ? { ...x, src: ev.target.value } : x)) })} />
               <input className={`${input} w-48`} placeholder="Label" value={v.label} onChange={(ev) => set({ visuals: (c.visuals ?? []).map((x, j) => (j === i ? { ...x, label: ev.target.value } : x)) })} />
-              <button onClick={() => set({ visuals: (c.visuals ?? []).filter((_, j) => j !== i) })} className="text-red-400 font-bold px-2">�</button>
+              <button onClick={() => set({ visuals: (c.visuals ?? []).filter((_, j) => j !== i) })} className="text-red-400 font-bold px-2">×</button>
             </div>
           ))}
           <div className="flex gap-2 items-center">
