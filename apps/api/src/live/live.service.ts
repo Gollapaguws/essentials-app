@@ -86,18 +86,22 @@ export class LiveService implements OnModuleDestroy {
   /** Start restreaming a source URL → HLS. "testsrc" generates a test pattern. */
   startSource(url: string): { ok: true } {
     this.stopSource();
+    // -reconnect* only applies to network inputs (http/hls), not lavfi or local files
+    const network = /^https?:|^rtsp/.test(url);
+    const reconnect = network
+      ? ["-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "2"]
+      : [];
     const input =
       url === "testsrc"
         ? ["-f", "lavfi", "-i", "testsrc=duration=0:size=1280x720:rate=30", "-f", "lavfi", "-i", "sine=frequency=440:duration=0"]
         : url.startsWith("rtsp")
-          ? ["-rtsp_transport", "tcp", "-i", url]
-          : ["-i", url];
+          ? ["-rtsp_transport", "tcp", ...reconnect, "-i", url]
+          : [...reconnect, "-i", url];
 
     const proc = spawn(
       "ffmpeg",
       [
         "-hide_banner", "-loglevel", "error",
-        "-reconnect", "1", "-reconnect_streamed", "1",
         ...input,
         "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
         "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "5000k", "-pix_fmt", "yuv420p",
