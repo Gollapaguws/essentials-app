@@ -28,18 +28,26 @@ export class SimulcastService implements OnModuleDestroy {
     ];
   }
 
-  private spawnPush(targetId: string, url: string) {
+  private attempts = new Map<string, number>();
+
+  private spawnPush(targetId: string, url: string, attempt = 0) {
     const proc = spawn("ffmpeg", this.ffmpegArgs(url), { stdio: ["ignore", "ignore", "pipe"] });
     proc.stderr?.on("data", () => {}); // drain
     proc.on("error", (e) => this.logger.error(`push ${targetId}: ${e.message}`));
     proc.on("exit", (code) => {
-      if (this.pushes.get(targetId)?.proc === proc) {
-        this.pushes.delete(targetId);
-        this.logger.log(`push ${targetId} exited: ${code}`);
+      if (this.pushes.get(targetId)?.proc !== proc) return; // replaced/stopped
+      this.pushes.delete(targetId);
+      // the RTSP path may not be publishing yet when the push connects — retry
+      if (attempt < 5 && code !== 0) {
+        setTimeout(() => {
+          if (!this.pushes.has(targetId)) this.spawnPush(targetId, url, attempt + 1);
+        }, 3000);
+        return;
       }
+      this.logger.log(`push ${targetId} exited: ${code}`);
     });
     this.pushes.set(targetId, { proc, targetId });
-    this.logger.log(`simulcast push started → ${targetId}`);
+    this.logger.log(`simulcast push started → ${targetId} (attempt ${attempt + 1})`);
   }
 
   /** Start pushes for every enabled target. Called when a broadcast begins. */
