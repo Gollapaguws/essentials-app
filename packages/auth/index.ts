@@ -10,9 +10,7 @@ export interface AuthUser {
   aal: "aal1" | "aal2";
 }
 
-export type MeResponse =
-  | { user: AuthUser; mfaRequired: boolean }
-  | { inviteRequired: true; email: string };
+export type MeResponse = { user: AuthUser; mfaRequired: boolean };
 
 export interface AuthStorage {
   getItem(key: string): string | null | Promise<string | null>;
