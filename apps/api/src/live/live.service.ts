@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, Logger } from "@nestjs/common";
 import { spawn, type ChildProcess } from "child_process";
-import { mkdirSync } from "fs";
+import { mkdirSync, statSync } from "fs";
 import { SimulcastService } from "./simulcast.service";
 
 // RTSP is served by a dedicated MediaMTX server (ffmpeg 6.1 on Ubuntu cannot
@@ -153,8 +153,15 @@ export class LiveService implements OnModuleDestroy {
   }
 
   status() {
+    // studio (Meld/OBS) broadcast = live.m3u8 freshly written by mediamtx runOnReady
+    let studioLive = false;
+    try {
+      const m = statSync(`${HLS_DIR}/live.m3u8`);
+      studioLive = Date.now() - m.mtimeMs < 30_000;
+    } catch {}
     return {
       live: !!(this.ingestProc && !this.ingestProc.killed),
+      studioLive,
       simulcast: this.simulcast?.states() ?? {},
       rtspUrl: `rtsp://${RTSP_HOST}/${RTSP_PATH}`,
       source: this.sourceUrl,
