@@ -46,14 +46,6 @@ export async function fetchMe() {
 }
 
 /** Send a sign-in link (and, for new identities, create the Supabase user). */
-export async function requestMagicLink(email, redirectTo) {
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: redirectTo },
-  });
-  if (error) throw new Error(error.message);
-}
-
 export async function signInWithPassword(email, password) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw new Error(error.message);
