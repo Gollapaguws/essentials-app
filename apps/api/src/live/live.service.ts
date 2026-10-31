@@ -1,0 +1,122 @@
+import { Injectable, OnModuleDestroy, Logger } from "@nestjs/common";
+import { spawn, type ChildProcess } from "child_process";
+
+const RTSP_OUT = "rtsp://0.0.0.0:8554/essentials";
+const HLS_DIR = process.env.HLS_DIR ?? "/var/www/essentialsedm/hls";
+const HLS_PLAYLIST = `${HLS_DIR}/stream.m3u8`;
+
+/**
+ * Live media engine.
+ * - INGEST (screen → RTSP): the site streams raw H.264 (annexb) + AAC (ADTS)
+ *   frames over a WebSocket; ffmpeg muxes them straight into a live RTSP output.
+ * - SOURCE (restreaming): any RTSP/HTTP/HLS input URL is transcoded to a
+ *   low-latency HLS playlist that the front page plays (hls.js).
+ */
+@Injectable()
+export class LiveService implements OnModuleDestroy {
+  private readonly logger = new Logger(LiveService.name);
+  private ingestProc: ChildProcess | null = null;
+  private sourceProc: ChildProcess | null = null;
+  private sourceUrl: string | null = null;
+
+  /** Start the ingest ffmpeg (idempotent). Called on WS connect. */
+  startIngest(): boolean {
+    if (this.ingestProc && !this.ingestProc.killed) return false;
+    const proc = spawn(
+      "ffmpeg",
+      [
+        "-hide_banner", "-loglevel", "error",
+        "-f", "h264", "-i", "pipe:0",
+        "-f", "aac", "-i", "pipe:1",
+        "-c:v", "copy",
+        "-c:a", "aac", "-ar", "44100", "-ac", "2",
+        "-tune", "zerolatency", "-fflags", "+flush_packets",
+        "-muxdelay", "0",
+        "-f", "rtsp", "-rtsp_transport", "tcp",
+        RTSP_OUT,
+      ],
+      { stdio: ["pipe", "ignore", "pipe"] },
+    );
+    proc.on("error", (e) => this.logger.error(`ingest ffmpeg: ${e.message}`));
+    proc.on("exit", (code) => { this.ingestProc = null; this.logger.log(`ingest ffmpeg exited: ${code}`); });
+    this.ingestProc = proc;
+    this.logger.log("ingest ffmpeg started → " + RTSP_OUT);
+    return true;
+  }
+
+  /** Write a raw frame. stream: 0 = video (h264), 1 = audio (aac/adts). */
+  writeIngest(stream: 0 | 1, chunk: Buffer) {
+    const proc = this.ingestProc;
+    if (!proc || proc.killed || !proc.stdin) return;
+    proc.stdin.write(chunk);
+  }
+
+  stopIngest() {
+    if (this.ingestProc && !this.ingestProc.killed) {
+      try { this.ingestProc.stdin?.end(); } catch {}
+      this.ingestProc.kill("SIGTERM");
+      this.ingestProc = null;
+      this.logger.log("ingest ffmpeg stopped");
+    }
+  }
+
+  /** Start restreaming a source URL → HLS. "testsrc" generates a test pattern. */
+  startSource(url: string): { ok: true } {
+    this.stopSource();
+    const input =
+      url === "testsrc"
+        ? ["-f", "lavfi", "-i", "testsrc=duration=0:size=1280x720:rate=30", "-f", "lavfi", "-i", "sine=frequency=440:duration=0"]
+        : url.startsWith("rtsp")
+          ? ["-rtsp_transport", "tcp", "-i", url]
+          : ["-i", url];
+
+    const proc = spawn(
+      "ffmpeg",
+      [
+        "-hide_banner", "-loglevel", "error",
+        "-reconnect", "1", "-reconnect_streamed", "1",
+        ...input,
+        "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
+        "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "5000k", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "96k", "-ar", "44100", "-ac", "2",
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "3", "-hls_flags", "delete_segments",
+        HLS_PLAYLIST,
+      ],
+      { stdio: ["ignore", "ignore", "pipe"] },
+    );
+    proc.on("error", (e) => this.logger.error(`source ffmpeg: ${e.message}`));
+    proc.on("exit", (code) => {
+      if (this.sourceProc === proc) {
+        this.sourceProc = null;
+        this.sourceUrl = null;
+        this.logger.log(`source ffmpeg exited: ${code}`);
+      }
+    });
+    this.sourceProc = proc;
+    this.sourceUrl = url;
+    this.logger.log(`source ffmpeg started: ${url} → ${HLS_PLAYLIST}`);
+    return { ok: true };
+  }
+
+  stopSource(): { ok: true } {
+    if (this.sourceProc && !this.sourceProc.killed) this.sourceProc.kill("SIGTERM");
+    this.sourceProc = null;
+    this.sourceUrl = null;
+    return { ok: true };
+  }
+
+  status() {
+    return {
+      live: !!(this.ingestProc && !this.ingestProc.killed),
+      rtspUrl: `rtsp://essentialsedm.com:8554/essentials`,
+      source: this.sourceUrl,
+      sourceUp: !!(this.sourceProc && !this.sourceProc.killed),
+      hls: this.sourceUrl ? "https://essentialsedm.com/hls/stream.m3u8" : null,
+    };
+  }
+
+  onModuleDestroy() {
+    this.stopIngest();
+    this.stopSource();
+  }
+}

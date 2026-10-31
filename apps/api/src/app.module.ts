@@ -19,6 +19,7 @@ import { ArtistsModule } from "./artists/artists.module";
 import { PaymentsModule } from "./payments/payments.module";
 import { InsightsModule } from "./insights/insights.module";
 import { SiteModule } from "./site/site.module";
+import { LiveModule } from "./live/live.module";
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { SiteModule } from "./site/site.module";
     PaymentsModule,
     InsightsModule,
     SiteModule,
+    LiveModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
