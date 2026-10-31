@@ -1,8 +1,24 @@
+import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { setAccessTokenProvider } from "@essentials/api-client";
 import { colors } from "../theme";
+import { supabase } from "../lib/supabase";
 
 export default function Layout() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setAccessTokenProvider(async () => {
+      const { data } = await supabase.auth.getSession();
+      return data.session?.access_token ?? null;
+    });
+    // Restore the persisted session before the first screen decides where to go.
+    supabase.auth.getSession().finally(() => setReady(true));
+  }, []);
+
+  if (!ready) return null;
+
   return (
     <>
       <StatusBar style="light" />

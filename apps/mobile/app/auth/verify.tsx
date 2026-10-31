@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { colors, type } from "../../theme";
-import { api, setToken } from "@essentials/api-client";
+import { api } from "@essentials/api-client";
 
 /** 2/4 — Paste magic-link token (deep link also lands here with ?token=). */
 export default function Verify() {
@@ -12,8 +12,7 @@ export default function Verify() {
 
   const verify = async () => {
     try {
-      const res = await api.post<{ accessToken: string }>("/auth/verify", { token });
-      setToken(res.accessToken);
+      await api.post("/auth/verify", { token });
       router.replace("/(tabs)/events");
     } catch (e: any) {
       setError(String(e?.message ?? "").includes("NO_ACCOUNT") ? "No account yet — use your invite code." : "Link expired. Request a new one.");

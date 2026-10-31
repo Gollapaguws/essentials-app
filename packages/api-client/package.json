@@ -4,5 +4,12 @@
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "scripts": { "build": "tsc index.ts --outDir dist --declaration" }
+  "scripts": {
+    "build": "tsc index.ts --outDir dist --declaration",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit index.ts"
+  },
+  "devDependencies": {
+    "vitest": "^2"
+  }
 }

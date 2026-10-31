@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, setToken } from "@essentials/api-client";
+import { api } from "@essentials/api-client";
 
 /** Magic-link sign-in for promoters/admins. */
 export default function LoginPage() {
@@ -29,8 +29,6 @@ export default function LoginPage() {
       alert("Dashboard is for promoters, venue managers and admins.");
       return;
     }
-    setToken(res.accessToken);
-    localStorage.setItem("essentials_token", res.accessToken);
     router.push("/dashboard");
   };
 
