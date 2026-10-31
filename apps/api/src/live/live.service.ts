@@ -24,7 +24,9 @@ export class LiveService implements OnModuleDestroy {
   private sourceProc: ChildProcess | null = null;
   private sourceUrl: string | null = null;
 
-  /** Start the ingest ffmpeg (idempotent). Called on WS connect. */
+  /** Start the ingest ffmpeg (idempotent). Called on WS connect.
+   * Single input: a live WebM (VP8/VP9+Opus) container streamed continuously
+   * from the browser over the WebSocket — one pipe, no probe race. */
   startIngest(): boolean {
     if (this.ingestProc && !this.ingestProc.killed) return false;
     this.ingestDead = false;
@@ -32,11 +34,11 @@ export class LiveService implements OnModuleDestroy {
       "ffmpeg",
       [
         "-hide_banner", "-loglevel", "error",
-        "-f", "h264", "-i", "pipe:0",
-        "-f", "aac", "-i", "pipe:1",
-        "-c:v", "copy",
-        "-c:a", "aac", "-ar", "44100", "-ac", "2",
-        "-tune", "zerolatency", "-fflags", "+flush_packets",
+        "-fflags", "+genpts+discardcorrupt",
+        "-i", "pipe:0",
+        "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
+        "-pix_fmt", "yuv420p", "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "5000k",
+        "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "96k",
         "-muxdelay", "0",
         "-f", "rtsp", "-rtsp_transport", "tcp",
         RTSP_PUSH,
@@ -60,8 +62,8 @@ export class LiveService implements OnModuleDestroy {
     return true;
   }
 
-  /** Write a raw frame. stream: 0 = video (h264), 1 = audio (aac/adts). */
-  writeIngest(stream: 0 | 1, chunk: Buffer) {
+  /** Append raw bytes of the incoming WebM stream. */
+  writeIngest(chunk: Buffer) {
     const proc = this.ingestProc;
     if (!proc || proc.killed || this.ingestDead || !proc.stdin) return;
     proc.stdin.write(chunk, (e) => {

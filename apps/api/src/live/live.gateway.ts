@@ -10,11 +10,9 @@ import { AuthUserService } from "../auth/auth-user.service";
 
 /**
  * Raw-WS ingest endpoint (admin screen → RTSP).
- * The site streams binary frames: byte 0 = 0x01 (H.264 annexb) or 0x02 (AAC ADTS),
- * remaining bytes = raw frame. The Supabase token arrives via ?token= on connect.
- *
- * Attaches a `ws` server to the app's HTTP server on path /live/ingest
- * (nginx upgrades the connection and proxies to the API).
+ * The browser streams a live WebM container (VP8/VP9 + Opus, MediaRecorder)
+ * as plain binary frames; ffmpeg re-encodes and pushes to MediaMTX.
+ * The Supabase token arrives via ?token= on connect; admin + MFA required.
  */
 @Injectable()
 export class LiveGateway {
@@ -45,8 +43,7 @@ export class LiveGateway {
             : Buffer.concat(
                 (data as (Buffer | ArrayBuffer)[]).map((p) => (Buffer.isBuffer(p) ? p : Buffer.from(p as ArrayBuffer))),
               );
-          if (buf.length < 2) return;
-          this.live.writeIngest(buf[0] === 0x02 ? 1 : 0, buf.subarray(1));
+          if (buf.length) this.live.writeIngest(buf);
         });
       })().catch((e) => {
         try { ws.close(4401, String((e as Error).message).slice(0, 100)); } catch {}

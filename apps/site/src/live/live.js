@@ -28,140 +28,69 @@ export async function stopLiveSource() {
   return res.json();
 }
 
+function pickMimeType() {
+  const candidates = [
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm;codecs=vp9",
+    "video/webm",
+  ];
+  for (const c of candidates) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(c)) return c;
+  }
+  return "";
+}
+
 /**
  * Screen+mic → live RTSP.
- * getDisplayMedia → WebCodecs (raw H.264 annexb + AAC ADTS) → WebSocket → ffmpeg → RTSP.
- * Works in Chrome/Edge. Returns { stop }.
+ * getDisplayMedia → MediaRecorder (WebM container) → WebSocket → ffmpeg → MediaMTX → RTSP.
+ * Returns { stop }. Works in Chrome/Edge.
  */
-export async function startScreenIngest({ onStatus }) {
+export async function startScreenIngest() {
+  if (!navigator.mediaDevices?.getDisplayMedia) {
+    throw new Error("Screen capture is not supported in this browser (use Chrome or Edge)");
+  }
   const stream = await navigator.mediaDevices.getDisplayMedia({
     video: { frameRate: { ideal: 30, max: 30 } },
     audio: { echoCancellation: true, noiseSuppression: true },
   });
+  if (!stream.getVideoTracks().length) {
+    stream.getTracks().forEach((t) => t.stop());
+    throw new Error("No video track — share a screen or window, not just a tab");
+  }
 
   const ws = new WebSocket(`${WS_BASE}/live/ingest?token=${encodeURIComponent(token())}`);
-  await new Promise((resolve, reject) => {
-    ws.onopen = resolve;
-    ws.onerror = () => reject(new Error("WS connect failed (admin only)"));
+  const closeCode = new Promise((resolve, reject) => {
+    ws.onopen = () => resolve();
+    ws.onerror = () => reject(new Error("WS connect failed (admin login + MFA required)"));
+    ws.onclose = (e) => { if (e.code === 4401 || e.code === 4403) reject(new Error("Not authorized — admin login required")); else resolve(); };
   });
-  if (ws.closeCode === 4401) throw new Error("Not authorized — admin login required");
+  await closeCode.catch(() => { throw new Error("Connection refused by server (admin + MFA required)"); });
 
-  const send = (type, data) => {
-    if (ws.readyState !== 1) return;
-    const out = new Uint8Array(data.byteLength + 1);
-    out[0] = type;
-    out.set(new Uint8Array(data), 1);
-    ws.send(out);
+  const rec = new MediaRecorder(stream, { mimeType: pickMimeType(), videoBitsPerSecond: 4_000_000, audioBitsPerSecond: 128_000 });
+  const queue = [];
+  let closed = false;
+
+  rec.ondataavailable = (e) => {
+    if (!e.data || !e.data.size || closed) return;
+    if (ws.readyState === 1) ws.send(e.data);
   };
-  const errors = [];
+  ws.onclose = () => { closed = true; };
 
-  // ---- video: canvas frames → VideoEncoder(h264) ----
-  const videoEl = document.createElement("video");
-  videoEl.srcObject = stream;
-  videoEl.muted = true;
-  videoEl.playsInline = true;
-  await videoEl.play().catch(() => {});
-  const width = videoEl.videoWidth || 1280;
-  const height = videoEl.videoHeight || 720;
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d", { alpha: false });
+  rec.start(500); // flush every 500ms
 
-  const vEnc = new VideoEncoder({
-    output: (chunk) => send(0x01, chunk.data),
-    error: (e) => errors.push(String(e)),
-  });
-  vEnc.configure({ codec: "avc1.42001f", width, height, bitrate: 2_500_000, framerate: 30 });
-
-  let lastT = 0;
   let stopped = false;
-  const pump = (now, meta) => {
-    if (stopped) return;
-    if (now - lastT < 30) { videoEl.requestVideoFrameCallback(pump); return; }
-    lastT = now;
-    canvas.width = meta.width;
-    canvas.height = meta.height;
-    ctx.drawImage(videoEl, 0, 0, meta.width, meta.height);
-    const frame = new VideoFrame(canvas, { timestamp: meta.mediaTime * 1e6, duration: 33_000 });
-    vEnc.encode(frame, { keyFrame: meta.initiatingChange !== "none" });
-    frame.close();
-    videoEl.requestVideoFrameCallback(pump);
-  };
-  videoEl.requestVideoFrameCallback(pump);
-
-  // ---- audio: worklet PCM → AudioEncoder(aac) ----
-  let ac = null;
-  let aEnc = null;
-  const audioTrack = stream.getAudioTracks()[0];
-  if (audioTrack && typeof AudioEncoder !== "undefined" && window.AudioWorklet) {
-    try {
-      ac = new AudioContext({ latencyHint: "interactive" });
-      const workletSrc = `
-class PCMProc extends AudioWorkletProcessor {
-  process(inputs) {
-    const ch = inputs[0] && inputs[0][0];
-    if (ch) this.port.postMessage(ch.slice(0), [ch.buffer]);
-    return true;
-  }
-}
-registerProcessor("pcmproc", PCMProc);`;
-      await ac.audioWorklet.addModule(
-        URL.createObjectURL(new Blob([workletSrc], { type: "application/javascript" })),
-      );
-      const srcNode = ac.createMediaStreamSource(new MediaStream([audioTrack]));
-      const workletNode = new AudioWorkletNode(ac, "pcmproc", { numberOfChannels: 1, outputChannelCount: [1] });
-      srcNode.connect(workletNode);
-
-      const queue = [];
-      workletNode.port.onmessage = (e) => queue.push(e.data);
-
-      aEnc = new AudioEncoder({ output: (chunk) => send(0x02, chunk.data), error: (e) => errors.push(String(e)) });
-      aEnc.configure({ codec: "mp4a.40.2", sampleRate: 44100, numberOfChannels: 1, bitrate: 96_000 });
-
-      const FRAMES = 1024;
-      let pending = new Float32Array(0);
-      (async function pumpAudio() {
-        while (!stopped) {
-          let chunk = null;
-          while (queue.length && pending.length + queue[0].length < FRAMES) pending = mergeFloat(pending, queue.shift());
-          if (queue.length) chunk = queue.shift();
-          if (chunk) pending = mergeFloat(pending, chunk);
-          if (pending.length >= FRAMES) {
-            const slice = pending.slice(0, FRAMES);
-            pending = pending.slice(FRAMES);
-            aEnc.encode(slice);
-          }
-          await new Promise((r) => setTimeout(r, 10));
-        }
-      })();
-    } catch (e) {
-      console.warn("audio ingest disabled:", e);
-    }
-  }
-
-  onStatus?.({ state: "live", errors });
-
   const stop = () => {
+    if (stopped) return;
     stopped = true;
-    try { vEnc.flush?.(); } catch {}
-    try { vEnc.close(); } catch {}
-    try { aEnc?.close(); } catch {}
-    try { ac?.close(); } catch {}
-    try { videoEl.pause(); } catch {}
-    stream.getTracks().forEach((t) => t.stop());
+    try { rec.stop(); } catch {}
+    closed = true;
     try { ws.close(); } catch {}
+    stream.getTracks().forEach((t) => t.stop());
   };
 
-  // auto-stop when the user closes the share tab / clicks "stop sharing"
+  // auto-stop when the user clicks "stop sharing"
   stream.getVideoTracks()[0].addEventListener("ended", stop);
 
-  return { stop, errors };
-}
-
-function mergeFloat(a, b) {
-  const out = new Float32Array(a.length + b.length);
-  out.set(a, 0);
-  out.set(b, a.length);
-  return out;
+  return { stop };
 }
