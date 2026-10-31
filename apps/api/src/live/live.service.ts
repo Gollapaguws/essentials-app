@@ -64,7 +64,7 @@ export class LiveService implements OnModuleDestroy {
   writeIngest(stream: 0 | 1, chunk: Buffer) {
     const proc = this.ingestProc;
     if (!proc || proc.killed || this.ingestDead || !proc.stdin) return;
-    proc.stdin.write(chunk, (e) => {
+    proc.stdin.write(chunk, (e?: NodeJS.ErrnoException) => {
       if (e && e.code !== "EPIPE" && e.code !== "ERR_STREAM_DESTROYED") {
         this.logger.warn(`ingest write: ${e.code}`);
       }
