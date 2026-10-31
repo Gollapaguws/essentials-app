@@ -4,6 +4,7 @@ import { Auth, CurrentUser } from "../common/auth.decorator";
 import { LiveService } from "./live.service";
 import { SimulcastService } from "./simulcast.service";
 import { IsIn, IsOptional, IsString, MaxLength } from "class-validator";
+import { ConfigService } from "@nestjs/config";
 import { prisma } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 
@@ -19,7 +20,7 @@ class TargetDto {
 
 @Controller("live")
 export class LiveController {
-  constructor(private live: LiveService, private simulcast: SimulcastService) {}
+  constructor(private live: LiveService, private simulcast: SimulcastService, private config: ConfigService) {}
 
   /** Public status: is someone live? is a restream active? (front page player). */
   @Get("status")
@@ -43,6 +44,16 @@ export class LiveController {
   stop() {
     this.simulcast.stopAll();
     return this.live.stopSource();
+  }
+
+  /** Admin: viewer RTSP URL including credentials (rotate via RTSP_VIEWER_PASS env). */
+  @Get("viewer-url")
+  @UseGuards(SupabaseAuthGuard)
+  @Auth("admin")
+  viewerUrl() {
+    const user = this.config.get("RTSP_VIEWER_USER") ?? "essentials";
+    const pass = this.config.get("RTSP_VIEWER_PASS") ?? "";
+    return { url: `rtsp://${user}:${pass}@essentialsedm.com:8554/essentials`, user, live: this.live.status().live };
   }
 
   // ===== Simulcast targets (YouTube / TikTok / Mixcloud / Facebook / Instagram / custom) =====

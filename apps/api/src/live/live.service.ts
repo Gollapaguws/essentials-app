@@ -6,8 +6,13 @@ import { SimulcastService } from "./simulcast.service";
 // RTSP is served by a dedicated MediaMTX server (ffmpeg 6.1 on Ubuntu cannot
 // bind its own RTSP muxer). ffmpeg pushes as a client; MediaMTX serves it
 // on 0.0.0.0:8554 to any number of viewers.
-const RTSP_PUSH = "rtsp://127.0.0.1:8554/essentials";
-const RTSP_PUBLIC = "rtsp://essentialsedm.com:8554/essentials";
+const RTSP_HOST = "essentialsedm.com:8554";
+const RTSP_PATH = "essentials";
+// Publisher credentials (env; used by the ingest ffmpeg push)
+const RTSP_PUSH = `rtsp://publish:${process.env.RTSP_PUBLISH_PASS ?? ""}@127.0.0.1:8554/${RTSP_PATH}`;
+// Viewer URL with credentials — served ONLY to admins via /live/viewer-url
+const viewerUrl = (user: string, pass: string) =>
+  `rtsp://${user}:${pass}@${RTSP_HOST}/${RTSP_PATH}`;
 const HLS_DIR = process.env.HLS_DIR ?? "/var/www/essentialsedm/hls";
 const HLS_PLAYLIST = `${HLS_DIR}/stream.m3u8`;
 
@@ -151,7 +156,7 @@ export class LiveService implements OnModuleDestroy {
     return {
       live: !!(this.ingestProc && !this.ingestProc.killed),
       simulcast: this.simulcast?.states() ?? {},
-      rtspUrl: RTSP_PUBLIC,
+      rtspUrl: `rtsp://${RTSP_HOST}/${RTSP_PATH}`,
       source: this.sourceUrl,
       sourceUp: !!(this.sourceProc && !this.sourceProc.killed),
       hls: this.sourceUrl ? "https://essentialsedm.com/hls/stream.m3u8" : null,
