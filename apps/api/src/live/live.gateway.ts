@@ -46,6 +46,7 @@ export class LiveGateway {
           if (buf.length) this.live.writeIngest(buf);
         });
       })().catch((e) => {
+        this.logger.warn(`ingest rejected: ${(e as Error).message}`);
         try { ws.close(4401, String((e as Error).message).slice(0, 100)); } catch {}
       });
     });
