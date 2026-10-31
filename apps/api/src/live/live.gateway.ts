@@ -29,7 +29,8 @@ export class LiveGateway {
   attach(server: Server) {
     this.wss = new WebSocketServer({ server, path: "/live/ingest" });
     this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
-      const token = new URL(req.url ?? "", "https://essentialsedm.com").searchParams.get("token");
+      const token = new URL(req.url ?? "", "https://essentialsedm.com").searchParams.get("token") ?? "";
+      this.logger.log(`ingest connect: token len ${token.length}, url ${req.url?.slice(0, 40)}`);
       (async () => {
         if (!token) throw new Error("missing token");
         const session = await this.tokens.verify(token);
