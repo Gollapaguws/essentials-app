@@ -20,10 +20,6 @@ export default function DashboardLayout({ children }: { children: import("react"
       return;
     }
     if (!me) return; // /auth/me still in flight or failed; the page surfaces its own error
-    if ("inviteRequired" in me) {
-      router.replace("/");
-      return;
-    }
     if (!DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
       router.replace("/");
       return;

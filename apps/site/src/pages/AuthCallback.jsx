@@ -46,10 +46,6 @@ export default function AuthCallback() {
         setError("Signed in, but your account could not be loaded.");
         return;
       }
-      if (me.inviteRequired) {
-        navigate("/join", { replace: true });
-        return;
-      }
       // Privileged roles finish two-step setup in the dashboard, not here.
       navigate("/", { replace: true });
     })();

@@ -5,6 +5,7 @@ import { AuthEventsService } from "./auth-events.service";
 import type { VerifiedSession } from "./supabase-token.service";
 
 const ROLE_TTL_MS = 60_000;
+const ROLES: Role[] = ["guest", "artist", "promoter", "venue_manager", "admin"];
 
 /**
  * Maps a Supabase identity onto the Prisma User table (lazy link, no bulk import)
@@ -31,8 +32,8 @@ export class AuthUserService {
     return user.role;
   }
 
-  /** Returns null when the identity has no Prisma account yet (INVITE_REQUIRED). */
-  async ensureUser(session: VerifiedSession): Promise<{ user: User; created: boolean } | null> {
+  /** Creates the account on first sign-in (open sign-up; no invite gating). */
+  async ensureUser(session: VerifiedSession): Promise<{ user: User; created: boolean }> {
     const email = session.email.toLowerCase();
 
     const byUid = await prisma.user.findUnique({ where: { authUid: session.sub } });
@@ -58,12 +59,13 @@ export class AuthUserService {
       return { user: linked, created: false };
     }
 
-    if (!session.role) return null;
-
+    // Open sign-up: first sign-in creates the account. Privileged roles can only
+    // come from an admin-set claim — everything else lands as guest.
+    const safeRole: Role = ROLES.includes(session.role as Role) ? (session.role as Role) : "guest";
     const created = await prisma.user.create({
       data: {
         email,
-        role: session.role,
+        role: safeRole,
         authUid: session.sub,
         referralCode: `E-${randomBytes(4).toString("hex").toUpperCase()}`,
       },
