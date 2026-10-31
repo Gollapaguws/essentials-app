@@ -13,3 +13,5 @@ tsbuildinfo
 supabase/.temp/
 supabase/.branches/
 apps/site/.env.production
+supabase/config.toml
+supabase/config.toml
