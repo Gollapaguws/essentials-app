@@ -11,7 +11,6 @@ import { EventsModule } from "./events/events.module";
 import { LoyaltyModule } from "./loyalty/loyalty.module";
 import { EmailEngineModule } from "./email-engine/email-engine.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
-import { InvitesModule } from "./invites/invites.module";
 import { VenuesModule } from "./venues/venues.module";
 import { SocialModule } from "./social/social.module";
 import { PromotionsModule } from "./promotions/promotions.module";
@@ -45,7 +44,6 @@ import { MailboxesModule } from "./mailboxes/mailboxes.module";
     PromotionsModule,
     ArtistsModule,
     AnalyticsModule,
-    InvitesModule,
     PaymentsModule,
     InsightsModule,
     SiteModule,

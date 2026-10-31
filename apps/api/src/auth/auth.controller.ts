@@ -29,7 +29,6 @@ export class AuthController {
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   async me(@CurrentUser() session: VerifiedSession) {
     const linked = await this.authUsers.ensureUser(session);
-    if (!linked) return { inviteRequired: true, email: session.email };
     return {
       user: {
         sub: session.sub,
@@ -60,15 +59,4 @@ export class AuthController {
     return { ok: true };
   }
 
-  /**
-   * Turn an invite code into a Prisma account for the *signed-in* identity.
-   * The email comes from the verified token, never the body.
-   */
-  @Post("invite/redeem")
-  @HttpCode(200)
-  @UseGuards(SupabaseAuthGuard, AuthRateGuard)
-  @SkipMfa()
-  redeem(@CurrentUser() session: VerifiedSession, @Body() dto: RedeemInviteDto, @Ip() ip: string) {
-    return this.auth.redeemInvite(session, dto.code, ip);
-  }
 }

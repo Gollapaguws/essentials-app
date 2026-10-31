@@ -19,10 +19,6 @@ export default function LoginPage() {
   const router = useRouter();
 
   const routeByRole = (me: MeResponse) => {
-    if ("inviteRequired" in me) {
-      setError("No dashboard account yet — ask an admin for an invite.");
-      return;
-    }
     if (!DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
       setError("Dashboard is for promoters, venue managers and admins.");
       return;

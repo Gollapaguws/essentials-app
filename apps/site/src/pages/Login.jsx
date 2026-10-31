@@ -13,8 +13,6 @@ const input = {
 };
 
 export default function Login() {
-  const [params] = useSearchParams();
-  const inviteCode = params.get("invite") ?? "";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -25,8 +23,6 @@ export default function Login() {
     setBusy(true);
     setError(null);
     try {
-      // Carry the invite through the email round-trip.
-      if (inviteCode) localStorage.setItem("essentials_invite", inviteCode);
       await signInWithPassword(email, password);
     } catch (err) {
       setError("Wrong email or password.");
