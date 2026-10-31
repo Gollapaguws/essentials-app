@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Param, Query, UseGuards } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { ArtistsService } from "./artists.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
@@ -12,7 +12,7 @@ class ProfileDto {
 }
 
 @Controller("artists")
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(SupabaseAuthGuard)
 export class ArtistsController {
   constructor(private artists: ArtistsService) {}
 

@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Param, UseGuards } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { PromotionsService } from "./promotions.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
@@ -15,7 +15,7 @@ class CreatePromoDto {
 }
 
 @Controller("promotions")
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(SupabaseAuthGuard)
 export class PromotionsController {
   constructor(private promotions: PromotionsService) {}
 

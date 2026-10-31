@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, Post, HttpCode, UseGuards, Param, Res, UploadedFile, UseInterceptors, BadRequestException } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { Body, Controller, Delete, Get, Post, HttpCode, UseGuards, Res, UploadedFile, UseInterceptors, BadRequestException } from "@nestjs/common";
+import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { ConfigService } from "@nestjs/config";
 import type { Response } from "express";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -32,14 +32,14 @@ export class SiteContentController {
 
   @Post("content")
   @HttpCode(200)
-  @UseGuards(AuthGuard("jwt"))
+  @UseGuards(SupabaseAuthGuard)
   @Auth("admin")
   save(@Body() body: FrontPageContent) {
     return this.content.save(body);
   }
 
   @Delete("content")
-  @UseGuards(AuthGuard("jwt"))
+  @UseGuards(SupabaseAuthGuard)
   @Auth("admin")
   reset() {
     return this.content.reset();
@@ -47,7 +47,7 @@ export class SiteContentController {
 
   /** Admin image upload for the front-page editor (slides, visuals). Max 10 MB. */
   @Post("media")
-  @UseGuards(AuthGuard("jwt"))
+  @UseGuards(SupabaseAuthGuard)
   @Auth("admin")
   @UseInterceptors(FileInterceptor("file"))
   upload(@UploadedFile() file?: Express.Multer.File) {
@@ -75,14 +75,14 @@ export class SiteContentController {
 
   /** Privacy data export for the signed-in user. */
   @Get("my-data")
-  @UseGuards(AuthGuard("jwt"))
+  @UseGuards(SupabaseAuthGuard)
   myData(@CurrentUser() user: JwtUser) {
     return this.siteStats.myData(user);
   }
 
   /** Admin: front-page traffic, last 30 days. */
   @Get("stats")
-  @UseGuards(AuthGuard("jwt"))
+  @UseGuards(SupabaseAuthGuard)
   @Auth("admin")
   stats() {
     return this.siteStats.stats();

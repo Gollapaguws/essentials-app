@@ -1,11 +1,11 @@
 import { Controller, Get, UseGuards } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { InsightsService } from "./insights.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 
 @Controller("insights")
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(SupabaseAuthGuard)
 export class InsightsController {
   constructor(private insights: InsightsService) {}
 

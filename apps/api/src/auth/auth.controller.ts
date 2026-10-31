@@ -1,30 +1,14 @@
-import { Controller, Post, Body, Get, Query, HttpCode, UseGuards, Ip } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { Controller, Post, Body, Get, HttpCode, UseGuards, Ip } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { AuthService } from "./auth.service";
 import { AuthUserService } from "./auth-user.service";
 import { AuthEventsService } from "./auth-events.service";
 import { MFA_REQUIRED_ROLES, SupabaseAuthGuard } from "./supabase-auth.guard";
 import type { VerifiedSession } from "./supabase-token.service";
-import { SessionEstablishedDto } from "./auth.dto";
+import { RedeemInviteDto, SessionEstablishedDto } from "./auth.dto";
+import { AuthRateGuard } from "../common/auth-rate.guard";
 import { CurrentUser } from "../common/auth.decorator";
 import { SkipMfa } from "../common/skip-mfa.decorator";
-import type { Role } from "@prisma/client";
-import { IsEmail, IsOptional, IsString } from "class-validator";
-
-class RequestMagicDto {
-  @IsEmail() email!: string;
-  @IsOptional() @IsString() mobile?: boolean;
-  @IsOptional() @IsString() redirect?: "web" | "mobile" | "site";
-}
-class VerifyDto {
-  @IsString() token!: string;
-}
-class RedeemInviteDto {
-  @IsString() code!: string;
-  @IsEmail() email!: string;
-  @IsOptional() role?: Role;
-}
 
 @Controller("auth")
 export class AuthController {
@@ -33,25 +17,6 @@ export class AuthController {
     private authUsers: AuthUserService,
     private events: AuthEventsService,
   ) {}
-
-  @Post("magic-link")
-  @HttpCode(200)
-  request(@Body() dto: RequestMagicDto) {
-    return this.auth.requestMagicLink(dto.email, dto.redirect ?? (dto.mobile ? "mobile" : "web"));
-  }
-
-  @Post("verify")
-  @HttpCode(200)
-  verify(@Body() dto: VerifyDto) {
-    return this.auth.verifyMagicLink(dto.token);
-  }
-
-  @Post("invite/redeem")
-  @HttpCode(200)
-  redeem(@Body() dto: RedeemInviteDto) {
-    // role is resolved server-side from the invite record (never trusted from client)
-    return this.auth.redeemInvite(dto.code, dto.email);
-  }
 
   /**
    * Canonical identity for a Supabase session.
@@ -95,9 +60,15 @@ export class AuthController {
     return { ok: true };
   }
 
-  /** Web/mobile verify pages redirect here with ?token= to complete sign-in. */
-  @Get("verify")
-  async verifyGet(@Query("token") token: string) {
-    return this.auth.verifyMagicLink(token);
+  /**
+   * Turn an invite code into a Prisma account for the *signed-in* identity.
+   * The email comes from the verified token, never the body.
+   */
+  @Post("invite/redeem")
+  @HttpCode(200)
+  @UseGuards(SupabaseAuthGuard, AuthRateGuard)
+  @SkipMfa()
+  redeem(@CurrentUser() session: VerifiedSession, @Body() dto: RedeemInviteDto, @Ip() ip: string) {
+    return this.auth.redeemInvite(session, dto.code, ip);
   }
 }

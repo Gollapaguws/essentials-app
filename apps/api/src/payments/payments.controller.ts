@@ -1,12 +1,12 @@
 import { Controller, Post, Body, Param, Headers, HttpCode, RawBodyRequest, Req, UseGuards, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { AuthGuard } from "@nestjs/passport";
+import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { PaymentsService } from "./payments.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 
 @Controller("payments")
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(SupabaseAuthGuard)
 export class PaymentsController {
   constructor(private payments: PaymentsService) {}
 

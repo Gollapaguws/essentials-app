@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { ConfigService } from "@nestjs/config";
 import { InvitesService } from "./invites.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
@@ -14,7 +14,7 @@ class CreateInviteDto {
 }
 
 @Controller("invites")
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(SupabaseAuthGuard)
 export class InvitesController {
   constructor(private invites: InvitesService, private config: ConfigService) {}
 

@@ -4,7 +4,7 @@ import { createHmac } from "crypto";
 const prisma = new PrismaClient();
 
 function signQr(eventId: string, userId: string) {
-  const secret = process.env.JWT_SECRET ?? "dev-secret";
+  const secret = process.env.QR_SECRET ?? process.env.JWT_SECRET ?? "dev-secret";
   return `EL:${eventId}:${userId}:${createHmac("sha256", secret).update(`${eventId}:${userId}`).digest("hex").slice(0, 16)}`;
 }
 
@@ -137,6 +137,29 @@ async function main() {
         update: {},
         create: { userId: u.id, eventId: `past-${v}`, visits: v },
       });
+    }
+  }
+
+  // Mirror roles for seeded users that are already linked to a Supabase identity.
+  // Users without an authUid are created lazily on first sign-in (lazy-link).
+  const seeded = await prisma.user.findMany({
+    where: { email: { endsWith: "@essentials.example" }, authUid: { not: null } },
+    select: { authUid: true, role: true, email: true },
+  });
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log(
+      "No SUPABASE_SERVICE_ROLE_KEY: seeded users are created on first sign-in (lazy-link).",
+    );
+  } else {
+    const { createClient } = await import("@supabase/supabase-js");
+    const client = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    for (const u of seeded) {
+      const { error } = await client.auth.admin.updateUserById(u.authUid!, {
+        app_metadata: { role: u.role },
+      });
+      if (error) console.warn(`role mirror failed for ${u.email}: ${error.message}`);
     }
   }
 

@@ -1,12 +1,12 @@
 import { Controller, Get, UseGuards } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { ConfigService } from "@nestjs/config";
 import { LoyaltyService } from "./loyalty.service";
 import { CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 
 @Controller("loyalty")
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(SupabaseAuthGuard)
 export class LoyaltyController {
   constructor(private loyalty: LoyaltyService, private config: ConfigService) {}
 

@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD } from "@nestjs/core";
+import { REDIS, RedisModule } from "./common/redis.provider";
+import { RedisThrottlerStorage } from "./common/redis-throttler.storage";
 import { AuthModule } from "./auth/auth.module";
 import { MailModule } from "./mail/mail.module";
 import { EventsModule } from "./events/events.module";
@@ -22,7 +24,15 @@ import { SiteModule } from "./site/site.module";
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ["../../.env", ".env"] }),
     ScheduleModule.forRoot(),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    RedisModule,
+    ThrottlerModule.forRootAsync({
+      imports: [RedisModule],
+      inject: [REDIS],
+      useFactory: (redis: ConstructorParameters<typeof RedisThrottlerStorage>[0]) => ({
+        throttlers: [{ ttl: 60_000, limit: 120 }],
+        storage: new RedisThrottlerStorage(redis),
+      }),
+    }),
     AuthModule,
     MailModule,
     EventsModule,

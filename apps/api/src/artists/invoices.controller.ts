@@ -1,12 +1,12 @@
 import { Controller, Get, Post, Body, Param, Res, UseGuards } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import type { Response } from "express";
 import { InvoicesService } from "./invoices.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 
 @Controller("invoices")
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(SupabaseAuthGuard)
 export class InvoicesController {
   constructor(private invoices: InvoicesService) {}
 

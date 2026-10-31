@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Param, Delete, Patch, UseGuards } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { EventsService } from "./events.service";
 import { EventToolsService } from "./event-tools.service";
 import type { Response } from "express";
@@ -26,7 +26,7 @@ class CreateEventDto {
 }
 
 @Controller("events")
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(SupabaseAuthGuard)
 export class EventsController {
   constructor(private events: EventsService, private tools: EventToolsService) {}
 

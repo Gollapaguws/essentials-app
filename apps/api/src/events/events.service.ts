@@ -10,8 +10,12 @@ import { LoyaltyService } from "../loyalty/loyalty.service";
 export class EventsService {
   constructor(private config: ConfigService, private loyalty: LoyaltyService) {}
 
+  /** Door-pass HMAC key — independent of the (removed) session JWT secret. */
   private qrSecret() {
-    return this.config.getOrThrow<string>("JWT_SECRET");
+    const secret = this.config.get<string>("QR_SECRET") ?? this.config.get<string>("JWT_SECRET");
+    if (secret) return secret;
+    if (process.env.NODE_ENV === "production") throw new Error("QR_SECRET is required in production");
+    return "dev-secret";
   }
 
   private signQr(eventId: string, userId: string) {

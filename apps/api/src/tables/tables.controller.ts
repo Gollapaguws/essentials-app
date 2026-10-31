@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Param, Patch, UseGuards } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
+import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { TablesService } from "./tables.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
@@ -13,7 +13,7 @@ class BookDto {
 }
 
 @Controller("tables")
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(SupabaseAuthGuard)
 export class TablesController {
   constructor(private tables: TablesService) {}
 
