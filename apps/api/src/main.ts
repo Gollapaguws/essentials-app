@@ -2,6 +2,7 @@ import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { AppModule } from "./app.module";
+import { LiveGateway } from "./live/live.gateway";
 import helmet from "helmet";
 
 async function bootstrap() {
@@ -21,6 +22,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   const port = config.get("PORT") ?? 4000;
   await app.listen(port);
+  app.get(LiveGateway).attach(app.getHttpServer());
   console.log(`ESSENTIALS API on :${port}`);
 }
 bootstrap();

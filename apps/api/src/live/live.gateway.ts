@@ -1,11 +1,7 @@
 import {
-  CanActivate,
-  ExecutionContext,
   Injectable,
   Logger,
-  OnApplicationBootstrap,
 } from "@nestjs/common";
-import { Reflector } from "@nestjs/core";
 import { WebSocketServer, WebSocket, RawData } from "ws";
 import type { IncomingMessage, Server } from "http";
 import { LiveService } from "./live.service";
@@ -21,7 +17,7 @@ import { AuthUserService } from "../auth/auth-user.service";
  * (nginx upgrades the connection and proxies to the API).
  */
 @Injectable()
-export class LiveGateway implements OnApplicationBootstrap {
+export class LiveGateway {
   private readonly logger = new Logger(LiveGateway.name);
   private wss: WebSocketServer | null = null;
 
@@ -31,9 +27,9 @@ export class LiveGateway implements OnApplicationBootstrap {
     private users: AuthUserService,
   ) {}
 
-  onApplicationBootstrap(app: any) {
-    const httpServer: Server = app.getHttpServer();
-    this.wss = new WebSocketServer({ server: httpServer, path: "/live/ingest" });
+  /** Called from main.ts once the HTTP server is listening. */
+  attach(server: Server) {
+    this.wss = new WebSocketServer({ server, path: "/live/ingest" });
     this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
       const token = new URL(req.url ?? "", "https://essentialsedm.com").searchParams.get("token");
       (async () => {
@@ -45,7 +41,9 @@ export class LiveGateway implements OnApplicationBootstrap {
         ws.on("message", (data: RawData) => {
           const buf = Buffer.isBuffer(data)
             ? data
-            : Buffer.concat(data.map((p) => (Buffer.isBuffer(p) ? p : Buffer.from(p as ArrayBuffer))));
+            : Buffer.concat(
+                (data as (Buffer | ArrayBuffer)[]).map((p) => (Buffer.isBuffer(p) ? p : Buffer.from(p as ArrayBuffer))),
+              );
           if (buf.length < 2) return;
           this.live.writeIngest(buf[0] === 0x02 ? 1 : 0, buf.subarray(1));
         });
