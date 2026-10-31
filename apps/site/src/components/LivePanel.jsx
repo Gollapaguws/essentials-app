@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { fetchMe } from "@/lib/auth";
-import { liveStatus, setLiveSource, stopLiveSource, startScreenIngest } from "@/live/live";
+import { liveStatus, setLiveSource, stopLiveSource, startScreenIngest, viewerUrl } from "@/live/live";
 
 /**
  * LIVE section on the front page:
@@ -102,10 +102,10 @@ export default function LivePanel() {
           )}
           {casting && (
             <button
-              onClick={() => navigator.clipboard?.writeText(status.rtspUrl)}
+              onClick={async () => { try { await navigator.clipboard?.writeText(await viewerUrl()); } catch {} }}
               style={{ background: "none", border: "1px solid rgba(255,255,255,.3)", color: "#fff", padding: "10px 16px", cursor: "pointer" }}
             >
-              COPY RTSP: {status.rtspUrl}
+              COPY RTSP LINK (with key)
             </button>
           )}
           <form onSubmit={sourceSet} style={{ display: "flex", gap: 8, flex: "1 1 320px", minWidth: 280 }}>

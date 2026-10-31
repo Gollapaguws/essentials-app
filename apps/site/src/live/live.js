@@ -3,6 +3,13 @@ const WS_BASE = (window.location.origin ?? "https://essentialsedm.com").replace(
 
 const token = () => localStorage.getItem("essentials_token") ?? "";
 
+export async function viewerUrl() {
+  const res = await fetch(`${API}/live/viewer-url`, { headers: { Authorization: `Bearer ${token()}` } });
+  if (!res.ok) throw new Error("viewer-url");
+  const d = await res.json();
+  return d.url;
+}
+
 export async function liveStatus() {
   const res = await fetch(`${API}/live/status`);
   if (!res.ok) throw new Error("status");
