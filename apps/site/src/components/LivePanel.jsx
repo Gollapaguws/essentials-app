@@ -26,10 +26,13 @@ export default function LivePanel() {
     return () => clearInterval(id);
   }, []);
 
+  const studioLive = !!status.studioLive;
+  const hlsUrl = studioLive ? "https://essentialsedm.com/hls/live.m3u8" : status.hls;
+
   // player: attach hls.js when a restream is active
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !status.hls || !status.sourceUp) return;
+    if (!video || !hlsUrl) return;
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = status.hls;
@@ -41,7 +44,7 @@ export default function LivePanel() {
     }
     video.play().catch(() => {});
     return () => { if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; } };
-  }, [status.hls, status.sourceUp]);
+  }, [hlsUrl]);
 
   const goLive = async () => {
     setError(null);
@@ -69,7 +72,7 @@ export default function LivePanel() {
   };
 
   const isAdmin = me?.role === "admin";
-  const showPlayer = status.sourceUp && status.hls;
+  const showPlayer = !!hlsUrl;
 
   return (
     <section id="live" className="noir-sec" style={{ borderTop: "1px solid rgba(255,255,255,.08)" }}>
@@ -83,7 +86,7 @@ export default function LivePanel() {
           <video ref={videoRef} muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
           <div style={{ display: "grid", placeItems: "center", height: "100%", color: "rgba(255,255,255,.35)" }}>
-            {casting ? "CONNECTION TO ROOM…" : "NO STREAM IN THE ROOM YET"}
+            {casting ? "CONNECTING TO THE ROOM…" : studioLive ? "LIVE FROM THE STUDIO" : "NO STREAM IN THE ROOM YET"}
           </div>
         )}
         {(casting || showPlayer) && (

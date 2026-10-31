@@ -56,6 +56,21 @@ export class LiveController {
     return { url: `rtsp://${user}:${pass}@essentialsedm.com:8554/essentials`, user, live: this.live.status().live };
   }
 
+  /** Admin: encoder settings for Meld Studio / OBS / any RTMP app. */
+  @Get("encoder-settings")
+  @UseGuards(SupabaseAuthGuard)
+  @Auth("admin")
+  encoderSettings() {
+    const key = this.config.get("MELD_STREAM_KEY") ?? "";
+    return {
+      server: "rtmp://essentialsedm.com:1935",
+      streamKey: key,
+      fullUrl: `rtmp://essentialsedm.com:1935/${key}`,
+      viewerHls: "https://essentialsedm.com/hls/live.m3u8",
+      viewerRtsp: `rtsp://essentialsedm.com:8554/${key}`,
+    };
+  }
+
   // ===== Simulcast targets (YouTube / TikTok / Mixcloud / Facebook / Instagram / custom) =====
 
   /** Admin: list stream targets (stream keys masked). */
