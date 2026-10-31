@@ -17,11 +17,26 @@ If your agent supports Agent Skills, install or update Base44 skills before Base
 npx skills add base44/skills
 ```
 
+## Auth
+
+Authentication runs on Supabase, not Base44. `src/lib/supabase.js` owns the client
+(PKCE, `detectSessionInUrl: false`), `src/lib/AuthContext.jsx` exposes the session to
+components, and `src/lib/auth.js` is the only place that talks to the NestJS API
+(it reads the bearer token from the Supabase session on every call).
+
+- The callback page `src/pages/AuthCallback.jsx` must exchange the PKCE code itself —
+  Supabase's verifier lives in this browser, so a server route cannot finish the flow.
+- Accounts are invite-only: a signed-in identity without a Prisma user lands on `/join`,
+  where the invite code is redeemed against `/api/auth/invite/redeem`.
+- Roles come from `GET /api/auth/me`, never from the token claims. Privileged roles
+  (`promoter`, `venue_manager`, `admin`) must finish TOTP setup in the dashboard.
+- Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`.
+
 ## Key Files
 
 - `src/`: frontend application source.
-- `src/api/base44Client.js`: frontend Base44 SDK client.
-- `vite.config.js`: Vite config and Base44 Vite plugin setup.
+- `src/lib/supabase.js`, `src/lib/AuthContext.jsx`, `src/lib/auth.js`: auth client, session state, API calls.
+- `vite.config.js`: Vite config.
 - `.env.local`: local-only environment values; never commit secrets.
 
 ## Working Notes
@@ -30,5 +45,4 @@ npx skills add base44/skills
 - When docs or code mention the frontend being started automatically, that usually means the Base44 project config includes `site.serveCommand`, for example `"serveCommand": "npm run dev"` in `base44/config.jsonc`.
 - Use `npm run dev` only for frontend-only work against the hosted Base44 backend.
 - Prefer the existing Base44 CLI workflow over adding new npm scripts for Base44-specific tasks.
-- Reuse the existing SDK client and Vite plugin patterns before adding new Base44 integration paths.
 - Run the relevant checks from `package.json` before finishing code changes.

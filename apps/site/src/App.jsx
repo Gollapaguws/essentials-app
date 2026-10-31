@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/toaster"
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
+import { AuthProvider } from '@/lib/AuthContext';
 import Home from './pages/Home';
 
 if (typeof window !== "undefined") {
@@ -11,7 +12,11 @@ if (typeof window !== "undefined") {
   }).catch(() => {});
 }
 import Login from './pages/Login';
-import AuthVerify from './pages/AuthVerify';
+import Register from './pages/Register';
+import Join from './pages/Join';
+import AuthCallback from './pages/AuthCallback';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Privacy from './pages/Privacy';
 
 /**
@@ -25,7 +30,11 @@ const PublicSite = () => (
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/auth/verify" element={<AuthVerify />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/join" element={<Join />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="*" element={<Home />} />
     </Routes>
@@ -36,7 +45,9 @@ const PublicSite = () => (
 export default function App() {
   return (
     <Router>
-      <PublicSite />
+      <AuthProvider>
+        <PublicSite />
+      </AuthProvider>
     </Router>
   );
 }

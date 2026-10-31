@@ -1,56 +1,85 @@
+import { supabase } from "@/lib/supabase";
+
 const API_URL = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
 
-const TOKEN_KEY = "essentials_token";
-
-export const getToken = () => localStorage.getItem(TOKEN_KEY);
-export const setToken = (t) => (t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY));
+/** Read the current access token straight from the Supabase session. */
+async function currentToken() {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+}
 
 export async function api(path, init) {
+  const token = await currentToken();
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init?.headers,
     },
   });
-  if (!res.ok) throw new Error((await res.text()) || res.statusText);
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const body = await res.json();
+      message = body.message ?? body.code ?? message;
+    } catch {
+      /* keep the status text */
+    }
+    throw new Error(message);
+  }
   return res.json();
 }
 
-/** Current session via /auth/me; null if no/invalid token. */
+/**
+ * Canonical identity for the current session.
+ * Returns `{ user, mfaRequired }`, `{ inviteRequired: true, email }`, or null.
+ */
 export async function fetchMe() {
-  if (!getToken()) return null;
+  const token = await currentToken();
+  if (!token) return null;
   try {
-    const { user } = await api("/auth/me");
-    return user;
+    return await api("/auth/me");
   } catch {
     return null;
   }
 }
 
-export async function requestMagicLink(email) {
-  return api("/auth/magic-link", { method: "POST", body: JSON.stringify({ email, redirect: "site" }) });
+/** Send a sign-in link (and, for new identities, create the Supabase user). */
+export async function requestMagicLink(email, redirectTo) {
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: redirectTo },
+  });
+  if (error) throw new Error(error.message);
 }
 
-/** Exchange a magic-link token for a session. Throws if account doesn't exist yet (needs invite code). */
-export async function verifyMagicLink(token) {
-  try {
-    const res = await api("/auth/verify", { method: "POST", body: JSON.stringify({ token }) });
-    setToken(res.accessToken);
-    return { ok: true, user: res.user };
-  } catch (e) {
-    const msg = String(e?.message ?? "");
-    if (msg.includes("NO_ACCOUNT")) return { ok: false, reason: "NO_ACCOUNT" };
-    return { ok: false, reason: "EXPIRED" };
-  }
+export async function signInWithPassword(email, password) {
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(error.message);
 }
 
-/** Redeem an invite code to create an account, then session. */
-export async function redeemInvite(code, email) {
-  const res = await api("/auth/invite/redeem", { method: "POST", body: JSON.stringify({ code, email }) });
-  setToken(res.accessToken);
-  return res.user;
+export async function signInWithGoogle(redirectTo) {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo },
+  });
+  if (error) throw new Error(error.message);
 }
 
-export const signOut = () => setToken(null);
+export async function requestPasswordReset(email, redirectTo) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw new Error(error.message);
+}
+
+export async function updatePassword(password) {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw new Error(error.message);
+}
+
+/** Redeem an invite for the signed-in identity; the email comes from the session. */
+export async function redeemInvite(code) {
+  return api("/auth/invite/redeem", { method: "POST", body: JSON.stringify({ code }) });
+}
+
+export const signOut = () => supabase.auth.signOut();

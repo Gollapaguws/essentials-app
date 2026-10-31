@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { updatePassword } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,9 @@ import AuthLayout from "@/components/AuthLayout";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
-  const resetToken = searchParams.get("token");
+  // Supabase recovery links land on /auth/callback which forwards here once the
+  // session is established; the marker keeps the page honest about that state.
+  const recovery = searchParams.get("recovery");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -25,8 +27,8 @@ export default function ResetPassword() {
     }
     setLoading(true);
     try {
-      await base44.auth.resetPassword({ resetToken, newPassword });
-      window.location.href = "/login";
+      await updatePassword(newPassword);
+      window.location.href = "/";
     } catch (err) {
       setError(err.message || "Failed to reset password");
     } finally {
@@ -34,7 +36,7 @@ export default function ResetPassword() {
     }
   };
 
-  if (!resetToken) {
+  if (!recovery) {
     return (
       <AuthLayout
         icon={AlertTriangle}
