@@ -12,3 +12,4 @@ dist/
 tsbuildinfo
 supabase/.temp/
 supabase/.branches/
+apps/site/.env.production
