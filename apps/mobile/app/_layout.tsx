@@ -27,11 +27,12 @@ export default function Layout() {
           headerStyle: { backgroundColor: colors.bg },
           headerTintColor: colors.neon,
           contentStyle: { backgroundColor: colors.bg },
-          headerTitleStyle: { fontWeight: "900", letterSpacing: 2 },
+          headerTitleStyle: { fontWeight: "900" },
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="auth/verify" options={{ title: "SIGN IN" }} />
+        <Stack.Screen name="auth/callback" options={{ title: "SIGN IN" }} />
+        <Stack.Screen name="auth/mfa" options={{ title: "TWO-STEP" }} />
         <Stack.Screen name="auth/invite" options={{ title: "INVITE CODE" }} />
         <Stack.Screen name="auth/profile" options={{ title: "PROFILE" }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

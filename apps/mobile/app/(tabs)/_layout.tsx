@@ -11,7 +11,6 @@ export default function TabsLayout() {
         tabBarStyle: { backgroundColor: colors.bg, borderTopColor: colors.border },
         tabBarActiveTintColor: colors.neon,
         tabBarInactiveTintColor: colors.muted,
-        sceneStyle: { backgroundColor: colors.bg },
       }}
     >
       <Tabs.Screen name="events" options={{ title: "EVENTS", tabBarIcon: ({ color }) => <Calendar color={color} size={22} /> }} />
