@@ -16,6 +16,7 @@ const links = [
   { href: "/dashboard/editor", label: "Front Page" },
   { href: "/dashboard/invites", label: "Invites" },
   { href: "/dashboard/mailboxes", label: "Mailboxes" },
+  { href: "/dashboard/simulcast", label: "Streaming" },
 ];
 
 export function TopNav() {

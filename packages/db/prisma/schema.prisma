@@ -501,3 +501,14 @@ model Invite {
 
   @@index([role, revoked])
 }
+
+// ===== Simulcast targets (YouTube, TikTok, Mixcloud, Facebook, Instagram, custom) =====
+model StreamTarget {
+  id        String   @id @default(cuid())
+  platform  String // youtube | tiktok | mixcloud | facebook | instagram | custom
+  label     String?
+  url       String // full RTMP(S) push URL including stream key
+  enabled   Boolean  @default(true)
+  createdBy String
+  createdAt DateTime @default(now())
+}

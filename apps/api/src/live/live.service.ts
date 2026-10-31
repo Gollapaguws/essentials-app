@@ -1,6 +1,7 @@
 import { Injectable, OnModuleDestroy, Logger } from "@nestjs/common";
 import { spawn, type ChildProcess } from "child_process";
 import { mkdirSync } from "fs";
+import { SimulcastService } from "./simulcast.service";
 
 // RTSP is served by a dedicated MediaMTX server (ffmpeg 6.1 on Ubuntu cannot
 // bind its own RTSP muxer). ffmpeg pushes as a client; MediaMTX serves it
@@ -20,10 +21,15 @@ const HLS_PLAYLIST = `${HLS_DIR}/stream.m3u8`;
 @Injectable()
 export class LiveService implements OnModuleDestroy {
   private readonly logger = new Logger(LiveService.name);
+  private readonly simulcast: SimulcastService;
   private ingestProc: ChildProcess | null = null;
   private ingestDead = false;
   private sourceProc: ChildProcess | null = null;
   private sourceUrl: string | null = null;
+
+  constructor(simulcast: SimulcastService) {
+    this.simulcast = simulcast;
+  }
 
   /** Start the ingest ffmpeg (idempotent). Called on WS connect.
    * Single input: a live WebM (VP8/VP9+Opus) container streamed continuously
@@ -60,6 +66,7 @@ export class LiveService implements OnModuleDestroy {
     proc.on("exit", (code) => { this.ingestDead = true; this.ingestProc = null; this.logger.log(`ingest ffmpeg exited: ${code}`); });
     this.ingestProc = proc;
     this.logger.log("ingest ffmpeg started → " + RTSP_PUSH);
+    void this.simulcast?.startAll().then((n) => { if (n) this.logger.log(`simulcast: ${n} platform(s) started`); });
     return true;
   }
 
@@ -80,6 +87,7 @@ export class LiveService implements OnModuleDestroy {
       try { this.ingestProc.stdin?.end(); } catch {}
       this.ingestProc.kill("SIGTERM");
       this.ingestProc = null;
+      this.simulcast?.stopAll();
       this.logger.log("ingest ffmpeg stopped");
     }
   }
@@ -137,6 +145,7 @@ export class LiveService implements OnModuleDestroy {
   status() {
     return {
       live: !!(this.ingestProc && !this.ingestProc.killed),
+      simulcast: this.simulcast?.states() ?? {},
       rtspUrl: RTSP_PUBLIC,
       source: this.sourceUrl,
       sourceUp: !!(this.sourceProc && !this.sourceProc.killed),
