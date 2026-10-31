@@ -84,6 +84,7 @@ enum PaymentStatus {
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
+  authUid       String?  @unique // Supabase auth.users.id (lazy-linked on first sign-in)
   name          String?
   avatar        String?
   role          Role     @default(guest)
@@ -469,6 +470,21 @@ model SiteContent {
   key       String   @id // "front_page"
   value     Json
   updatedAt DateTime @updatedAt
+}
+
+// ===== Auth audit (Supabase auth overhaul) =====
+model AuthEvent {
+  id        String   @id @default(cuid())
+  kind      String // sign_in | lazy_link | invite_redeemed | role_change | mfa_enrolled | mfa_escalated
+  userId    String?
+  email     String?
+  meta      Json     @default("{}")
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([kind, createdAt])
+  @@index([userId])
+  @@index([email])
 }
 
 // ===== Admin-issued invites =====
