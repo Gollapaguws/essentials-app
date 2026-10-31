@@ -6,13 +6,14 @@ routing/invoices/payments) and Phase 4 (payments, white-label, advanced analytic
 schema hooks already in place — see `packages/db/prisma/schema.prisma`.
 
 ## Stack
-- `apps/mobile` — Expo guest app: onboarding (magic link → invite code → profile), events
+- `apps/mobile` — Expo guest app: onboarding (email link or Google → invite code → profile), events
   feed with live headcount, RSVP/waitlist, QR door pass, VIP table booking, loyalty counter
   ("3/5 events — 2 to free entry") + referral link.
 - `apps/web` — Next.js 14 promoter dashboard: Recharts analytics (RSVPs, door vs list,
   no-show rate, table revenue per event, revenue per venue), event manager, email engine
   v1 with campaign attribution.
-- `apps/api` — NestJS: magic-link auth, JWT roles (guest|artist|promoter|venue_manager|admin),
+- `apps/api` — NestJS: Supabase-verified sessions (JWKS) with roles from Prisma
+  (guest|artist|promoter|venue_manager|admin), TOTP enforced for privileged roles,
   role-scoped queries everywhere, BullMQ email jobs, reminder scheduler, QR door check-in
   (signed HMAC tokens + DoorLog).
 - `packages/db` — Prisma schema + seed (demo event "ESSENTIALS: Amapiano Sunrise" @ The
@@ -23,16 +24,20 @@ schema hooks already in place — see `packages/db/prisma/schema.prisma`.
 ## Setup
 ```bash
 npm install
-cp .env.example .env          # set JWT_SECRET, RESEND_API_KEY (or keep console provider)
-npm run db:up                 # docker compose: postgres + redis
+supabase start                # or: npm run db:up for postgres/redis only
+cp .env.example .env          # Supabase URL + keys, RESEND_API_KEY (or keep console provider)
 npm run db:migrate            # prisma migrate dev
 npm run db:seed               # demo event + users
 npm run dev:api               # NestJS on :4000
 npm run dev:web               # dashboard on :3001
 npm run dev:mobile            # Expo (set EXPO_PUBLIC_API_URL to your LAN IP)
+npm run proof:auth            # live auth proof against the running stack
+npm test -w @essentials/api   # API unit tests
 ```
 
-### Demo logins (magic link — console provider prints the link to API logs)
+Auth architecture, redirect URLs and the MFA policy: `docs/auth.md`.
+
+### Demo accounts (sign in with an email link, or create these users in Supabase)
 | Role | Email |
 |---|---|
 | admin | admin@essentials.example |
@@ -41,7 +46,7 @@ npm run dev:mobile            # Expo (set EXPO_PUBLIC_API_URL to your LAN IP)
 | guests | guest1@essentials.example … guest12@essentials.example |
 
 ## API surface (Phase 1)
-`POST /api/auth/magic-link` · `POST /api/auth/verify` · `POST /api/auth/invite/redeem` ·
+`GET /api/auth/me` · `POST /api/auth/session-established` · `POST /api/auth/invite/redeem` ·
 `GET /api/events` · `GET /api/events/:id` · `POST/DELETE /api/events/:id/rsvp` ·
 `GET /api/events/:id/door-pass` · `POST /api/events/check-in` ·
 `GET /api/tables/inventory/:eventId` · `POST /api/tables/book` ·
