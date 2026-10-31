@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/components/AuthProvider";
 
 const links = [
   { href: "/dashboard", label: "Analytics" },
@@ -17,6 +19,15 @@ const links = [
 
 export function TopNav() {
   const path = usePathname();
+  const router = useRouter();
+  const { me } = useAuth();
+  const user = me && !("inviteRequired" in me) ? me.user : null;
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    router.replace("/");
+  };
+
   return (
     <nav className="border-b border-line bg-surface/60 backdrop-blur sticky top-0 z-10">
       <div className="max-w-6xl mx-auto flex items-center gap-6 px-6 py-4">
@@ -30,6 +41,17 @@ export function TopNav() {
             {l.label}
           </Link>
         ))}
+        {user && (
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-xs text-neutral-500 hidden sm:inline">{user.email}</span>
+            <button
+              onClick={signOut}
+              className="text-xs tracking-widest text-neutral-400 hover:text-neon"
+            >
+              SIGN OUT
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );

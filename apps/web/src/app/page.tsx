@@ -3,49 +3,99 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@essentials/api-client";
+import { DASHBOARD_ROLES, type MeResponse } from "@essentials/auth";
+import { supabase } from "@/lib/supabase";
 
-/** Magic-link sign-in for promoters/admins. */
+type Mode = "link" | "password";
+
+/** Sign-in for promoters/venue managers/admins: email link or password. */
 export default function LoginPage() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<Mode>("link");
   const [sent, setSent] = useState(false);
-  const [token, setToken] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  // already signed in (site or dashboard) with a privileged role? go straight in
-  useEffect(() => {
-    if (!localStorage.getItem("essentials_token")) return;
-    api
-      .get<{ user: { role: string } }>("/auth/me")
-      .then(({ user }) => {
-        if (["promoter", "admin", "venue_manager", "artist"].includes(user.role)) router.replace("/dashboard");
-        else localStorage.removeItem("essentials_token");
-      })
-      .catch(() => localStorage.removeItem("essentials_token"));
-  }, [router]);
-
-  const verify = async () => {
-    const res = await api.post<{ accessToken: string; user: { role: string } }>("/auth/verify", { token });
-    if (!["promoter", "admin", "venue_manager"].includes(res.user.role)) {
-      alert("Dashboard is for promoters, venue managers and admins.");
+  const routeByRole = (me: MeResponse) => {
+    if ("inviteRequired" in me) {
+      setError("No dashboard account yet — ask an admin for an invite.");
       return;
     }
-    router.push("/dashboard");
+    if (!DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
+      setError("Dashboard is for promoters, venue managers and admins.");
+      return;
+    }
+    router.replace(me.mfaRequired ? "/auth/mfa" : "/dashboard");
+  };
+
+  // Already signed in (site or dashboard) with a privileged role? Go straight in.
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return;
+      try {
+        routeByRole(await api.get<MeResponse>("/auth/me"));
+      } catch {
+        // stale session: stay on the form
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const submitLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const { error: err } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    setBusy(false);
+    if (err) setError("Could not send the link. Try a password instead.");
+    else setSent(true);
+  };
+
+  const submitPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+    if (err) {
+      setBusy(false);
+      setError("Wrong email or password — or use a sign-in link instead.");
+      return;
+    }
+    try {
+      routeByRole(await api.get<MeResponse>("/auth/me"));
+    } catch {
+      setError("Signed in, but the dashboard could not be loaded.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <main className="min-h-screen grid place-items-center px-6">
       <div className="w-full max-w-md border border-line bg-surface rounded-2xl p-8">
         <h1 className="text-neon text-3xl font-black tracking-widest">ESSENTIALS</h1>
-        <p className="text-neutral-500 mt-2 text-sm">Promoter dashboard — sign in with a magic link.</p>
-        {!sent ? (
-          <form
-            className="mt-6 space-y-3"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              await api.post("/auth/magic-link", { email });
-              setSent(true);
-            }}
-          >
+        <p className="text-neutral-500 mt-2 text-sm">Promoter dashboard — sign in to continue.</p>
+
+        {sent ? (
+          <div className="mt-6 space-y-3">
+            <p className="text-neutral-300 text-sm">Check {email} for your sign-in link.</p>
+            <button
+              className="text-neutral-500 text-xs underline"
+              onClick={() => {
+                setSent(false);
+                setError(null);
+              }}
+            >
+              Use a different email
+            </button>
+          </div>
+        ) : (
+          <form className="mt-6 space-y-3" onSubmit={mode === "link" ? submitLink : submitPassword}>
             <input
               className="w-full bg-bg border border-line rounded-lg px-4 py-3 outline-none focus:border-neon"
               placeholder="you@essentials.example"
@@ -54,24 +104,36 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <button className="w-full bg-neon text-bg font-black tracking-widest rounded-lg py-3 hover:opacity-90">
-              SEND MAGIC LINK
+            {mode === "password" && (
+              <input
+                className="w-full bg-bg border border-line rounded-lg px-4 py-3 outline-none focus:border-neon"
+                placeholder="Password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            )}
+            <button
+              disabled={busy}
+              className="w-full bg-neon text-bg font-black tracking-widest rounded-lg py-3 hover:opacity-90 disabled:opacity-50"
+            >
+              {busy ? "WORKING…" : mode === "link" ? "EMAIL ME A LINK" : "SIGN IN"}
+            </button>
+            <button
+              type="button"
+              className="w-full text-neutral-500 text-xs underline"
+              onClick={() => {
+                setMode(mode === "link" ? "password" : "link");
+                setError(null);
+              }}
+            >
+              {mode === "link" ? "Sign in with a password instead" : "Email me a link instead"}
             </button>
           </form>
-        ) : (
-          <div className="mt-6 space-y-3">
-            <p className="text-neutral-400 text-sm">Link sent. Paste the token from the email:</p>
-            <input
-              className="w-full bg-bg border border-line rounded-lg px-4 py-3 outline-none focus:border-neon font-mono text-xs"
-              placeholder="token"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-            />
-            <button onClick={verify} className="w-full bg-neon text-bg font-black tracking-widest rounded-lg py-3">
-              SIGN IN
-            </button>
-          </div>
         )}
+
+        {error && <p className="text-red-400 text-sm mt-4">{error}</p>}
       </div>
     </main>
   );
