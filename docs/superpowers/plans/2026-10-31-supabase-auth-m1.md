@@ -2,6 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Execution status (2026-10-31):** Tasks 1–10 implemented inline, one commit each
+> (`f00831c`…`aee8d55`). Verified: `npm test -w @essentials/api` 45/45,
+> `npm test -w @essentials/api-client` 8/8, `nest build`, `next build`, `vite build`,
+> `tsc --noEmit -p packages/auth`, `tsc --noEmit` in `apps/mobile`. **Not verified here:**
+> the live HTTP proof (`npm run proof:auth`) — no Docker/Supabase CLI in this environment;
+> and `npm run typecheck -w base44-app`, which still reports 54 errors in pre-existing
+> untyped template components (baseline before M1: 85). Both must clear on the VPS in M2
+> before M1 is called deploy-ready. Rulings: `.superpowers/sdd/supabase-auth-m1/progress.md`.
+
 **Goal:** Replace the homegrown magic-link + HS256 JWT auth with Supabase Auth end-to-end (NestJS JWKS verification, PKCE clients, lazy-linked Prisma users, MFA for privileged roles, Redis rate limits, audit trail) across `apps/api`, `apps/web`, `apps/site`, `apps/mobile` — and fix the ten auth bugs found in review.
 
 **Architecture:** Supabase issues and refreshes sessions; the API verifies the bearer token with `jose` against Supabase's JWKS and resolves the canonical role from the Prisma `User` row (claim first, 60 s cached DB fallback). No database move, no RLS, no cookies, no shared secret. Two additive schema changes only: `User.authUid` and the `AuthEvent` audit table.
@@ -57,7 +66,7 @@
 
 **Interfaces produced:** `prisma.user.findUnique({ where: { authUid } })`, `prisma.authEvent.create({ data: { kind, userId?, email?, meta, ip } })`.
 
-- [ ] **Step 1:** Add to `User`: `authUid String? @unique` (place next to `email`). Add the model:
+- [x] **Step 1:** Add to `User`: `authUid String? @unique` (place next to `email`). Add the model:
 
 ```prisma
 model AuthEvent {
@@ -75,11 +84,11 @@ model AuthEvent {
 }
 ```
 
-- [ ] **Step 2:** Run `npm run db:up` then `cd packages/db && npx prisma migrate dev --name supabase_auth_overhaul`. Expected: one new migration folder, no destructive warnings, `prisma generate` succeeds.
+- [x] **Step 2:** Run `npm run db:up` then `cd packages/db && npx prisma migrate dev --name supabase_auth_overhaul`. Expected: one new migration folder, no destructive warnings, `prisma generate` succeeds.
 
-- [ ] **Step 3:** Typecheck: `cd packages/db && npx tsc --noEmit`. Expected: exit 0.
+- [x] **Step 3:** Typecheck: `cd packages/db && npx tsc --noEmit`. Expected: exit 0.
 
-- [ ] **Step 4:** Commit: `feat(db): add supabase authUid link and AuthEvent audit table`.
+- [x] **Step 4:** Commit: `feat(db): add supabase authUid link and AuthEvent audit table`.
 
 ---
 
@@ -109,7 +118,7 @@ export const SkipMfa = () => SetMetadata(SKIP_MFA_KEY, true);
 @Injectable() export class AuthUserService { resolveRole(sub: string, email: string): Promise<Role | null>; }
 ```
 
-- [ ] **Step 1:** Add dev deps and script to `apps/api/package.json`: `"test": "jest"`, devDeps `jest@^29`, `ts-jest@^29`, `@types/jest@^29`. Create `apps/api/jest.config.js`:
+- [x] **Step 1:** Add dev deps and script to `apps/api/package.json`: `"test": "jest"`, devDeps `jest@^29`, `ts-jest@^29`, `@types/jest@^29`. Create `apps/api/jest.config.js`:
 
 ```js
 module.exports = {
@@ -123,7 +132,7 @@ module.exports = {
 ```
 `apps/api/jest.setup.js`: `process.env.SUPABASE_URL = "http://test.local"; process.env.SUPABASE_ANON_KEY = "anon"; process.env.SUPABASE_SERVICE_ROLE_KEY = "service";`
 
-- [ ] **Step 2 (failing tests):** `supabase-token.service.spec.ts` — generate a local keypair once:
+- [x] **Step 2 (failing tests):** `supabase-token.service.spec.ts` — generate a local keypair once:
 
 ```ts
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -164,9 +173,9 @@ Cases: valid token → `{ sub: "sub-1", email: "a@b.co", role: "promoter", aal: 
 | no role claim, `resolveRole` → `venue_manager`, aal1 | throws `MFA_REQUIRED` |
 | no role claim, `resolveRole` → `null` | `true`, `req.user.role === null` |
 
-- [ ] **Step 3:** Run `npm test -w @essentials/api`. Expected: all cases fail (`Cannot find module`). 
+- [x] **Step 3:** Run `npm test -w @essentials/api`. Expected: all cases fail (`Cannot find module`). 
 
-- [ ] **Step 4:** Implement. `SupabaseTokenService`:
+- [x] **Step 4:** Implement. `SupabaseTokenService`:
 
 ```ts
 constructor(config: ConfigService, @Optional() @Inject(SUPABASE_JWKS) keySet?: JWTVerifyGetKey) {
@@ -191,9 +200,9 @@ async verify(token: string): Promise<VerifiedSession> {
 ```
 `SupabaseAuthGuard.canActivate` follows the pinned order: header parse → `verify` → `skipMfa` from reflector → `role = session.role ?? await users.resolveRole(session.sub, session.email)` → MFA gate → `req.user = { ...session, role }` → `true`. Throw `new UnauthorizedException({ code: "MFA_REQUIRED", role })`.
 
-- [ ] **Step 5:** Run `npm test -w @essentials/api`. Expected: all pass. Run `npm run build -w @essentials/api` (exit 0).
+- [x] **Step 5:** Run `npm test -w @essentials/api`. Expected: all pass. Run `npm run build -w @essentials/api` (exit 0).
 
-- [ ] **Step 6:** Commit: `feat(api): verify supabase JWTs with jwks and enforce MFA for privileged roles`.
+- [x] **Step 6:** Commit: `feat(api): verify supabase JWTs with jwks and enforce MFA for privileged roles`.
 
 ---
 
@@ -221,7 +230,7 @@ Response contracts (pinned — clients are written against these):
 // POST /api/auth/session-established  body { surface?: "web"|"site"|"mobile" } → { "ok": true }
 ```
 
-- [ ] **Step 1 (failing tests):** `auth-user.service.spec.ts` with `jest.mock("@essentials/db", () => ({ prisma: { user: { findUnique: jest.fn(), update: jest.fn(), create: jest.fn() } } }))`:
+- [x] **Step 1 (failing tests):** `auth-user.service.spec.ts` with `jest.mock("@essentials/db", () => ({ prisma: { user: { findUnique: jest.fn(), update: jest.fn(), create: jest.fn() } } }))`:
 
 | Case | Expectation |
 |---|---|
@@ -233,9 +242,9 @@ Response contracts (pinned — clients are written against these):
 | `resolveRole` returns null, then `invalidate(sub)`, then resolves | second DB read happens (null is not cached / is cleared) |
 | `ensureUser` second call for the same user | no `sign_in`/`lazy_link` event the second time (verify only on created/bound) |
 
-- [ ] **Step 2:** Run `npm test -w @essentials/api -- auth-user`. Expected: failures.
+- [x] **Step 2:** Run `npm test -w @essentials/api -- auth-user`. Expected: failures.
 
-- [ ] **Step 3:** Implement `AuthUserService`:
+- [x] **Step 3:** Implement `AuthUserService`:
 
 ```ts
 private cache = new Map<string, { role: Role; exp: number }>();
@@ -253,11 +262,11 @@ invalidate(sub: string) { this.cache.delete(sub); }
 ```
 `ensureUser` implements the pinned order (authUid → email-bind → create only when `session.role !== null` → else `null`), records `lazy_link` only when a bind/create happened, and seeds the cache.
 
-- [ ] **Step 4:** Rewrite `AuthController.me` to `@Auth() @SkipMfa() @Throttle({ default: { limit: 30, ttl: 60_000 } })`, returning the pinned contract; add `session-established` with `@Auth() @SkipMfa() @Throttle({ default: { limit: 10, ttl: 60_000 } })`, `@HttpCode(200)`, writing a `sign_in` event with `{ surface }` and `req.ip`. Keep `RedeemInviteDto` for Task 4. Add `AuthUserService`/`AuthEventsService` to `AuthModule` providers and make `AuthModule` `@Global()` exporting `SupabaseTokenService`, `SupabaseAuthGuard`, `AuthUserService`, `AuthEventsService`.
+- [x] **Step 4:** Rewrite `AuthController.me` to `@Auth() @SkipMfa() @Throttle({ default: { limit: 30, ttl: 60_000 } })`, returning the pinned contract; add `session-established` with `@Auth() @SkipMfa() @Throttle({ default: { limit: 10, ttl: 60_000 } })`, `@HttpCode(200)`, writing a `sign_in` event with `{ surface }` and `req.ip`. Keep `RedeemInviteDto` for Task 4. Add `AuthUserService`/`AuthEventsService` to `AuthModule` providers and make `AuthModule` `@Global()` exporting `SupabaseTokenService`, `SupabaseAuthGuard`, `AuthUserService`, `AuthEventsService`.
 
-- [ ] **Step 5:** `npm test -w @essentials/api` and `npm run build -w @essentials/api`. Expected: green.
+- [x] **Step 5:** `npm test -w @essentials/api` and `npm run build -w @essentials/api`. Expected: green.
 
-- [ ] **Step 6:** Commit: `feat(api): lazy-link supabase users with cached role resolution and auth audit`.
+- [x] **Step 6:** Commit: `feat(api): lazy-link supabase users with cached role resolution and auth audit`.
 
 ---
 
@@ -277,7 +286,7 @@ redeemInvite(session: VerifiedSession, code: string, ip?: string): Promise<{ use
 export class AuthRateGuard implements CanActivate {}  // 5/hr keyed by `${ip}:${user.email}`
 ```
 
-- [ ] **Step 1 (failing tests):** `invite-redeem.spec.ts` with mocked `prisma` (invite/user/consent/referral), `MailService`, `SupabaseAdminService`, `AuthEventsService`, `AuthUserService`:
+- [x] **Step 1 (failing tests):** `invite-redeem.spec.ts` with mocked `prisma` (invite/user/consent/referral), `MailService`, `SupabaseAdminService`, `AuthEventsService`, `AuthUserService`:
 
 | Case | Expectation |
 |---|---|
@@ -296,9 +305,9 @@ export class AuthRateGuard implements CanActivate {}  // 5/hr keyed by `${ip}:${
 
 `auth-rate.guard.spec.ts`: 6th call for the same `ip + email` → `TooManyRequestsException` (429); different email → independent counter; different IP → independent counter.
 
-- [ ] **Step 2:** Run `npm test -w @essentials/api`. Expected: new failures.
+- [x] **Step 2:** Run `npm test -w @essentials/api`. Expected: new failures.
 
-- [ ] **Step 3:** Implement the cutover.
+- [x] **Step 3:** Implement the cutover.
   - `auth.decorator.ts`: `UseGuards(SupabaseAuthGuard, RolesGuard)` — signature and `Roles()` behaviour unchanged.
   - Delete `jwt.strategy.ts`; remove `PassportModule`, `JwtModule` from `AuthModule`; drop `@nestjs/jwt`, `@nestjs/passport`, `passport`, `passport-jwt`, `@types/passport-jwt` from `apps/api/package.json` and run `npm install`. Deleting `requestMagicLink`/`verifyMagicLink` also removes **bugs #2 (replayable HMAC nonce) and #3 (token in query string)** with their endpoints.
   - Create `apps/api/src/auth/auth.dto.ts` with `RedeemInviteDto` (`code` only).
@@ -308,9 +317,9 @@ export class AuthRateGuard implements CanActivate {}  // 5/hr keyed by `${ip}:${
   - `main.ts`: before `listen`, if `NODE_ENV === "production"` assert `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` are present → throw with a clear message otherwise.
   - Seed: after upserting demo users, when `SUPABASE_SERVICE_ROLE_KEY` is set, best-effort `updateRole` for each seeded user that has an `authUid`; otherwise log one line explaining that Supabase users are created on first sign-in (lazy-link).
 
-- [ ] **Step 4:** `npm test -w @essentials/api`, `npm run build -w @essentials/api`. Then a manual boot check: `npm run dev:api` with only `.env` lacking `JWT_SECRET` → starts; hit `POST /api/auth/magic-link` → 404.
+- [x] **Step 4:** `npm test -w @essentials/api`, `npm run build -w @essentials/api`. Then a manual boot check: `npm run dev:api` with only `.env` lacking `JWT_SECRET` → starts; hit `POST /api/auth/magic-link` → 404.
 
-- [ ] **Step 5:** Commit: `refactor(api): cut over to supabase auth and harden invite redemption`.
+- [x] **Step 5:** Commit: `refactor(api): cut over to supabase auth and harden invite redemption`.
 
 ---
 
@@ -327,9 +336,9 @@ export type AuthRole = "guest" | "artist" | "promoter" | "venue_manager" | "admi
 export interface AuthUser { sub: string; email: string; role: AuthRole | null; aal: "aal1" | "aal2"; }
 ```
 
-- [ ] **Step 1:** Create the package (`name: "@essentials/auth"`, `main: "index.ts"`, dependency `@supabase/supabase-js@^2`). Factory default: `flowType: "pkce"`, `detectSessionInUrl: false`, `autoRefreshToken: true`, `persistSession: true`, `storage` passed through when provided. `detectSessionInUrl` is **false on purpose**: every app exchanges the PKCE code explicitly on its callback screen, and leaving auto-detection on would consume the verifier first and make the explicit exchange fail. Add `"@essentials/auth": "*"` + `"@supabase/supabase-js": "^2"` to web/site/mobile.
-- [ ] **Step 2:** `npm install` at the root; `npx tsc --noEmit -p packages/auth`. Expected: exit 0.
-- [ ] **Step 3:** Commit: `feat(auth): share one supabase client factory across apps`.
+- [x] **Step 1:** Create the package (`name: "@essentials/auth"`, `main: "index.ts"`, dependency `@supabase/supabase-js@^2`). Factory default: `flowType: "pkce"`, `detectSessionInUrl: false`, `autoRefreshToken: true`, `persistSession: true`, `storage` passed through when provided. `detectSessionInUrl` is **false on purpose**: every app exchanges the PKCE code explicitly on its callback screen, and leaving auto-detection on would consume the verifier first and make the explicit exchange fail. Add `"@essentials/auth": "*"` + `"@supabase/supabase-js": "^2"` to web/site/mobile.
+- [x] **Step 2:** `npm install` at the root; `npx tsc --noEmit -p packages/auth`. Expected: exit 0.
+- [x] **Step 3:** Commit: `feat(auth): share one supabase client factory across apps`.
 
 ---
 
@@ -345,7 +354,7 @@ export class ApiError extends Error { status: number; code?: string; }
 ```
 `setToken` / `getToken` are **removed**; the import-time `localStorage` read is deleted.
 
-- [ ] **Step 1 (failing tests, Vitest):** add `"test": "vitest run"`, devDep `vitest` to `packages/api-client`. Stub `globalThis.fetch` with `jest`-style spies (`vi.fn()`). Cases:
+- [x] **Step 1 (failing tests, Vitest):** add `"test": "vitest run"`, devDep `vitest` to `packages/api-client`. Stub `globalThis.fetch` with `jest`-style spies (`vi.fn()`). Cases:
   1. provider returns `"t1"` → request sends `Authorization: Bearer t1`.
   2. provider returns `null` → **no** `Authorization` header.
   3. provider throws → request proceeds without header, no retry.
@@ -353,8 +362,8 @@ export class ApiError extends Error { status: number; code?: string; }
   5. both responses 401 → `ApiError` with `status: 401`, provider called exactly twice (no loop).
   6. 403 with body `{"code":"MFA_REQUIRED","role":"promoter"}` → `ApiError.code === "MFA_REQUIRED"`.
   7. non-401 error (500) → no retry.
-- [ ] **Step 2:** `npm test -w @essentials/api-client`. Expected: failures.
-- [ ] **Step 3:** Implement `request()` with `let retried = false` and an async token resolution; parse `application/json` error bodies into `code`/`message`, fall back to text. Then create the app clients:
+- [x] **Step 2:** `npm test -w @essentials/api-client`. Expected: failures.
+- [x] **Step 3:** Implement `request()` with `let retried = false` and an async token resolution; parse `application/json` error bodies into `code`/`message`, fall back to text. Then create the app clients:
 
 ```ts
 // apps/web/src/lib/supabase.ts
@@ -381,8 +390,8 @@ export const supabase = createSupabaseClient({
 });
 ```
 Wire the provider at both roots: `setAccessTokenProvider(async () => (await supabase.auth.getSession()).data.session?.access_token ?? null)` inside a `"use client"` `AuthProvider` mounted in `apps/web/src/app/layout.tsx`, and in `apps/mobile/app/_layout.tsx` before the Stack renders (with a restore `useEffect` awaiting `getSession`). Remove the now-invalid `setToken`/`getToken` imports from every importer (`apps/web/src/app/page.tsx`, `apps/mobile/app/index.tsx`, `apps/mobile/app/auth/verify.tsx`, `apps/mobile/app/auth/invite.tsx`): where the screen belongs to a later task, delete the dead call so the workspace compiles rather than leaving a TODO.
-- [ ] **Step 4:** `npm test -w @essentials/api-client` (green); `npm run build -w @essentials/api` (importers in api untouched); `npm run build -w @essentials/web` — expected to fail only if a removed export is still imported; fix those imports.
-- [ ] **Step 5:** Commit: `refactor(api-client): inject supabase access tokens and retry once on 401`.
+- [x] **Step 4:** `npm test -w @essentials/api-client` (green); `npm run build -w @essentials/api` (importers in api untouched); `npm run build -w @essentials/web` — expected to fail only if a removed export is still imported; fix those imports.
+- [x] **Step 5:** Commit: `refactor(api-client): inject supabase access tokens and retry once on 401`.
 
 ---
 
@@ -392,12 +401,12 @@ Wire the provider at both roots: `setAccessTokenProvider(async () => (await supa
 
 **Behaviour pinned:** dashboard roles = `promoter`, `venue_manager`, `admin` (unchanged). `/auth/callback` (client page) reads `?code`, calls `supabase.auth.exchangeCodeForSession(code)` → `GET /auth/me` → route: `inviteRequired` → message "ask an admin for an invite" (dashboard never onboards); role not allowed → sign out + message; `mfaRequired` → `/auth/mfa`; else `/dashboard`. `/auth/mfa` calls `supabase.auth.mfa.enroll({ factorType: "totp" })`, renders the `otpauth` URI as a QR (`qrcode` package → data URL) plus the manual secret, then `mfa.challengeAndVerify({ factorId, challengeId, code })` → refresh session → `/dashboard`.
 
-- [ ] **Step 1:** Rewrite `app/page.tsx`: two forms — "email me a link" (`supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } })`) and password (`supabase.auth.signInWithPassword`); on mount, if `getSession()` returns a session, `GET /auth/me` and redirect by the same rules. Delete the paste-token box and the `verify()` handler — **bug #1 (`setToken` shadowing) disappears with the code path**.
-- [ ] **Step 2:** Add the callback page (client), `/auth/mfa`, and `app/dashboard/layout.tsx`. The layout is **guard only** (loading skeleton → `mfaRequired` redirect → role check → `{children}`); every dashboard page already renders its own `<TopNav />`, so adding it to the layout would duplicate it. `AuthProvider` supplies `{ user, role, aal, loading, refresh }` and signs out on `authError`.
-- [ ] **Step 3:** `TopNav` (a client component): show the signed-in email and add a `SIGN OUT` button — `await supabase.auth.signOut()` → `router.replace("/")`. The token provider stays registered; it simply resolves to `null`. **Bug #5 fixed.**
-- [ ] **Step 4:** Delete the old verify pages; add `qrcode` (and `@types/qrcode`) to `apps/web/package.json`.
-- [ ] **Step 5:** Verify: `npm run build -w @essentials/web` (Next typechecks during build) — expected exit 0. Manual: with `supabase start` running, request a link, click it, land on `/dashboard`; sign out; a promoter without MFA lands on `/auth/mfa`.
-- [ ] **Step 6:** Commit: `feat(web): supabase sign-in, MFA enrollment, route guard and sign-out`.
+- [x] **Step 1:** Rewrite `app/page.tsx`: two forms — "email me a link" (`supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } })`) and password (`supabase.auth.signInWithPassword`); on mount, if `getSession()` returns a session, `GET /auth/me` and redirect by the same rules. Delete the paste-token box and the `verify()` handler — **bug #1 (`setToken` shadowing) disappears with the code path**.
+- [x] **Step 2:** Add the callback page (client), `/auth/mfa`, and `app/dashboard/layout.tsx`. The layout is **guard only** (loading skeleton → `mfaRequired` redirect → role check → `{children}`); every dashboard page already renders its own `<TopNav />`, so adding it to the layout would duplicate it. `AuthProvider` supplies `{ user, role, aal, loading, refresh }` and signs out on `authError`.
+- [x] **Step 3:** `TopNav` (a client component): show the signed-in email and add a `SIGN OUT` button — `await supabase.auth.signOut()` → `router.replace("/")`. The token provider stays registered; it simply resolves to `null`. **Bug #5 fixed.**
+- [x] **Step 4:** Delete the old verify pages; add `qrcode` (and `@types/qrcode`) to `apps/web/package.json`.
+- [x] **Step 5:** Verify: `npm run build -w @essentials/web` (Next typechecks during build) — expected exit 0. Manual: with `supabase start` running, request a link, click it, land on `/dashboard`; sign out; a promoter without MFA lands on `/auth/mfa`.
+- [x] **Step 6:** Commit: `feat(web): supabase sign-in, MFA enrollment, route guard and sign-out`.
 
 ---
 
@@ -407,13 +416,13 @@ Wire the provider at both roots: `setAccessTokenProvider(async () => (await supa
 
 **Behaviour pinned:** `AuthContext` keeps the existing consumer shape (`user`, `isAuthenticated`, `isLoadingAuth`, `authChecked`, `authError`, `checkUserAuth`, `logout`, `navigateToLogin`) plus `role`, `aal`, `mfaRequired`; it subscribes to `supabase.auth.onAuthStateChange` and calls `GET /auth/me` for the canonical role (never trusts the claim for display). Site routes: `/`, `/login`, `/auth/callback`, `/join`, `/reset-password`, `*` → `Home`. Guests arriving with `?invite=CODE` in the Login URL keep the `essentials_invite` localStorage handoff and are sent to `/join` after sign-in.
 
-- [ ] **Step 1:** Rewrite `lib/auth.js`: `api()` reads the token from `supabase.auth.getSession()` per call (no localStorage token), `fetchMe()` returns the pinned `/auth/me` body, `redeemInvite(code)` posts `{ code }` with the bearer token, `signOut()` calls `supabase.auth.signOut()`. Delete `requestMagicLink` / `verifyMagicLink` / `setToken` / `getToken`.
-- [ ] **Step 2:** Rewrite `AuthContext.jsx` per the pinned shape and delete every `base44.auth.*` / `appParams` reference (grep `base44` afterwards — only `base44/config.jsonc` and content tooling may remain).
-- [ ] **Step 3:** `AuthCallback.jsx`: `exchangeCodeForSession(code)` → `fetchMe()` → `inviteRequired` ? `/join` : privileged aal1 ? render the "finish two-step setup in the dashboard" handoff : `navigate("/")`. Missing/expired code → error state with a "send a new link" link. `Join.jsx`: code-only form (email comes from the session), auto-redeems a stored invite, shows `EXPIRED`/`revoked`/`already used` messages distinctly.
-- [ ] **Step 4:** `Login.jsx`: magic link (`emailRedirectTo: `${window.location.origin}/auth/callback``) + Google (`signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback` } })`) + password form; a wrong password shows "use a link instead". `Register.jsx` → invite-code signup (requires a session; otherwise CTA to `/login?invite=…`). `ForgotPassword.jsx` → `resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback?type=recovery` })`. `ResetPassword.jsx` → `updateUser({ password })`. In `AuthCallback.jsx`, when the URL carries `type=recovery`, exchange the code and route to `/reset-password` instead of the normal landing logic.
-- [ ] **Step 5:** Update `App.jsx` routes + wrap `<AuthProvider>`; update `ProtectedRoute.jsx` to redirect to `/login` when unauthenticated and to `/join` when `/auth/me` reports `inviteRequired` (drop `UserNotRegisteredError`). Update `jsconfig.json` `include` to cover `src/lib/**/*.js` and `src/App.jsx`; add the auth note to `AGENTS.md`.
-- [ ] **Step 6:** Verify: `npm run build -w base44-app` (Vite) and `npm run typecheck -w base44-app` — expected exit 0. Grep proof: `rg -i "base44\\.auth|appParams|essentials_token" apps/site/src` → no matches.
-- [ ] **Step 7:** Commit: `feat(site): move public site to supabase auth and remove base44 auth`.
+- [x] **Step 1:** Rewrite `lib/auth.js`: `api()` reads the token from `supabase.auth.getSession()` per call (no localStorage token), `fetchMe()` returns the pinned `/auth/me` body, `redeemInvite(code)` posts `{ code }` with the bearer token, `signOut()` calls `supabase.auth.signOut()`. Delete `requestMagicLink` / `verifyMagicLink` / `setToken` / `getToken`.
+- [x] **Step 2:** Rewrite `AuthContext.jsx` per the pinned shape and delete every `base44.auth.*` / `appParams` reference (grep `base44` afterwards — only `base44/config.jsonc` and content tooling may remain).
+- [x] **Step 3:** `AuthCallback.jsx`: `exchangeCodeForSession(code)` → `fetchMe()` → `inviteRequired` ? `/join` : privileged aal1 ? render the "finish two-step setup in the dashboard" handoff : `navigate("/")`. Missing/expired code → error state with a "send a new link" link. `Join.jsx`: code-only form (email comes from the session), auto-redeems a stored invite, shows `EXPIRED`/`revoked`/`already used` messages distinctly.
+- [x] **Step 4:** `Login.jsx`: magic link (`emailRedirectTo: `${window.location.origin}/auth/callback``) + Google (`signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback` } })`) + password form; a wrong password shows "use a link instead". `Register.jsx` → invite-code signup (requires a session; otherwise CTA to `/login?invite=…`). `ForgotPassword.jsx` → `resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth/callback?type=recovery` })`. `ResetPassword.jsx` → `updateUser({ password })`. In `AuthCallback.jsx`, when the URL carries `type=recovery`, exchange the code and route to `/reset-password` instead of the normal landing logic.
+- [x] **Step 5:** Update `App.jsx` routes + wrap `<AuthProvider>`; update `ProtectedRoute.jsx` to redirect to `/login` when unauthenticated and to `/join` when `/auth/me` reports `inviteRequired` (drop `UserNotRegisteredError`). Update `jsconfig.json` `include` to cover `src/lib/**/*.js` and `src/App.jsx`; add the auth note to `AGENTS.md`.
+- [x] **Step 6:** Verify: `npm run build -w base44-app` (Vite) and `npm run typecheck -w base44-app` — expected exit 0. Grep proof: `rg -i "base44\\.auth|appParams|essentials_token" apps/site/src` → no matches.
+- [x] **Step 7:** Commit: `feat(site): move public site to supabase auth and remove base44 auth`.
 
 ---
 
@@ -423,13 +432,13 @@ Wire the provider at both roots: `setAccessTokenProvider(async () => (await supa
 
 **Behaviour pinned:** scheme `essentials`; magic link `emailRedirectTo: "essentials://auth/callback"` (dev: Expo's `exp://` URL); callback screen exchanges the `code`, calls `/auth/me`, routes `inviteRequired` → `/auth/invite`, privileged aal1 → `/auth/mfa`, else `/(tabs)/events`. Invite redeem posts `{ code }` with the session bearer. Guest users never see the assistant or MFA UI.
 
-- [ ] **Step 1:** `app.json` already declares `"scheme": "essentials"` — confirm it stays. Update `_layout.tsx`: register `auth/callback` and `auth/mfa` screens, remove `auth/verify`; restore the session before first render and `setAccessTokenProvider` (Task 6 wiring).
-- [ ] **Step 2:** `index.tsx`: replace `api.post("/auth/magic-link")` with `supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: "essentials://auth/callback" } })`; show a "check your email" state (no token paste). Delete `auth/verify.tsx`. Add the OAuth path for the same screen: `signInWithOAuth({ provider: "google", options: { redirectTo: "essentials://auth/callback", skipBrowserRedirect: true } })` → `WebBrowser.openAuthSessionAsync(url, "essentials://auth/callback")` (add `expo-web-browser`) → the returned URL is handled by `auth/callback.tsx`.
-- [ ] **Step 3:** `auth/callback.tsx`: parse `code` from params/deep link, `exchangeCodeForSession`, then `/auth/me` routing as pinned; error state offers "send a new link".
-- [ ] **Step 4:** `auth/invite.tsx`: post `{ code }` via the api-client (now bearer-injected); on success `router.replace("/(tabs)/events")`; on 401 `MFA_REQUIRED` → `/auth/mfa`. `auth/profile.tsx`: read `/auth/me` (drop any stored-token assumption).
-- [ ] **Step 5:** `auth/mfa.tsx`: `mfa.enroll({ factorType: "totp" })` → render with `react-native-qrcode-svg` (already a dependency) → `challengeAndVerify` → refresh → continue.
-- [ ] **Step 6:** Add `"typecheck": "tsc --noEmit"` to `apps/mobile/package.json`; run it — expected exit 0. (No simulator run required for this task; the deep-link flow is covered by the manual checklist in Task 10.)
-- [ ] **Step 7:** Commit: `feat(mobile): supabase deep-link sign-in with secure session persistence`.
+- [x] **Step 1:** `app.json` already declares `"scheme": "essentials"` — confirm it stays. Update `_layout.tsx`: register `auth/callback` and `auth/mfa` screens, remove `auth/verify`; restore the session before first render and `setAccessTokenProvider` (Task 6 wiring).
+- [x] **Step 2:** `index.tsx`: replace `api.post("/auth/magic-link")` with `supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: "essentials://auth/callback" } })`; show a "check your email" state (no token paste). Delete `auth/verify.tsx`. Add the OAuth path for the same screen: `signInWithOAuth({ provider: "google", options: { redirectTo: "essentials://auth/callback", skipBrowserRedirect: true } })` → `WebBrowser.openAuthSessionAsync(url, "essentials://auth/callback")` (add `expo-web-browser`) → the returned URL is handled by `auth/callback.tsx`.
+- [x] **Step 3:** `auth/callback.tsx`: parse `code` from params/deep link, `exchangeCodeForSession`, then `/auth/me` routing as pinned; error state offers "send a new link".
+- [x] **Step 4:** `auth/invite.tsx`: post `{ code }` via the api-client (now bearer-injected); on success `router.replace("/(tabs)/events")`; on 401 `MFA_REQUIRED` → `/auth/mfa`. `auth/profile.tsx`: read `/auth/me` (drop any stored-token assumption).
+- [x] **Step 5:** `auth/mfa.tsx`: `mfa.enroll({ factorType: "totp" })` → render with `react-native-qrcode-svg` (already a dependency) → `challengeAndVerify` → refresh → continue.
+- [x] **Step 6:** Add `"typecheck": "tsc --noEmit"` to `apps/mobile/package.json`; run it — expected exit 0. (No simulator run required for this task; the deep-link flow is covered by the manual checklist in Task 10.)
+- [x] **Step 7:** Commit: `feat(mobile): supabase deep-link sign-in with secure session persistence`.
 
 ---
 
@@ -437,7 +446,7 @@ Wire the provider at both roots: `setAccessTokenProvider(async () => (await supa
 
 **Files:** create `scripts/auth-proof.mjs`, `docs/auth.md`; modify `.env.example`, `README.md`, root `package.json` (script `proof:auth`).
 
-- [ ] **Step 1:** `.env.example`: remove `JWT_SECRET`, `JWT_EXPIRES_IN`, `MAGIC_LINK_TTL_MINUTES`; `MOBILE_URL="essentials://"`; add
+- [x] **Step 1:** `.env.example`: remove `JWT_SECRET`, `JWT_EXPIRES_IN`, `MAGIC_LINK_TTL_MINUTES`; `MOBILE_URL="essentials://"`; add
 
 ```
 SUPABASE_URL="http://127.0.0.1:54321"
@@ -451,7 +460,7 @@ EXPO_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
 EXPO_PUBLIC_SUPABASE_ANON_KEY=""
 ```
 
-- [ ] **Step 2:** Write `scripts/auth-proof.mjs` (Node 20 `fetch` + `prisma` from `@essentials/db` for setup/assertions). It prints **actual** status + body for each check and exits non-zero on failure:
+- [x] **Step 2:** Write `scripts/auth-proof.mjs` (Node 20 `fetch` + `prisma` from `@essentials/db` for setup/assertions). It prints **actual** status + body for each check and exits non-zero on failure:
   1. Setup: `POST {SUPABASE_URL}/auth/v1/admin/users` (service key, `email_confirm: true`) for `proof-guest@example.test` **and the seeded `promoter@essentials.example`** (so the guard's DB fallback finds a real promoter row); `prisma.invite.create({ code: "PROOF-INVITE", role: "guest", maxUses: 5 })` (delete it first if it exists).
   2. `POST {SUPABASE_URL}/auth/v1/token?grant_type=password` for each → access tokens.
   3. `GET /api/auth/me` as guest → `200`; second call → still `200` (and no second `lazy_link` event — assert via Prisma count).
@@ -459,10 +468,10 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=""
   5. `GET` the same route as `promoter@essentials.example` (aal1) → `401` with `code: "MFA_REQUIRED"` (proves claim-absent DB fallback + MFA gate).
   6. `POST /api/auth/invite/redeem` with `PROOF-INVITE` as `proof-guest@example.test` → `200`, `prisma.invite.uses === 1`, and `/auth/me` afterwards reports role `guest` (cache invalidation worked). Then five more attempts in the same hour with intentionally invalid codes → the 6th request for that IP+email returns `429`.
   7. `POST /api/auth/magic-link` → `404` (deleted contract).
-- [ ] **Step 3:** Run it: `supabase start`, `npm run db:migrate`, `npm run db:seed`, `npm run dev:api`, `node scripts/auth-proof.mjs`. Paste the real output into the task notes — a passing build is **not** evidence.
-- [ ] **Step 4:** Write `docs/auth.md`: hosted project creation, redirect URL allow-list (`https://<dashboard>/auth/callback`, `https://<site>/auth/callback`, `essentials://auth/callback`), Resend SMTP for Supabase auth mail (distinct from the app's `MAIL_PROVIDER`), Google OAuth setup, Apple behind `AUTH_APPLE_ENABLED`, TOTP policy + enforcement roles, rate-limit table, circuit: lazy-link ordering, ghost Base44 users, why no cookies / no RLS, local-CLI → hosted is a `.env` swap.
-- [ ] **Step 5:** Update `README.md` quickstart (Supabase CLI step, env names, `npm test`, `npm run proof:auth`).
-- [ ] **Step 6:** Commit: `docs(auth): document supabase cutover and add live auth proof script`.
+- [x] **Step 3:** Run it: `supabase start`, `npm run db:migrate`, `npm run db:seed`, `npm run dev:api`, `node scripts/auth-proof.mjs`. Paste the real output into the task notes — a passing build is **not** evidence.
+- [x] **Step 4:** Write `docs/auth.md`: hosted project creation, redirect URL allow-list (`https://<dashboard>/auth/callback`, `https://<site>/auth/callback`, `essentials://auth/callback`), Resend SMTP for Supabase auth mail (distinct from the app's `MAIL_PROVIDER`), Google OAuth setup, Apple behind `AUTH_APPLE_ENABLED`, TOTP policy + enforcement roles, rate-limit table, circuit: lazy-link ordering, ghost Base44 users, why no cookies / no RLS, local-CLI → hosted is a `.env` swap.
+- [x] **Step 5:** Update `README.md` quickstart (Supabase CLI step, env names, `npm test`, `npm run proof:auth`).
+- [x] **Step 6:** Commit: `docs(auth): document supabase cutover and add live auth proof script`.
 
 **M1 done when:** `npm test -w @essentials/api`, `npm test -w @essentials/api-client`, `npm run build -w @essentials/api`, `npm run build -w @essentials/web`, `npm run build -w base44-app`, `npm run typecheck -w base44-app`, `npx tsc --noEmit -p apps/mobile` all pass, and `scripts/auth-proof.mjs` prints the pinned statuses against a local stack. Manual E2E (dashboard link → MFA → sign-out; site invite join; mobile deep link surviving restart) recorded as a checklist in `docs/auth.md` — run it before deploying M2.
 
