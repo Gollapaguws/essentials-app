@@ -14,9 +14,9 @@ export default function Home() {
       <SiteNav />
       <main>
         <HeroCinema />
+        <LivePanel />
         <LineupStrip events={content.events} />
         <ManifestoQuote />
-        <LivePanel />
       </main>
       <SiteFooter />
     </div>
