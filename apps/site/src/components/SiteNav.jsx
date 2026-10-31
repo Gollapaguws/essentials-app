@@ -15,8 +15,8 @@ export default function SiteNav() {
   const [role, setRole] = useState(null);
 
   useEffect(() => {
-    fetchMe().then((u) => { setLoggedIn(!!u); setRole(u?.role ?? null); });
-    const onStorage = () => fetchMe().then((u) => { setLoggedIn(!!u); setRole(u?.role ?? null); });
+    fetchMe().then((me) => { setLoggedIn(!!me); setRole(me?.user?.role ?? null); });
+    const onStorage = () => fetchMe().then((me) => { setLoggedIn(!!me); setRole(me?.user?.role ?? null); });
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
