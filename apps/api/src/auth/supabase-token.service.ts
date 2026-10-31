@@ -1,5 +1,6 @@
 import { Inject, Injectable, Optional, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Logger } from "@nestjs/common";
 import {
   createRemoteJWKSet,
   jwtVerify,
@@ -26,6 +27,7 @@ export interface VerifiedSession {
  */
 @Injectable()
 export class SupabaseTokenService {
+  private readonly logger = new Logger(SupabaseTokenService.name);
   private readonly issuer: string;
   private readonly keySet: JWTVerifyGetKey;
 
@@ -59,7 +61,8 @@ export class SupabaseTokenService {
         role: typeof claimed === "string" && ROLES.includes(claimed as Role) ? (claimed as Role) : null,
         aal: payload.aal === "aal2" ? "aal2" : "aal1",
       };
-    } catch {
+    } catch (e) {
+      this.logger?.warn?.(`jwtVerify failed: ${(e as Error).name} ${(e as Error).message} ${(e as { code?: string }).code ?? ""}`);
       throw new UnauthorizedException("Invalid or expired token");
     }
   }
