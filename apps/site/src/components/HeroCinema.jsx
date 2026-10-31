@@ -1,10 +1,11 @@
 import GoldWordmark from "@/components/GoldWordmark";
 import HeroSlider from "@/components/HeroSlider";
-import { slides } from "@/data/siteContent";
+import { slides as defaultSlides } from "@/data/siteContent";
 import { useSiteContent } from "@/lib/useSiteContent";
 
 export default function HeroCinema() {
   const c = useSiteContent();
+  const slides = c.heroSlides?.length ? c.heroSlides : defaultSlides;
   return (
     <section id="top" className="noir-hero">
       <div className="noir-bar noir-bar-top">

@@ -54,6 +54,7 @@ export default function EventManager() {
                 <th className="text-left px-4 py-3">Date</th>
                 <th className="text-left px-4 py-3">Status</th>
                 <th className="text-left px-4 py-3">Guests</th>
+                <th className="text-left px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -64,6 +65,10 @@ export default function EventManager() {
                   <td className="px-4 py-3">{new Date(e.date).toLocaleDateString()}</td>
                   <td className="px-4 py-3"><span className={e.status === "approved" || e.status === "live" ? "text-neon" : "text-neutral-400"}>{e.status}</span></td>
                   <td className="px-4 py-3">{e._count.guestLists}/{e.capacity}</td>
+                  <td className="px-4 py-3 space-x-2">
+                    <button onClick={async () => { await api.post(`/events/${e.id}/clone`); load(); }} className="text-neon underline text-xs">Clone</button>
+                    <a href={`${process.env.NEXT_PUBLIC_API_URL}/events/${e.id}/guest-list.csv`} className="text-neutral-300 underline text-xs">CSV</a>
+                  </td>
                 </tr>
               ))}
               {!events.length && (

@@ -1,4 +1,6 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
+import { MailService } from "../mail/mail.service";
+import { emailTemplates, wrapTemplate } from "../mail/templates";
 import { prisma } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 
@@ -6,6 +8,7 @@ const LOYALTY_TARGET = 5; // 5 visits -> free entry
 
 @Injectable()
 export class LoyaltyService {
+  constructor(private mail: MailService) {}
   /** "3/5 events â€” 2 to free entry" */
   async status(user: JwtUser) {
     const visits = await prisma.loyaltyVisit.count({ where: { userId: user.sub, freeEntryAwarded: false } });
@@ -41,8 +44,25 @@ export class LoyaltyService {
   async recordVisit(userId: string, eventId: string) {
     if (await prisma.loyaltyVisit.findUnique({ where: { userId_eventId: { userId, eventId } } })) return;
     const count = await prisma.loyaltyVisit.count({ where: { userId } });
+    const awarded = (count + 1) % LOYALTY_TARGET === 0;
     await prisma.loyaltyVisit.create({
-      data: { userId, eventId, visits: count + 1, freeEntryAwarded: (count + 1) % LOYALTY_TARGET === 0 },
+      data: { userId, eventId, visits: count + 1, freeEntryAwarded: awarded },
     });
+    if (awarded) {
+      // auto-issue the free-entry reward by email
+      const user = await prisma.user.findUnique({ where: { id: userId }, include: { consentRecords: true } });
+      if (user) {
+        const consent = user.consentRecords.find((c) => c.channel === "email");
+        if (consent?.status === "granted") {
+          const appUrl = process.env.APP_URL ?? "https://essentialsedm.com";
+          const html = `<h1 style="color:#00FF66;letter-spacing:2px;font-size:22px">FREE ENTRY EARNED</h1>
+            <p>${user.name ?? "there"}, ${LOYALTY_TARGET} visits done. Show this code at the door:</p>
+            <p style="font-size:20px;font-weight:bold;letter-spacing:3px">${user.referralCode}</p>`;
+          try {
+            await this.mail.send({ to: user.email, subject: "Your free entry — ESSENTIALS", html: wrapTemplate(html) });
+          } catch {}
+        }
+      }
+    }
   }
 }

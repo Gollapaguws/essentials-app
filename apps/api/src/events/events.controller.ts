@@ -1,6 +1,9 @@
 import { Controller, Get, Post, Body, Param, Delete, Patch, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { EventsService } from "./events.service";
+import { EventToolsService } from "./event-tools.service";
+import type { Response } from "express";
+import { Res } from "@nestjs/common";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { IsInt, IsOptional, IsString, Min } from "class-validator";
@@ -25,7 +28,7 @@ class CreateEventDto {
 @Controller("events")
 @UseGuards(AuthGuard("jwt"))
 export class EventsController {
-  constructor(private events: EventsService) {}
+  constructor(private events: EventsService, private tools: EventToolsService) {}
 
   @Get()
   feed() {
@@ -67,6 +70,18 @@ export class EventsController {
   @Auth("promoter", "venue_manager")
   update(@Param("id") id: string, @CurrentUser() user: JwtUser, @Body() data: Record<string, unknown>) {
     return this.events.update(user, id, data);
+  }
+
+  @Post(":id/clone")
+  @Auth("promoter")
+  clone(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.tools.clone(user, id);
+  }
+
+  @Get(":id/guest-list.csv")
+  @Auth("promoter", "venue_manager")
+  exportCsv(@Param("id") id: string, @CurrentUser() user: JwtUser, @Res() res: Response) {
+    return this.tools.exportCsv(user, id, res);
   }
 
   @Get("manage/list")

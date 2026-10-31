@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
+import { Injectable, BadRequestException, Logger } from "@nestjs/common";
 import { prisma } from "@essentials/db";
 import { IsArray, IsIn, IsOptional, IsString, MaxLength, MinLength, validateSync } from "class-validator";
 
@@ -13,6 +13,9 @@ export class FrontPageContent {
   @IsOptional() @IsArray() @MaxLength(50) events?: FrontPageEvent[];
   @IsOptional() @IsString() @MaxLength(120) footerLeft?: string;
   @IsOptional() @IsString() @MaxLength(120) footerRight?: string;
+  @IsOptional() @IsArray() @MaxLength(20) heroSlides?: string[];
+  @IsOptional() @IsArray() @MaxLength(20) visuals?: { src: string; label: string }[];
+  @IsOptional() @IsString() @MaxLength(30) lineupPublishAt?: string;
 }
 
 class FrontPageEvent {
@@ -29,9 +32,16 @@ const KEY = "front_page";
 
 @Injectable()
 export class SiteContentService {
+  private readonly logger = new Logger(SiteContentService.name);
+
   async get() {
     const row = await prisma.siteContent.findUnique({ where: { key: KEY } });
-    return { ...(row ? (row.value as object) : {}), updatedAt: row?.updatedAt ?? null };
+    const value = (row?.value ?? {}) as Record<string, unknown>;
+    const publishAt = value["lineupPublishAt"] as string | undefined;
+    if (publishAt && new Date(publishAt) > new Date() && Array.isArray(value["events"])) {
+      value["events"] = []; // scheduled drop — hidden until publish time
+    }
+    return { ...value, updatedAt: row?.updatedAt ?? null };
   }
 
   async save(input: FrontPageContent) {

@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit, Optional, Inject } from "@nestjs/comm
 import { Interval } from "@nestjs/schedule";
 import { getQueueToken } from "@nestjs/bullmq";
 import type { Queue } from "bullmq";
+import { RetentionService } from "../site/retention.service";
 import { prisma, EventStatus } from "@essentials/db";
 
 /**
@@ -12,10 +13,26 @@ import { prisma, EventStatus } from "@essentials/db";
 export class RemindersService implements OnModuleInit {
   private readonly logger = new Logger(RemindersService.name);
 
-  constructor(@Optional() @Inject(getQueueToken("email")) private emailQueue?: Queue) {}
+  constructor(
+    @Optional() @Inject(getQueueToken("email")) private emailQueue?: Queue,
+    private retention?: RetentionService,
+  ) {}
 
   async onModuleInit() {
     this.logger.log("reminder scheduler ready");
+  }
+
+  /** Daily retention automations: taste matches + post-event follow-ups. */
+  @Interval(3_600_000)
+  async retentionSweep() {
+    if (!this.retention) return;
+    try {
+      const taste = await this.retention.sendTasteMatches();
+      const post = await this.retention.sendPostEventEmails();
+      if (taste.sent || post.sent) this.logger.log(`retention sweep: taste=${taste.sent} post=${post.sent}`);
+    } catch (e) {
+      this.logger.error(`retention sweep failed: ${(e as Error).message}`);
+    }
   }
 
   @Interval(600_000)

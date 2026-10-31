@@ -135,6 +135,7 @@ model Venue {
 
 model Event {
   id                      String          @id @default(cuid())
+  genres                  String[]        @default([])
   venueId                 String
   promoterId              String
   title                   String
@@ -449,6 +450,18 @@ model DoorLog {
   createdAt DateTime @default(now())
 
   @@index([venueId, createdAt])
+}
+
+// ===== Front-page content (admin editor) =====
+model SiteVisit {
+  id         String @id @default(cuid())
+  visitorKey String
+  path       String
+  day        String
+  views      Int    @default(1)
+
+  @@unique([visitorKey, path, day])
+  @@index([day])
 }
 
 // ===== Front-page content (admin editor) =====

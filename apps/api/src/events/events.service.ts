@@ -3,11 +3,12 @@ import { createHmac } from "crypto";
 import { prisma, GuestListStatus, EventStatus } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 import { ConfigService } from "@nestjs/config";
+import { LoyaltyService } from "../loyalty/loyalty.service";
 
 /** Every query is role-scoped: guests see own data, promoters their events, venue managers their venues, admin all. */
 @Injectable()
 export class EventsService {
-  constructor(private config: ConfigService) {}
+  constructor(private config: ConfigService, private loyalty: LoyaltyService) {}
 
   private qrSecret() {
     return this.config.getOrThrow<string>("JWT_SECRET");
@@ -162,6 +163,7 @@ export class EventsService {
     await prisma.doorLog.create({
       data: { venueId: entry.event.venueId, eventId: entry.eventId, scannedBy: user.sub, qrToken, result: "ok" },
     });
+    void this.loyalty.recordVisit(decoded.userId, decoded.eventId);
     return { result: "ok" as const, guest: entry.user.name, headcount: entry.headcount };
   }
 

@@ -5,6 +5,7 @@ import { EmailEngineService } from "./email-engine.service";
 import { EmailSenderService } from "./email-sender.service";
 import { EmailProcessor } from "./email.processor";
 import { RemindersService } from "./reminders.service";
+import { SiteModule } from "../site/site.module";
 
 /**
  * Email engine module. With REDIS_URL set, sends go through BullMQ (worker +
@@ -19,12 +20,12 @@ export class EmailEngineModule {
 
     return {
       module: EmailEngineModule,
-      imports: useRedis
-        ? [
-            BullModule.forRoot({ connection: { url: process.env.REDIS_URL } }),
-            BullModule.registerQueue({ name: "email" }),
-          ]
-        : [],
+      imports: [
+        ...(useRedis
+          ? [BullModule.forRoot({ connection: { url: process.env.REDIS_URL } }), BullModule.registerQueue({ name: "email" })]
+          : []),
+        SiteModule,
+      ],
       controllers: [EmailEngineController],
       providers: [EmailEngineService, EmailSenderService, RemindersService, ...(useRedis ? [EmailProcessor] : [])],
     };
