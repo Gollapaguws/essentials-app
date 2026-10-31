@@ -20,6 +20,7 @@ import { PaymentsModule } from "./payments/payments.module";
 import { InsightsModule } from "./insights/insights.module";
 import { SiteModule } from "./site/site.module";
 import { LiveModule } from "./live/live.module";
+import { MailboxesModule } from "./mailboxes/mailboxes.module";
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { LiveModule } from "./live/live.module";
     InsightsModule,
     SiteModule,
     LiveModule,
+    MailboxesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
