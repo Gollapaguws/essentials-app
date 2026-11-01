@@ -36,10 +36,10 @@ export default function LivePanel() {
     if (!video || !hlsUrl) return;
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = status.hls;
+      video.src = hlsUrl;
     } else if (Hls.isSupported()) {
       const hls = new Hls({ lowLatencyMode: true, liveDurationInfinity: true });
-      hls.loadSource(status.hls);
+      hls.loadSource(hlsUrl);
       hls.attachMedia(video);
       hlsRef.current = hls;
     }
