@@ -7,5 +7,6 @@ import { SocialSchedulerService } from "./social-scheduler.service";
 @Module({
   controllers: [SocialController],
   providers: [SocialPublishService, SocialAgentService, SocialSchedulerService],
+  exports: [SocialPublishService],
 })
 export class SocialPostingModule {}
