@@ -512,3 +512,19 @@ model StreamTarget {
   createdBy String
   createdAt DateTime @default(now())
 }
+
+// ===== Social media posting hub =====
+model SocialPost {
+  id          String    @id @default(cuid())
+  content     String
+  platforms   String[]
+  mediaUrl    String?
+  status      String    @default("draft") // draft | scheduled | publishing | published | partial | failed
+  scheduledAt DateTime?
+  results     Json      @default("{}") // { platform: { status, detail } }
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, scheduledAt])
+}
