@@ -63,7 +63,7 @@ export class LiveController {
   encoderSettings() {
     const key = this.config.get("MELD_STREAM_KEY") ?? "";
     return {
-      server: "rtmp://essentialsedm.com:1935",
+      server: "rtmp://essentialsedm.com:443",
       streamKey: key,
       fullUrl: `rtmp://essentialsedm.com:1935/${key}`,
       viewerHls: "https://essentialsedm.com/hls/live.m3u8",
