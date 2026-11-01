@@ -52,6 +52,24 @@ export class ArtistsService {
     return prisma.artistProfile.create({ data: { userId: user.sub, ...data } });
   }
 
+  /** Gig calendar: approved upcoming events that the artist has not applied to. */
+  async openGigs(user: JwtUser) {
+    const profile = await prisma.artistProfile.findUnique({ where: { userId: user.sub } });
+    const applied = profile
+      ? (await prisma.artistBooking.findMany({ where: { artistId: profile.id }, select: { eventId: true } })).map((b) => b.eventId)
+      : [];
+    return prisma.event.findMany({
+      where: {
+        status: { in: ["approved", "live"] },
+        date: { gte: new Date() },
+        id: { notIn: applied },
+      },
+      include: { venue: { select: { name: true } } },
+      orderBy: { date: "asc" },
+      take: 50,
+    });
+  }
+
   /** Upcoming confirmed/pending gigs for the signed-in artist. */
   async myGigs(user: JwtUser) {
     const profile = await this.requireProfile(user);

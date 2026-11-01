@@ -1,10 +1,16 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
 import { prisma, EventStatus } from "@essentials/db";
+import { NotificationsService } from "../notifications/notifications.service";
+import { DjBookingService } from "../artists/dj-booking.service";
 import type { JwtUser } from "../common/roles.guard";
 
 /** Phase 2 venue portal backend. All queries scoped: managers see only their venues; admin all. */
 @Injectable()
 export class VenuesService {
+  constructor(
+    private notifications: NotificationsService,
+    private djBooking: DjBookingService,
+  ) {}
   private async assertManager(venueId: string, user: JwtUser) {
     const venue = await prisma.venue.findUnique({ where: { id: venueId } });
     if (!venue) throw new NotFoundException("Venue not found");
@@ -37,13 +43,41 @@ export class VenuesService {
     if (!event) throw new NotFoundException("Event not found");
     if (user.role !== "admin" && event.venue.managerId !== user.sub) throw new ForbiddenException();
     if (event.status !== EventStatus.pending_venue_approval) throw new BadRequestException("Event is not pending approval");
-    return prisma.event.update({
+    const updated = await prisma.event.update({
       where: { id: eventId },
       data: { status: approve ? EventStatus.approved : EventStatus.draft },
     });
+    if (approve) {
+      // notify all artists (DJ call) + post the event to the front-page lineup
+      void this.djBooking.announceToArtists(eventId).catch(() => null);
+      void this.postToLineup(updated).catch(() => null);
+    }
+    return updated;
   }
 
   /** Table inventory management. */
+  /** Auto-post an approved event into the front-page lineup (SiteContent.events). */
+  private async postToLineup(event: { id: string; title: string; date: Date; venueId: string }) {
+    const row = await prisma.siteContent.findUnique({ where: { key: "front_page" } });
+    const value = (row?.value ?? {}) as Record<string, unknown>;
+    const events = Array.isArray(value["events"]) ? (value["events"] as Record<string, string>[]) : [];
+    if (events.some((e) => e.eventId === event.id)) return;
+    const venue = await prisma.venue.findUnique({ where: { id: event.venueId } });
+    events.unshift({
+      eventId: event.id,
+      title: event.title,
+      displayDate: event.date.toDateString(),
+      city: "JOHANNESBURG",
+      venue: venue?.name ?? "TBA",
+      doors: "22:00",
+      price: "TBA",
+      status: "ANNOUNCED",
+    });
+    await prisma.siteContent.update({ where: { key: "front_page" }, data: { value: { ...value, events } as object } }).catch(async () => {
+      await prisma.siteContent.create({ data: { key: "front_page", value: { ...value, events } as object } });
+    });
+  }
+
   async listTables(user: JwtUser, venueId: string) {
     await this.assertManager(venueId, user);
     return prisma.venueTable.findMany({ where: { venueId }, orderBy: { tableNumber: "asc" } });

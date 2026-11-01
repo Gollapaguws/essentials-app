@@ -19,6 +19,7 @@ import { InsightsModule } from "./insights/insights.module";
 import { SiteModule } from "./site/site.module";
 import { LiveModule } from "./live/live.module";
 import { MailboxesModule } from "./mailboxes/mailboxes.module";
+import { NotificationsModule } from "./notifications/notifications.module";
 import { SocialPostingModule } from "./social/social-posting.module";
 
 @Module({
@@ -48,6 +49,7 @@ import { SocialPostingModule } from "./social/social-posting.module";
     SiteModule,
     LiveModule,
     MailboxesModule,
+    NotificationsModule,
     SocialPostingModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
