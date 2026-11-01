@@ -7,6 +7,7 @@ import type { JwtUser } from "../common/roles.guard";
 @Injectable()
 export class SocialAgentService {
   private readonly logger = new Logger(SocialAgentService.name);
+  private inFlight = false;
 
   constructor(private config: ConfigService) {}
 
@@ -31,6 +32,19 @@ export class SocialAgentService {
 
   /** Generate platform-tailored copy for an event/announcement. */
   async generate(
+    user: JwtUser,
+    data: { topic: string; platforms: string[]; tone?: string; includeHashtags?: boolean; eventDate?: string; venue?: string },
+  ) {
+    if (this.inFlight) throw new Error("The agent is already writing — try again in a moment");
+    this.inFlight = true;
+    try {
+      return await this.generateInner(user, data);
+    } finally {
+      this.inFlight = false;
+    }
+  }
+
+  private async generateInner(
     user: JwtUser,
     data: { topic: string; platforms: string[]; tone?: string; includeHashtags?: boolean; eventDate?: string; venue?: string },
   ) {
