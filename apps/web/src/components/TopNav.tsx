@@ -17,6 +17,8 @@ const links = [
   { href: "/dashboard/mailboxes", label: "Mailboxes" },
   { href: "/dashboard/simulcast", label: "Streaming" },
   { href: "/dashboard/social", label: "Social Hub" },
+  { href: "/dashboard/gig-calendar", label: "Gig Calendar" },
+  { href: "/dashboard/applications", label: "DJ Applications" },
 ];
 
 export function TopNav() {

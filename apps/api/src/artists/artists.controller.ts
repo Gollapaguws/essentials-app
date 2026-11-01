@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Post, Body, Param, Query, UseGuards, HttpCode } from "@nestjs/common";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { ArtistsService } from "./artists.service";
+import { DjBookingService, SLOTS } from "./dj-booking.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { IsDateString, IsISO8601, IsNumber, IsOptional, IsString, Min } from "class-validator";
@@ -14,7 +15,7 @@ class ProfileDto {
 @Controller("artists")
 @UseGuards(SupabaseAuthGuard)
 export class ArtistsController {
-  constructor(private artists: ArtistsService) {}
+  constructor(private artists: ArtistsService, private djBooking: DjBookingService) {}
 
   @Get("me")
   @Auth("artist", "admin")
@@ -44,6 +45,29 @@ export class ArtistsController {
   @Auth("artist", "admin")
   savePlan(@CurrentUser() user: JwtUser, @Body("date") date: string) {
     return this.artists.savePlan(user, date);
+  }
+
+  /** Gig calendar: open events accepting DJ applications. */
+  @Get("gig-calendar")
+  @Auth("artist", "admin")
+  gigCalendar(@CurrentUser() user: JwtUser) {
+    return this.artists.openGigs(user);
+  }
+
+  /** Apply for a slot: day | evening | late-night. */
+  @Post("gig-calendar/apply")
+  @HttpCode(200)
+  @Auth("artist", "admin")
+  apply(@CurrentUser() user: JwtUser, @Body() dto: { eventId: string; slot: "day" | "evening" | "late-night" }) {
+    return this.djBooking.apply(user, dto.eventId, dto.slot);
+  }
+
+  /** Promoter: confirm/decline a DJ application. */
+  @Post("applications/:id/decide")
+  @HttpCode(200)
+  @Auth("promoter", "admin")
+  decide(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: { confirm: boolean }) {
+    return this.djBooking.decide(user, id, dto.confirm ?? false);
   }
 
   @Post("bookings/:id/status")

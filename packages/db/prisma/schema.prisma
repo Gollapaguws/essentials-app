@@ -386,6 +386,8 @@ model ArtistProfile {
 
 model ArtistBooking {
   id                String              @id @default(cuid())
+  slot              String?
+  appliedAt         DateTime?
   eventId           String
   artistId          String
   startAt           DateTime
@@ -527,4 +529,18 @@ model SocialPost {
   updatedAt   DateTime  @updatedAt
 
   @@index([status, scheduledAt])
+}
+
+// ===== DJ booking flow (event → notify artists → apply → confirm) =====
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String // dj_call | application | confirmed | declined | generic
+  title     String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
 }
