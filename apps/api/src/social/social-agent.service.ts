@@ -23,7 +23,7 @@ export class SocialAgentService {
     const res = await fetch(`${this.ollamaUrl()}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: this.model(), prompt, stream: false }),
+      body: JSON.stringify({ model: this.model(), prompt, stream: false, keep_alive: "30m" }),
     });
     if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
     const json: any = await res.json();
