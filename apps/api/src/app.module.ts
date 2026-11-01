@@ -12,7 +12,6 @@ import { LoyaltyModule } from "./loyalty/loyalty.module";
 import { EmailEngineModule } from "./email-engine/email-engine.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
 import { VenuesModule } from "./venues/venues.module";
-import { SocialModule } from "./social/social.module";
 import { PromotionsModule } from "./promotions/promotions.module";
 import { ArtistsModule } from "./artists/artists.module";
 import { PaymentsModule } from "./payments/payments.module";
@@ -41,7 +40,6 @@ import { SocialPostingModule } from "./social/social-posting.module";
     LoyaltyModule,
     EmailEngineModule.register(),
     VenuesModule,
-    SocialModule,
     PromotionsModule,
     ArtistsModule,
     AnalyticsModule,

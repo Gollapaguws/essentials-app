@@ -32,12 +32,15 @@ class PublishDto {
 @Controller("social")
 @UseGuards(SupabaseAuthGuard)
 export class SocialController {
+  private agent: SocialAgentService;
+
   constructor(
     private config: ConfigService,
-    private agent: SocialAgentService,
     private publish: SocialPublishService,
     private scheduler: SocialSchedulerService,
-  ) {}
+  ) {
+    this.agent = new SocialAgentService(config);
+  }
 
   /** Which platforms auto-publish (credentials configured) vs manual copy-paste. */
   @Get("accounts")
