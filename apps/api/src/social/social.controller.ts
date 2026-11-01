@@ -6,6 +6,7 @@ import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { SocialPublishService, autoPublishPlatforms, COMPOSER_LINKS, MANUAL_PLATFORMS, type Platform } from "./social-publish.service";
 import { SocialAgentService } from "./social-agent.service";
 import { SocialSchedulerService } from "./social-scheduler.service";
+import { ConfigService } from "@nestjs/config";
 import { IsArray, IsIn, IsOptional, IsString, MaxLength } from "class-validator";
 
 class GenerateDto {
@@ -32,17 +33,17 @@ class PublishDto {
 @UseGuards(SupabaseAuthGuard)
 export class SocialController {
   constructor(
+    private config: ConfigService,
     private agent: SocialAgentService,
     private publish: SocialPublishService,
     private scheduler: SocialSchedulerService,
-    private publishService: SocialPublishService,
   ) {}
 
   /** Which platforms auto-publish (credentials configured) vs manual copy-paste. */
   @Get("accounts")
   @Auth("promoter", "admin")
   accounts() {
-    const auto = autoPublishPlatforms(this.publishService["config"]);
+    const auto = autoPublishPlatforms(this.config);
     return {
       autoPublish: auto,
       manual: MANUAL_PLATFORMS,
