@@ -12,6 +12,7 @@ export default function LivePanel() {
   const [status, setStatus] = useState({ live: false, sourceUp: false, hls: null, rtspUrl: "" });
   const [me, setMe] = useState(null);
   const [casting, setCasting] = useState(false);
+  const [unmuted, setUnmuted] = useState(false);
   const [error, setError] = useState(null);
   const [srcUrl, setSrcUrl] = useState("");
   const videoRef = useRef(null);
@@ -93,6 +94,14 @@ export default function LivePanel() {
           <span style={{ position: "absolute", top: 10, left: 10, background: "#e11d48", color: "#fff", fontWeight: 900, letterSpacing: 2, fontSize: 12, padding: "4px 10px" }}>
             ● LIVE
           </span>
+        )}
+        {showPlayer && (
+          <button
+            onClick={() => { const v = videoRef.current; if (v) { v.muted = !v.muted; setUnmuted(!v.muted); } }}
+            style={{ position: "absolute", bottom: 10, right: 10, background: "rgba(0,0,0,.6)", color: "#fff", border: "1px solid rgba(255,255,255,.3)", padding: "6px 12px", cursor: "pointer", fontWeight: 700 }}
+          >
+            {unmuted ? "🔇 MUTE" : "🔊 UNMUTE"}
+          </button>
         )}
       </div>
 
