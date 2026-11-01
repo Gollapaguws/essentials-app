@@ -62,6 +62,13 @@ export class ArtistsController {
     return this.djBooking.apply(user, dto.eventId, dto.slot);
   }
 
+  /** Promoter: list DJ applications across their events. */
+  @Get("applications")
+  @Auth("promoter", "admin")
+  applications(@CurrentUser() user: JwtUser) {
+    return this.djBooking.applications(user);
+  }
+
   /** Promoter: confirm/decline a DJ application. */
   @Post("applications/:id/decide")
   @HttpCode(200)
