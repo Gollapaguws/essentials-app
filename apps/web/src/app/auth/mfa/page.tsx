@@ -83,7 +83,7 @@ export default function MfaPage() {
     await supabase.auth.refreshSession();
     try {
       const me = await api.get<MeResponse>("/auth/me");
-      if (!("inviteRequired" in me) && !me.mfaRequired) {
+      if (!me.mfaRequired) {
         router.replace("/dashboard");
         return;
       }

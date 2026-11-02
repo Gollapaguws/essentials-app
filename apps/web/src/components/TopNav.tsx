@@ -19,13 +19,15 @@ const links = [
   { href: "/dashboard/social", label: "Social Hub" },
   { href: "/dashboard/gig-calendar", label: "Gig Calendar" },
   { href: "/dashboard/applications", label: "DJ Applications" },
+  { href: "/dashboard/users", label: "Users", adminOnly: true },
 ];
 
 export function TopNav() {
   const path = usePathname();
   const router = useRouter();
   const { me } = useAuth();
-  const user = me && !("inviteRequired" in me) ? me.user : null;
+  const user = me?.user ?? null;
+  const visible = links.filter((l) => !l.adminOnly || user?.role === "admin");
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -34,9 +36,9 @@ export function TopNav() {
 
   return (
     <nav className="border-b border-line bg-surface/60 backdrop-blur sticky top-0 z-10">
-      <div className="max-w-6xl mx-auto flex items-center gap-6 px-6 py-4">
+      <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-6 px-6 py-4">
         <Link href="/" className="text-neon font-black tracking-widest">ESSENTIALS</Link>
-        {links.map((l) => (
+        {visible.map((l) => (
           <Link
             key={l.href}
             href={l.href}

@@ -25,6 +25,34 @@ export interface RouteLeg {
   mapsUrl: string;
 }
 
+/** The only booking fields route planning needs. */
+interface GigWindow {
+  id: string;
+  startAt: Date;
+  endAt: Date;
+  setupBufferMin: number;
+  teardownBufferMin: number;
+  event: { venue: { lat: number; lng: number } };
+}
+
+interface TravelProfile {
+  vehicleConsumptionLPer100km: number;
+  travelRatePerKm: number;
+}
+
+export interface DayPlan {
+  legs: RouteLeg[];
+  totals: { distanceKm: number; fuelCost: number; travelFee: number };
+  conflicts: number;
+}
+
+/** Midnight at the start of the booking's local day. */
+function startOfDay(value: string | Date): Date {
+  const day = new Date(value);
+  day.setHours(0, 0, 0, 0);
+  return day;
+}
+
 /**
  * Phase 3 artist portal backend.
  * - gig calendar (day/evening/late-night slots)
@@ -86,16 +114,68 @@ export class ArtistsService {
   /** Multi-gig routing for one calendar day: legs, buffers, collision alerts, fuel + billable travel. */
   async planDay(user: JwtUser, date: string) {
     const profile = await this.requireProfile(user);
-    const dayStart = new Date(date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+    const gigs = await this.dayGigs(profile.id, startOfDay(date));
+    return this.buildPlan(profile, gigs);
+  }
 
-    const gigs = await prisma.artistBooking.findMany({
-      where: { artistId: profile.id, startAt: { gte: dayStart, lt: dayEnd } },
-      include: { event: { include: { venue: true } } },
+  /** Persist a planned day's legs (BookingRouteLeg), replacing the existing ones. */
+  async savePlan(user: JwtUser, date: string) {
+    const profile = await this.requireProfile(user);
+    const gigs = await this.dayGigs(profile.id, startOfDay(date));
+    return this.persistPlan(gigs, profile);
+  }
+
+  /**
+   * A venue's coordinates changed: rebuild every persisted leg that depends on
+   * them, so saved plans stop quoting distances to where the venue used to be.
+   * A leg never spans midnight, so re-planning each affected (artist, day) is
+   * enough — including the artist's other gigs that day.
+   */
+  async recomputeForVenue(venueId: string) {
+    const bookings = await prisma.artistBooking.findMany({
+      where: { event: { venueId } },
+      select: { artistId: true, startAt: true },
+    });
+
+    const days = new Set<string>();
+    for (const booking of bookings) {
+      days.add(`${booking.artistId}|${startOfDay(booking.startAt).toISOString()}`);
+    }
+
+    let legs = 0;
+    for (const key of days) {
+      const [artistId, iso] = key.split("|");
+      const profile = await prisma.artistProfile.findUnique({ where: { id: artistId } });
+      if (!profile) continue;
+      const gigs = await this.dayGigs(artistId, new Date(iso));
+      const plan = await this.persistPlan(gigs, profile);
+      legs += plan.legs.length;
+    }
+
+    return { days: days.size, legs };
+  }
+
+  async updateBooking(user: JwtUser, bookingId: string, data: { status?: ArtistBookingStatus }) {
+    const profile = await this.requireProfile(user);
+    const booking = await prisma.artistBooking.findUnique({ where: { id: bookingId } });
+    if (!booking) throw new NotFoundException("Booking not found");
+    if (booking.artistId !== profile.id && user.role !== "admin") throw new ForbiddenException();
+    return prisma.artistBooking.update({ where: { id: bookingId }, data });
+  }
+
+  private async dayGigs(artistId: string, dayStart: Date): Promise<GigWindow[]> {
+    const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+    return prisma.artistBooking.findMany({
+      where: { artistId, startAt: { gte: dayStart, lt: dayEnd } },
+      include: { event: { include: { venue: { select: { lat: true, lng: true } } } } },
       orderBy: { startAt: "asc" },
     });
-    if (!gigs.length) return { legs: [], totals: { distanceKm: 0, fuelCost: 0, travelFee: 0 }, conflicts: 0 };
+  }
+
+  private buildPlan(profile: TravelProfile, gigs: GigWindow[]): DayPlan {
+    if (!gigs.length) {
+      return { legs: [], totals: { distanceKm: 0, fuelCost: 0, travelFee: 0 }, conflicts: 0 };
+    }
 
     const legs: RouteLeg[] = [];
     let prev = gigs[0];
@@ -135,12 +215,17 @@ export class ArtistsService {
     };
   }
 
-  /** Persist a planned day's legs (BookingRouteLeg), replacing existing ones for the first booking. */
-  async savePlan(user: JwtUser, date: string) {
-    const profile = await this.requireProfile(user);
-    const plan = await this.planDay(user, date);
+  /** Replace the day's stored legs with a freshly computed plan. */
+  private async persistPlan(gigs: GigWindow[], profile: TravelProfile): Promise<DayPlan> {
+    const plan = this.buildPlan(profile, gigs);
+    const bookingIds = gigs.map((g) => g.id);
+
+    if (bookingIds.length) {
+      await prisma.bookingRouteLeg.deleteMany({ where: { bookingId: { in: bookingIds } } });
+    }
+
     for (const leg of plan.legs) {
-      await prisma.bookingRouteLeg.deleteMany({ where: { bookingId: leg.fromBookingId } });
+      if (!leg.toBookingId) continue;
       await prisma.bookingRouteLeg.create({
         data: {
           bookingId: leg.fromBookingId,
@@ -151,16 +236,8 @@ export class ArtistsService {
         },
       });
     }
-    void profile;
-    return plan;
-  }
 
-  async updateBooking(user: JwtUser, bookingId: string, data: { status?: ArtistBookingStatus }) {
-    const profile = await this.requireProfile(user);
-    const booking = await prisma.artistBooking.findUnique({ where: { id: bookingId } });
-    if (!booking) throw new NotFoundException("Booking not found");
-    if (booking.artistId !== profile.id && user.role !== "admin") throw new ForbiddenException();
-    return prisma.artistBooking.update({ where: { id: bookingId }, data });
+    return plan;
   }
 
   private async requireProfile(user: JwtUser) {

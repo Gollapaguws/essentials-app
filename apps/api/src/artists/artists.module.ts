@@ -10,6 +10,6 @@ import { NotificationsModule } from "../notifications/notifications.module";
   imports: [NotificationsModule],
   controllers: [ArtistsController, InvoicesController],
   providers: [ArtistsService, InvoicesService, DjBookingService],
-  exports: [DjBookingService],
+  exports: [DjBookingService, ArtistsService],
 })
 export class ArtistsModule {}

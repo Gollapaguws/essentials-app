@@ -6,6 +6,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { REDIS, RedisModule } from "./common/redis.provider";
 import { RedisThrottlerStorage } from "./common/redis-throttler.storage";
 import { AuthModule } from "./auth/auth.module";
+import { UsersModule } from "./users/users.module";
 import { MailModule } from "./mail/mail.module";
 import { EventsModule } from "./events/events.module";
 import { LoyaltyModule } from "./loyalty/loyalty.module";
@@ -36,6 +37,7 @@ import { SocialPostingModule } from "./social/social-posting.module";
       }),
     }),
     AuthModule,
+    UsersModule,
     MailModule,
     EventsModule,
     LoyaltyModule,

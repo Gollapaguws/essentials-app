@@ -1,14 +1,22 @@
-import { Controller, Get, Post, Body, Param, Delete, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Body, Param, Delete, Query, UseGuards } from "@nestjs/common";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { VenuesService } from "./venues.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
-import { IsBoolean, IsInt, IsOptional, IsString, Min } from "class-validator";
+import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 
 class TableDto {
   @IsString() tableNumber!: string;
   @IsInt() @Min(1) capacity!: number;
   @IsInt() @Min(0) minSpend!: number;
+}
+
+/** Venue profile + coordinates; lat/lng drive DJ route planning. */
+class VenueDetailsDto {
+  @IsOptional() @IsString() @MaxLength(120) name?: string;
+  @IsOptional() @IsString() @MaxLength(240) address?: string;
+  @IsOptional() @IsNumber() @Min(-90) @Max(90) lat?: number;
+  @IsOptional() @IsNumber() @Min(-180) @Max(180) lng?: number;
 }
 
 @Controller("venues")
@@ -22,6 +30,13 @@ export class VenuesController {
     return this.venues.myVenues(user);
   }
 
+  /** Promoter picker when creating an event; flags venues with no coordinates. */
+  @Get("options")
+  @Auth("promoter", "admin")
+  options() {
+    return this.venues.listForPicker();
+  }
+
   @Get("events/pending")
   @Auth("venue_manager", "admin")
   pending(@CurrentUser() user: JwtUser, @Query("venueId") venueId?: string) {
@@ -32,6 +47,12 @@ export class VenuesController {
   @Auth("venue_manager", "admin")
   decide(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body("approve") approve: boolean) {
     return this.venues.decideEvent(user, id, approve);
+  }
+
+  @Patch(":venueId")
+  @Auth("venue_manager", "admin")
+  update(@CurrentUser() user: JwtUser, @Param("venueId") venueId: string, @Body() dto: VenueDetailsDto) {
+    return this.venues.updateVenue(user, venueId, dto);
   }
 
   @Get(":venueId/tables")

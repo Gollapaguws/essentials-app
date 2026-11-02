@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { fetchMe, signOut as endSession } from "@/lib/auth";
 
@@ -6,9 +6,8 @@ const AuthContext = createContext(undefined);
 
 /**
  * Site session state on Supabase.
- * Keeps the pre-existing consumer shape (`user`, `isAuthenticated`, `isLoadingAuth`,
- * `authChecked`, `authError`, `checkUserAuth`, `logout`, `navigateToLogin`) and adds
- * `role`, `aal`, `mfaRequired` from the canonical `/auth/me` response.
+ * Consumed shape: `user`, `isAuthenticated`, `isLoadingAuth`, `authChecked`,
+ * `authError`, `logout`, `navigateToLogin`, `role`, `aal`, `mfaRequired`.
  */
 export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
@@ -19,7 +18,7 @@ export const AuthProvider = ({ children }) => {
   const [authError, setAuthError] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
 
-  const checkUserAuth = useCallback(async () => {
+  const checkUserAuth = async () => {
     setIsLoadingAuth(true);
     const { data } = await supabase.auth.getSession();
     setSession(data.session ?? null);
@@ -30,28 +29,24 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setIsLoadingAuth(false);
       setAuthChecked(true);
-      return null;
+      return;
     }
 
     const identity = await fetchMe();
     setMe(identity ?? null);
 
-    if (!identity || identity.inviteRequired) {
+    if (identity) {
+      setUser({ email: identity.user.email, role: identity.user.role });
+      setIsAuthenticated(true);
+    } else {
       setUser({ email: data.session.user.email });
       setIsAuthenticated(true);
-      setIsLoadingAuth(false);
-      setAuthChecked(true);
-      return identity;
     }
-
-    setUser({ email: identity.user.email, role: identity.user.role });
-    setIsAuthenticated(true);
     setIsLoadingAuth(false);
     setAuthChecked(true);
-    return identity;
-  }, []);
+  };
 
-  useEffect(() => {
+  React.useEffect(() => {
     checkUserAuth();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
@@ -69,7 +64,7 @@ export const AuthProvider = ({ children }) => {
     });
 
     return () => sub.subscription.unsubscribe();
-  }, [checkUserAuth]);
+  }, []);
 
   const logout = async () => {
     await endSession();
@@ -92,10 +87,9 @@ export const AuthProvider = ({ children }) => {
     authError,
     appPublicSettings: null,
     authChecked,
-    role: me && !me.inviteRequired ? me.user.role : null,
-    aal: me && !me.inviteRequired ? me.user.aal : null,
-    mfaRequired: Boolean(me && !me.inviteRequired && me.mfaRequired),
-    inviteRequired: Boolean(me && me.inviteRequired),
+    role: me?.user?.role ?? null,
+    aal: me?.user?.aal ?? null,
+    mfaRequired: Boolean(me?.mfaRequired),
     logout,
     navigateToLogin,
     checkUserAuth,

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, Linking } from "react-native";
-import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { colors, type } from "../theme";
 import { supabase } from "../lib/supabase";
@@ -8,7 +7,7 @@ import { supabase } from "../lib/supabase";
 /** Deep link Supabase sends the PKCE code back to. */
 const CALLBACK = "essentials://auth/callback";
 
-/** 1/4 — Welcome: enter email -> sign-in link, or continue with Google. */
+/** 1/3 — Welcome: enter email -> sign-in link, or continue with Google. */
 export default function Welcome() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -72,9 +71,6 @@ export default function Welcome() {
           </Pressable>
           <Pressable style={s.ghost} onPress={google}>
             <Text style={{ color: colors.text, fontWeight: "700" }}>CONTINUE WITH GOOGLE</Text>
-          </Pressable>
-          <Pressable onPress={() => router.push("/auth/invite")}>
-            <Text style={{ color: colors.muted, marginTop: 16 }}>Got an invite code? →</Text>
           </Pressable>
         </>
       )}

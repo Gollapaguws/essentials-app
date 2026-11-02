@@ -33,7 +33,7 @@ export async function api(path, init) {
 
 /**
  * Canonical identity for the current session.
- * Returns `{ user, mfaRequired }`, `{ inviteRequired: true, email }`, or null.
+ * Returns `{ user, mfaRequired }` or null.
  */
 export async function fetchMe() {
   const token = await currentToken();
@@ -45,10 +45,16 @@ export async function fetchMe() {
   }
 }
 
-/** Send a sign-in link (and, for new identities, create the Supabase user). */
 export async function signInWithPassword(email, password) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw new Error(error.message);
+}
+
+/** Create the Supabase identity. Returns the session when confirmation is off. */
+export async function signUpWithPassword(email, password) {
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw new Error(error.message);
+  return data.session ?? null;
 }
 
 export async function signInWithGoogle(redirectTo) {
@@ -67,11 +73,6 @@ export async function requestPasswordReset(email, redirectTo) {
 export async function updatePassword(password) {
   const { error } = await supabase.auth.updateUser({ password });
   if (error) throw new Error(error.message);
-}
-
-/** Redeem an invite for the signed-in identity; the email comes from the session. */
-export async function redeemInvite(code) {
-  return api("/auth/invite/redeem", { method: "POST", body: JSON.stringify({ code }) });
 }
 
 export const signOut = () => supabase.auth.signOut();

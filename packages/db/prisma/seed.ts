@@ -140,17 +140,15 @@ async function main() {
     }
   }
 
-  // Mirror roles for seeded users that are already linked to a Supabase identity.
   // Users without an authUid are created lazily on first sign-in (lazy-link).
+  // Roles are mirrored into Supabase app_metadata by the auth guard on demand,
+  // using the service role key from the deployment environment; the guard also
+  // falls back to the Prisma row when the claim is absent.
   const seeded = await prisma.user.findMany({
     where: { email: { endsWith: "@essentials.example" }, authUid: { not: null } },
     select: { authUid: true, role: true, email: true },
   });
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.log(
-      "No SUPABASE_SERVICE_ROLE_KEY: seeded users are created on first sign-in (lazy-link).",
-    );
-  } else {
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
     const { createClient } = await import("@supabase/supabase-js");
     const client = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -161,6 +159,8 @@ async function main() {
       });
       if (error) console.warn(`role mirror failed for ${u.email}: ${error.message}`);
     }
+  } else {
+    console.log("No SUPABASE_SERVICE_ROLE_KEY: seeded roles are stored only in Prisma.");
   }
 
   console.log("Seed complete. Admin:", admin.email, "Event:", demoEvent.id);

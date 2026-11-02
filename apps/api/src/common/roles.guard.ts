@@ -4,7 +4,11 @@ import type { Role } from "@prisma/client";
 import { ROLES_KEY } from "./roles.decorator";
 
 export interface JwtUser {
+  /** Prisma `User.id` — the key every ownership check and FK write uses. */
   sub: string;
+  id?: string | null;
+  /** Supabase `auth.users.id`, kept for audit/linking. */
+  authUid?: string;
   email: string;
   role: Role;
 }

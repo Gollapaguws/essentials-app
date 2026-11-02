@@ -2,7 +2,15 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { prisma, EventStatus } from "@essentials/db";
 import { NotificationsService } from "../notifications/notifications.service";
 import { DjBookingService } from "../artists/dj-booking.service";
+import { ArtistsService } from "../artists/artists.service";
 import type { JwtUser } from "../common/roles.guard";
+
+export interface VenueDetailsInput {
+  name?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
+}
 
 /** Phase 2 venue portal backend. All queries scoped: managers see only their venues; admin all. */
 @Injectable()
@@ -10,6 +18,7 @@ export class VenuesService {
   constructor(
     private notifications: NotificationsService,
     private djBooking: DjBookingService,
+    private artists: ArtistsService,
   ) {}
   private async assertManager(venueId: string, user: JwtUser) {
     const venue = await prisma.venue.findUnique({ where: { id: venueId } });
@@ -23,6 +32,59 @@ export class VenuesService {
       where: user.role === "admin" ? {} : { managerId: user.sub },
       include: { _count: { select: { events: true, tables: true } } },
     });
+  }
+
+  /**
+   * Picker for promoters creating an event. Venues without coordinates are
+   * returned too (they still exist), flagged so the UI can warn: DJ routing
+   * measures between venue locations.
+   */
+  async listForPicker() {
+    const venues = await prisma.venue.findMany({
+      select: { id: true, name: true, address: true, lat: true, lng: true, capacity: true },
+      orderBy: { name: "asc" },
+    });
+    return venues.map((v) => ({ ...v, hasLocation: v.lat !== 0 || v.lng !== 0 }));
+  }
+
+  /**
+   * Venue profile + coordinates. DJ route planning (`ArtistsService.planDay`)
+   * measures distance between venue lat/lng, so moving a venue invalidates the
+   * legs already saved against it and they are rebuilt here.
+   */
+  async updateVenue(user: JwtUser, venueId: string, input: VenueDetailsInput) {
+    const venue = await this.assertManager(venueId, user);
+
+    const data: { name?: string; address?: string | null; lat?: number; lng?: number } = {};
+    if (input.name !== undefined) {
+      const name = input.name.trim();
+      if (!name) throw new BadRequestException("Venue name cannot be empty.");
+      data.name = name;
+    }
+    if (input.address !== undefined) data.address = input.address.trim() || null;
+    if (input.lat !== undefined) data.lat = input.lat;
+    if (input.lng !== undefined) data.lng = input.lng;
+
+    // One axis alone would put the venue on a meaningless line for routing.
+    if ((input.lat === undefined) !== (input.lng === undefined)) {
+      throw new BadRequestException(
+        "Send latitude and longitude together so DJ route planning stays correct.",
+      );
+    }
+
+    if (!Object.keys(data).length) throw new BadRequestException("Nothing to update.");
+
+    const updated = await prisma.venue.update({ where: { id: venueId }, data });
+
+    const moved =
+      (input.lat !== undefined && input.lat !== venue.lat) ||
+      (input.lng !== undefined && input.lng !== venue.lng);
+    if (moved) {
+      // Saving a location must not fail because a route rebuild hit a snag.
+      await this.artists.recomputeForVenue(venueId).catch(() => null);
+    }
+
+    return updated;
   }
 
   /** Event approval workflow: pending_venue_approval -> approved | draft(rejected). */

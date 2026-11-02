@@ -1,10 +1,18 @@
 import { useEffect, useState } from "react";
-import { ScrollView, Text, View, Pressable, StyleSheet } from "react-native";
+import { ScrollView, Text, View, Pressable, StyleSheet, Linking, Platform } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { colors, type } from "../../theme";
 import { api, type EventSummary, type RsvpResult } from "@essentials/api-client";
 
-/** Event detail: lineup, capacity, live headcount, RSVP + waitlist. */
+/** Native maps when the platform has one, Google Maps in the browser otherwise. */
+function mapsUrl(name: string, lat: number, lng: number) {
+  const label = encodeURIComponent(name);
+  if (Platform.OS === "ios") return `maps://?q=${label}&ll=${lat},${lng}`;
+  if (Platform.OS === "android") return `geo:${lat},${lng}?q=${lat},${lng}(${label})`;
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
+/** Event detail: venue + map link, lineup, capacity, live headcount, RSVP + waitlist. */
 export default function EventDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [event, setEvent] = useState<EventSummary & { status?: string } | null>(null);
@@ -30,15 +38,42 @@ export default function EventDetail() {
       const res = await api.post<RsvpResult>(`/events/${id}/rsvp`);
       setRsvpState(res.status);
       load();
-    } catch { setError("RSVP failed — maybe you're already on the list."); }
+    } catch { setError("RSVP failed - maybe you're already on the list."); }
   };
 
-  if (!event) return <View style={s.wrap}><Text style={{ color: colors.muted }}>{error ?? "Loading…"}</Text></View>;
+  const venue = event?.venue as { name: string; address?: string | null; lat?: number; lng?: number } | undefined;
+  // 0,0 is the "never geocoded" sentinel the venue portal and route planner use.
+  const hasLocation = typeof venue?.lat === "number" && typeof venue?.lng === "number" && (venue.lat !== 0 || venue.lng !== 0);
+
+  const openMap = async () => {
+    if (!venue || !hasLocation) return;
+    const fallback = `https://www.google.com/maps/search/?api=1&query=${venue.lat},${venue.lng}`;
+    try {
+      await Linking.openURL(mapsUrl(venue.name, venue.lat as number, venue.lng as number));
+    } catch {
+      await Linking.openURL(fallback).catch(() => setError("Could not open a map on this device."));
+    }
+  };
+
+  if (!event || !venue) return <View style={s.wrap}><Text style={{ color: colors.muted }}>{error ?? "Loading…"}</Text></View>;
 
   return (
     <ScrollView style={s.wrap} contentContainerStyle={{ paddingBottom: 120 }}>
       <Text style={[type.display, { color: colors.neon }]}>{event.title}</Text>
-      <Text style={{ color: colors.muted, marginTop: 6 }}>{event.venue.name} · {new Date(event.date).toDateString()}</Text>
+      <Text style={{ color: colors.muted, marginTop: 6 }}>{venue.name}{" \u00b7 "}{new Date(event.date).toDateString()}</Text>
+
+      <View style={s.venueCard}>
+        <Text style={s.venueLabel}>VENUE</Text>
+        <Text style={{ color: colors.text, marginTop: 4 }}>{venue.address || "Address not set yet."}</Text>
+        {hasLocation ? (
+          <Pressable style={s.mapButton} onPress={openMap}>
+            <Text style={s.mapButtonText}>OPEN IN MAPS</Text>
+          </Pressable>
+        ) : (
+          <Text style={{ color: colors.muted, marginTop: 10, fontSize: 12 }}>Location coming soon.</Text>
+        )}
+      </View>
+
       <Text style={{ color: colors.text, marginTop: 16, fontWeight: "800", fontSize: 18 }}>{event.going}/{event.capacity} GOING</Text>
       {event.description && <Text style={{ color: colors.text, marginTop: 12 }}>{event.description}</Text>}
       <Text style={[s.section, { color: colors.muted }]}>LINEUP</Text>
@@ -67,7 +102,7 @@ export default function EventDetail() {
       {(matches.length ? matches : []).map((m) => (
         <View key={m.userId} style={s.matchRow}>
           <Text style={{ color: colors.text, fontWeight: "700", flex: 1 }}>{m.name ?? "Guest"}</Text>
-          <Text style={{ color: colors.neon, fontSize: 12 }}>{m.sharedTastes.join(" · ")}</Text>
+          <Text style={{ color: colors.neon, fontSize: 12 }}>{m.sharedTastes.join(" \u00b7 ")}</Text>
         </View>
       ))}
       {!matches.length && <Text style={{ color: colors.muted }}>RSVP to see who else is going.</Text>}
@@ -82,6 +117,10 @@ export default function EventDetail() {
 const s = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg, padding: 20 },
   section: { marginTop: 20, marginBottom: 6, fontWeight: "800", letterSpacing: 1, fontSize: 12 },
+  venueCard: { marginTop: 16, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  venueLabel: { color: colors.muted, fontWeight: "800", letterSpacing: 1, fontSize: 12 },
+  mapButton: { marginTop: 12, borderWidth: 1, borderColor: colors.neon, borderRadius: 10, paddingVertical: 10, alignItems: "center" },
+  mapButtonText: { color: colors.neon, fontWeight: "900", letterSpacing: 2, fontSize: 12 },
   lineupRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   matchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
   button: { backgroundColor: colors.neon, borderRadius: 10, padding: 16, alignItems: "center" },

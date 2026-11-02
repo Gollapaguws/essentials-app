@@ -35,12 +35,7 @@ export default function AuthCallback() {
         const me = await api.get<MeResponse>("/auth/me");
         if (me.mfaRequired) router.replace("/auth/mfa");
         else router.replace("/(tabs)/events");
-      } catch (e: any) {
-        if (e?.status === 401) {
-          // No Prisma account yet: onboarding continues with an invite code.
-          router.replace("/auth/invite");
-          return;
-        }
+      } catch {
         setError("Signed in, but your account could not be loaded.");
       }
     })();

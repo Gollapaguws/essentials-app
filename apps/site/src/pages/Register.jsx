@@ -1,103 +1,112 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { UserPlus, KeyRound, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import AuthLayout from "@/components/AuthLayout";
-import { useAuth } from "@/lib/AuthContext";
-import { redeemInvite } from "@/lib/auth";
+import { signUpWithPassword, signInWithGoogle } from "@/lib/auth";
+import { authCallbackUrl } from "@/lib/supabase";
+import GoogleIcon from "@/components/GoogleIcon";
 
-/** ESSENTIALS is invite-only: sign in first, then redeem the code. */
+const input = {
+  padding: 14,
+  borderRadius: 8,
+  border: "1px solid rgba(255,255,255,.2)",
+  background: "transparent",
+  color: "inherit",
+};
+
+/** Public sign-up. The role starts as guest; an admin assigns DJ/venue/promoter. */
 export default function Register() {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoadingAuth, user } = useAuth();
-  const [code, setCode] = useState(localStorage.getItem("essentials_invite") ?? "");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setBusy(true);
+    setError(null);
     try {
-      await redeemInvite(code.trim().toUpperCase());
-      localStorage.removeItem("essentials_invite");
-      navigate("/", { replace: true });
+      const session = await signUpWithPassword(email, password);
+      if (session) navigate("/", { replace: true });
+      else setSent(true);
     } catch (err) {
-      setError(err.message || "That invite code could not be redeemed");
+      setError(err.message || "Could not create the account.");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   };
 
-  if (isLoadingAuth) {
-    return (
-      <AuthLayout icon={UserPlus} title="Loading" subtitle="Checking your session">
-        <div className="flex justify-center py-6">
-          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <AuthLayout
-        icon={UserPlus}
-        title="Invite only"
-        subtitle="Sign in with your email first, then enter your invite code"
-        footer={
-          <Link to="/login" className="text-primary font-medium hover:underline">
-            Back to log in
-          </Link>
-        }
-      >
-        <Button className="w-full h-12 font-medium" onClick={() => navigate("/login")}>
-          Sign in
-        </Button>
-      </AuthLayout>
-    );
-  }
-
   return (
-    <AuthLayout
-      icon={KeyRound}
-      title="Enter your invite code"
-      subtitle={`Finishing setup for ${user?.email ?? "your account"}`}
-      footer={
-        <Link to="/login" className="text-primary font-medium hover:underline">
-          Not you?
-        </Link>
-      }
-    >
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>
-      )}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="code">Invite code</Label>
-          <Input
-            id="code"
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="ABC123"
-            autoFocus
-            required
-            className="h-12 tracking-widest"
-          />
-        </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading || code.trim().length < 4}>
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Joining...
-            </>
-          ) : (
-            "Join ESSENTIALS"
-          )}
-        </Button>
-      </form>
-    </AuthLayout>
+    <div className="noir" style={{ minHeight: "80vh", display: "grid", placeItems: "center", padding: 24 }}>
+      <div style={{ maxWidth: 420, width: "100%" }}>
+        <h1 style={{ letterSpacing: 4 }}>JOIN THE LIST</h1>
+        <p style={{ opacity: 0.7, marginTop: 8 }}>Create an account to get on the guest list.</p>
+
+        {sent ? (
+          <>
+            <p style={{ marginTop: 24 }}>Check {email} to confirm your account, then sign in.</p>
+            <Link to="/login" style={{ display: "inline-block", marginTop: 16, opacity: 0.7, fontSize: 13 }}>
+              Back to sign in
+            </Link>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => {
+                signInWithGoogle(authCallbackUrl).catch(() => setError("Google sign-up failed."));
+              }}
+              style={{
+                marginTop: 20,
+                width: "100%",
+                padding: 14,
+                borderRadius: 8,
+                border: "1px solid rgba(255,255,255,.3)",
+                background: "transparent",
+                color: "inherit",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                cursor: "pointer",
+              }}
+            >
+              <GoogleIcon className="w-5 h-5" />
+              CONTINUE WITH GOOGLE
+            </button>
+
+            <form onSubmit={submit} style={{ display: "grid", gap: 12, marginTop: 16 }}>
+              <input
+                type="email"
+                required
+                placeholder="you@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={input}
+              />
+              <input
+                type="password"
+                required
+                minLength={8}
+                placeholder="Password (8+ characters)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={input}
+              />
+              <button
+                disabled={busy}
+                style={{ padding: 14, borderRadius: 8, border: 0, fontWeight: 800, letterSpacing: 2, cursor: "pointer" }}
+              >
+                {busy ? "WORKING…" : "CREATE ACCOUNT"}
+              </button>
+              <Link to="/login" style={{ opacity: 0.6, fontSize: 12, textAlign: "center" }}>
+                Already have an account? Sign in
+              </Link>
+            </form>
+          </>
+        )}
+
+        {error && <p style={{ color: "#ff5b7f", marginTop: 12 }}>{error}</p>}
+      </div>
+    </div>
   );
 }
