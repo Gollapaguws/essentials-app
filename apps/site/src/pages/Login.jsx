@@ -43,6 +43,9 @@ export default function Login() {
     setError(null);
     try {
       await signInWithPassword(email, password);
+      // Signing in here is only half the job: the dashboard owns MFA and role
+      // routing, so hand off instead of leaving the visitor on a silent form.
+      window.location.href = "/dashboard";
     } catch (err) {
       setError("Wrong email or password.");
     } finally {
