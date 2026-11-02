@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@essentials/api-client";
-import { DASHBOARD_ROLES, type MeResponse } from "@essentials/auth";
+import { DASHBOARD_ROLES, landingPath, type MeResponse } from "@essentials/auth";
 import { supabase } from "@/lib/supabase";
 
 function CallbackInner() {
@@ -30,10 +30,10 @@ function CallbackInner() {
         const me = await api.get<MeResponse>("/auth/me");
         if (!DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
           await supabase.auth.signOut();
-          setError("Dashboard is for promoters, venue managers and admins.");
+          setError("Dashboard is for DJs, promoters, venue managers and admins.");
           return;
         }
-        router.replace(me.mfaRequired ? "/auth/mfa" : "/dashboard");
+        router.replace(me.mfaRequired ? "/auth/mfa" : landingPath(me.user.role));
       } catch {
         setError("Signed in, but the dashboard could not be loaded.");
       }
