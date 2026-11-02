@@ -52,6 +52,7 @@ export class SupabaseAuthGuard implements CanActivate {
       id: identity?.id ?? null,
       authUid: session.sub,
       role,
+      mustResetPassword: identity?.mustResetPassword ?? false,
     };
     return true;
   }

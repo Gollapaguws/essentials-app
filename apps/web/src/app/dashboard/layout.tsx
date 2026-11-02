@@ -21,6 +21,11 @@ export default function DashboardLayout({ children }: { children: import("react"
       return;
     }
     if (!me) return; // /auth/me still in flight or failed; the page surfaces its own error
+    // First sign-in for a new address: no dashboard until it picks a password.
+    if (me.mustResetPassword) {
+      router.replace("/auth/password");
+      return;
+    }
     if (!DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
       router.replace("/");
       return;
