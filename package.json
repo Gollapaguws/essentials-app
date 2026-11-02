@@ -1,21 +1,11 @@
 {
-  "name": "essentials",
-  "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "name": "essentials-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "db:up": "docker compose up -d",
-    "db:migrate": "npm run migrate --workspace @essentials/db",
-    "db:seed": "npm run seed --workspace @essentials/db",
-    "dev:api": "npm run dev --workspace @essentials/api",
-    "dev:web": "npm run dev --workspace @essentials/web",
-    "dev:mobile": "npm run dev --workspace @essentials/mobile",
-    "build": "npm run build --workspaces --if-present",
-    "proof:auth": "node scripts/auth-proof.mjs"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "devDependencies": {
-    "typescript": "^5.6.0"
-  }
+  "keywords": [],
+  "type": "commonjs"
 }
