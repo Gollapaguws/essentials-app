@@ -45,5 +45,5 @@ export function createSupabaseClient(o: CreateSupabaseClientOptions): SupabaseCl
 /** Roles that must satisfy MFA (`aal2`) before data endpoints answer. */
 export const MFA_REQUIRED_ROLES: readonly AuthRole[] = ["promoter", "venue_manager", "admin"];
 
-/** Role allowed into the promoter dashboard. */
-export const DASHBOARD_ROLES: readonly AuthRole[] = ["promoter", "venue_manager", "admin"];
+/** Roles allowed into the dashboard. DJs included: the artist portal lives there. */
+export const DASHBOARD_ROLES: readonly AuthRole[] = ["artist", "promoter", "venue_manager", "admin"];

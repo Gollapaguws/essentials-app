@@ -6,78 +6,95 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import { Tooltip } from "@/components/Tooltip";
 
-/** `hint` is the hover/focus tooltip under each item. */
-const links = [
+import type { AuthRole } from "@essentials/auth";
+
+/** `hint` is the hover/focus tooltip; `roles` decides who sees the item. */
+type NavLink = { href: string; label: string; hint: string; roles?: readonly AuthRole[] };
+
+const links: NavLink[] = [
   {
     href: "/dashboard",
     label: "Analytics",
     hint: "Tonight at a glance: RSVPs, check-ins, table revenue, venue and promoter splits, plus events pacing off target.",
+    roles: ["promoter", "admin"],
   },
   {
     href: "/dashboard/events",
     label: "Events",
     hint: "Create an event, pick the venue from the list, set capacity and lineup, then clone a past night.",
+    roles: ["promoter", "admin"],
   },
   {
     href: "/dashboard/email",
     label: "Email Engine",
     hint: "Campaigns and guest segments, plus which RSVPs each send brought in.",
+    roles: ["promoter", "admin"],
   },
   {
     href: "/dashboard/venue",
     label: "Venue Portal",
     hint: "Venue address and coordinates, pending event approvals, table inventory, door scans and revenue splits.",
+    roles: ["venue_manager", "admin"],
   },
   {
     href: "/dashboard/promotions",
     label: "Promotions",
     hint: "Promo campaigns per event and the RSVPs they are tracked against.",
+    roles: ["promoter", "admin"],
   },
   {
     href: "/dashboard/artist",
     label: "Artist Portal",
     hint: "DJ profile and stage name, gigs, invoices with payment links, and the day-by-day route plan.",
+    roles: ["artist", "admin"],
   },
   {
     href: "/dashboard/insights",
     label: "Insights",
     hint: "Guest lifetime value and cohort retention across previous nights.",
+    roles: ["promoter", "admin"],
   },
   {
     href: "/dashboard/editor",
     label: "Front Page",
     hint: "Edit the public front page: lineup, broadcasts and site copy.",
+    roles: ["admin"],
   },
   {
     href: "/dashboard/mailboxes",
     label: "Mailboxes",
     hint: "Inboxes the API watches for replies, and the password for each mailbox.",
+    roles: ["admin"],
   },
   {
     href: "/dashboard/simulcast",
     label: "Streaming",
     hint: "Restream one broadcast to every platform, with live status refreshed every few seconds.",
+    roles: ["admin"],
   },
   {
     href: "/dashboard/social",
     label: "Social Hub",
     hint: "Generate copy, queue posts per platform, republish or publish immediately.",
+    roles: ["promoter", "admin"],
   },
   {
     href: "/dashboard/gig-calendar",
     label: "Gig Calendar",
     hint: "Open DJ slots at venues: apply for a day, evening or late-night set.",
+    roles: ["artist", "admin"],
   },
   {
     href: "/dashboard/applications",
     label: "DJ Applications",
     hint: "Applications for your events — confirm or decline each slot.",
+    roles: ["promoter", "admin"],
   },
   {
     href: "/dashboard/users",
     label: "Users",
     hint: "Every registered account: make someone a DJ, venue manager or promoter.",
-    adminOnly: true,
+    roles: ["admin"],
   },
 ];
 
@@ -86,7 +103,9 @@ export function TopNav() {
   const router = useRouter();
   const { me } = useAuth();
   const user = me?.user ?? null;
-  const visible = links.filter((l) => !l.adminOnly || user?.role === "admin");
+  // Admins see the whole dashboard; everyone else only the sections their role owns.
+  const role = user?.role ?? "guest";
+  const visible = links.filter((l) => role === "admin" || !l.roles || l.roles.includes(role));
 
   const signOut = async () => {
     await supabase.auth.signOut();
