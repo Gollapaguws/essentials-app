@@ -1,0 +1,59 @@
+name: Typecheck
+
+on:
+  pull_request:
+
+concurrency:
+  group: typecheck-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    name: Typecheck (api, web, mobile, site)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # `prisma generate` only parses the schema; no database is contacted.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/site/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The API and web typecheck against the generated Prisma types and the
+      # built workspace packages, so those have to exist before tsc runs.
+      - name: Generate Prisma client
+        run: npm run generate --workspace @essentials/db
+
+      - name: Build shared packages
+        run: |
+          npm run build --workspace @essentials/db
+          npm run build --workspace @essentials/api-client
+
+      - name: Typecheck API
+        working-directory: apps/api
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Typecheck web
+        working-directory: apps/web
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Typecheck mobile
+        working-directory: apps/mobile
+        run: npm run typecheck
+
+      - name: Typecheck site
+        working-directory: apps/site
+        run: npm run typecheck
