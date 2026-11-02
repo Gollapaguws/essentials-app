@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { prisma, ConsentStatus } from "@essentials/db";
 import { MailService } from "../mail/mail.service";
-import { emailTemplates, wrapTemplate } from "../mail/templates";
+import { wrapTemplate } from "../mail/templates";
 
 /**
  * Retention automations (Phase 4.5):

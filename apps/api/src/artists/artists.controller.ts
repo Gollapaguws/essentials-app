@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Body, Param, Query, UseGuards, HttpCode } from "@nestjs/common";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { ArtistsService } from "./artists.service";
-import { DjBookingService, SLOTS } from "./dj-booking.service";
+import { DjBookingService } from "./dj-booking.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
-import { IsDateString, IsISO8601, IsNumber, IsOptional, IsString, Min } from "class-validator";
+import { IsNumber, IsOptional, IsString, Min } from "class-validator";
 
 class ProfileDto {
   @IsString() stageName!: string;

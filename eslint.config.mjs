@@ -77,7 +77,7 @@ export default tseslint.config(
       // bodies, third-party callbacks); typing those is separate work.
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/no-empty-object-type": "off",

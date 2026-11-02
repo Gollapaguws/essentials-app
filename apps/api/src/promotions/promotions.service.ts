@@ -47,7 +47,7 @@ export class PromotionsService {
     });
     if (already) throw new BadRequestException("Already redeemed");
 
-    const [redemption] = await prisma.$transaction([
+    await prisma.$transaction([
       prisma.promotionRedemption.create({ data: { promotionId: promo.id, userId: user.sub, guestListId: entry.id } }),
       prisma.promotion.update({ where: { id: promo.id }, data: { uses: { increment: 1 } } }),
     ]);

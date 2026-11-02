@@ -13,7 +13,6 @@ interface Application {
 /** Promoter: review DJ applications — confirm or decline. */
 export default function Applications() {
   const [apps, setApps] = useState<Application[]>([]);
-  const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = () => api.get<Application[]>("/artists/applications").then(setApps).catch((e) => setError(e.message));
@@ -32,7 +31,6 @@ export default function Applications() {
       <TopNav />
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <h1 className="text-2xl font-black tracking-wide">DJ APPLICATIONS</h1>
-        {msg && <p className="text-neon text-sm">{msg}</p>}
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <div className="border border-line rounded-xl">
           {apps.map((a) => (

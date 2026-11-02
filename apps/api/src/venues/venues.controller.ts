@@ -3,7 +3,7 @@ import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { VenuesService } from "./venues.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
-import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 
 class TableDto {
   @IsString() tableNumber!: string;

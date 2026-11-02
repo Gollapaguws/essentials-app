@@ -72,7 +72,6 @@ export class EmailEngineService {
     });
     const recipients = await this.resolveRecipients(data.segmentId);
     const emails = new Set<string>();
-    const sender = this.sender; // injected
     for (const r of recipients) {
       if (emails.has(r.email)) continue;
       emails.add(r.email);

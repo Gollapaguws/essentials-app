@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FlatList, Text, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { colors, type } from "../../theme";
-import { api, type EventSummary, type RsvpResult } from "@essentials/api-client";
+import { api, type EventSummary } from "@essentials/api-client";
 
 /** Door passes for events you're attending. */
 export default function Passes() {

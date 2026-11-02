@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { FlatList, Text, View, Pressable, StyleSheet, RefreshControl } from "react-native";
+import { FlatList, Text, Pressable, StyleSheet, RefreshControl } from "react-native";
 import { router } from "expo-router";
 import { colors, type } from "../../theme";
 import { api, type EventSummary } from "@essentials/api-client";
