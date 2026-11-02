@@ -58,6 +58,18 @@ jobs:
         working-directory: apps/site
         run: npm run typecheck
 
+      - name: Lint API
+        working-directory: apps/api
+        run: npm run lint
+
+      - name: Lint web
+        working-directory: apps/web
+        run: npm run lint
+
+      - name: Lint mobile
+        working-directory: apps/mobile
+        run: npm run lint
+
       - name: Lint site
         working-directory: apps/site
         run: npm run lint

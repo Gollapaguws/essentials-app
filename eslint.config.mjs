@@ -1,0 +1,91 @@
+import js from "@eslint/js";
+import globals from "globals";
+import reactHooks from "eslint-plugin-react-hooks";
+import tseslint from "typescript-eslint";
+
+/**
+ * Shared flat config for the TypeScript apps (api, web, mobile).
+ *
+ * The public site keeps its own `apps/site/eslint.config.js` — it is plain JSX
+ * and uses react/unused-imports plugins that the TS apps do not need.
+ *
+ * Rules that the codebase does not satisfy yet are set to `warn`, so `--quiet`
+ * keeps them out of CI output while still surfacing them locally.
+ */
+export default tseslint.config(
+  {
+    ignores: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.next/**",
+      "**/.expo/**",
+      "**/coverage/**",
+      "apps/site/**",
+    ],
+  },
+
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+
+  // TypeScript already resolves identifiers; the base rule only reports noise
+  // for DOM/Node globals.
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: { "no-undef": "off" },
+  },
+
+  {
+    files: ["apps/api/**/*.ts"],
+    languageOptions: { globals: { ...globals.node } },
+  },
+
+  {
+    files: ["apps/web/**/*.{ts,tsx}"],
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
+  },
+
+  {
+    files: ["apps/mobile/**/*.{ts,tsx}"],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: { ecmaFeatures: { jsx: true } },
+    },
+  },
+
+  // Hooks rules for the two React apps; `exhaustive-deps` only warns so an
+  // existing dependency gap cannot block a pull request.
+  {
+    files: ["apps/web/**/*.{ts,tsx}", "apps/mobile/**/*.{ts,tsx}"],
+    plugins: { "react-hooks": reactHooks },
+    rules: {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
+    },
+  },
+
+  // Plain JS next to the TS sources (configs, scripts) is still Node code.
+  {
+    files: ["apps/{api,web,mobile}/**/*.{js,cjs,mjs}"],
+    languageOptions: { globals: { ...globals.node } },
+  },
+
+  {
+    files: ["**/*.{ts,tsx}"],
+    rules: {
+      // `any` is used deliberately at API boundaries (Prisma payloads, JSON
+      // bodies, third-party callbacks); typing those is separate work.
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+      "@typescript-eslint/no-empty-object-type": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-unused-expressions": "off",
+      "@typescript-eslint/no-namespace": "off",
+      // `catch {}` is used on purpose where a failure must not propagate.
+      "no-empty": ["error", { allowEmptyCatch: true }],
+    },
+  },
+);

@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "build": "echo 'use eas build'",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --quiet"
   },
   "dependencies": {
     "@essentials/api-client": "*",
