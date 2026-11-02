@@ -47,14 +47,6 @@ export default function FrontPageEditor() {
     } catch (err: any) { setError(err.message); }
   };
 
-  const moveEvent = (i: number, dir: -1 | 1) => {
-    const evts = [...(c.events ?? [])];
-    const j = i + dir;
-    if (j < 0 || j >= evts.length) return;
-    [evts[i], evts[j]] = [evts[j], evts[i]];
-    set({ events: evts });
-  };
-
   const setEvent = (i: number, patch: Partial<FrontPageEvent>) =>
     setC((p) => ({ ...p, events: (p.events ?? []).map((e, j) => (j === i ? { ...e, ...patch } : e)) }));
 

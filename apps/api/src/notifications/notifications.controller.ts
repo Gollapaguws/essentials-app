@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Param, UseGuards, HttpCode } from "@nestjs/common";
+import { Controller, Get, Post, UseGuards, HttpCode } from "@nestjs/common";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
-import { Auth, CurrentUser } from "../common/auth.decorator";
+import { CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { NotificationsService } from "./notifications.service";
 

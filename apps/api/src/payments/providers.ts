@@ -1,5 +1,4 @@
 import { createHmac, timingSafeEqual } from "crypto";
-import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { PaymentProvider, CreatePaymentInput } from "./payment-provider.interface";
 

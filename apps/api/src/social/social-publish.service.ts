@@ -1,7 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { prisma } from "@essentials/db";
-import type { JwtUser } from "../common/roles.guard";
 
 export type Platform = "x" | "telegram" | "discord" | "facebook" | "youtube" | "tiktok" | "instagram" | "mixcloud" | "webhook";
 
@@ -75,8 +73,7 @@ export class SocialPublishService {
   }
 
   private xAuthHeader(method: string, url: string, c: { key: string; secret: string; token: string; tokenSecret: string }) {
-    const { createHmac, randomBytes, createHash } = require("crypto") as typeof import("crypto");
-    const u = new URL(url);
+    const { createHmac, randomBytes } = require("crypto") as typeof import("crypto");
     const oauth = {
       oauth_consumer_key: c.key,
       oauth_nonce: randomBytes(16).toString("hex"),

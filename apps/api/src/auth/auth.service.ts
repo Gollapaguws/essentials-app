@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common";
-import { prisma, type Role } from "@essentials/db";
 
 export interface PublicUser {
   id: string;

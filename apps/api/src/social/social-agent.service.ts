@@ -1,6 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { prisma } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 
 /** Content generation via the LOCAL agent (Ollama on the VPS). */

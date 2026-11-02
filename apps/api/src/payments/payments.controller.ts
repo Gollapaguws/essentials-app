@@ -1,5 +1,5 @@
-import { Controller, Post, Body, Param, Headers, HttpCode, RawBodyRequest, Req, UseGuards, Res } from "@nestjs/common";
-import type { Request, Response } from "express";
+import { Controller, Post, Body, Param, Headers, HttpCode, RawBodyRequest, Req, UseGuards } from "@nestjs/common";
+import type { Request } from "express";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { PaymentsService } from "./payments.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";

@@ -10,9 +10,6 @@ const RTSP_HOST = "essentialsedm.com:8554";
 const RTSP_PATH = "essentials";
 // Publisher credentials (env; used by the ingest ffmpeg push)
 const RTSP_PUSH = `rtsp://publish:${process.env.RTSP_PUBLISH_PASS ?? ""}@127.0.0.1:8554/${RTSP_PATH}`;
-// Viewer URL with credentials — served ONLY to admins via /live/viewer-url
-const viewerUrl = (user: string, pass: string) =>
-  `rtsp://${user}:${pass}@${RTSP_HOST}/${RTSP_PATH}`;
 const HLS_DIR = process.env.HLS_DIR ?? "/var/www/essentialsedm/hls";
 const HLS_PLAYLIST = `${HLS_DIR}/stream.m3u8`;
 

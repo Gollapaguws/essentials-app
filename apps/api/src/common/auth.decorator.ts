@@ -1,4 +1,4 @@
-import { createParamDecorator, ExecutionContext, UseGuards, applyDecorators, SetMetadata } from "@nestjs/common";
+import { createParamDecorator, ExecutionContext, UseGuards, applyDecorators } from "@nestjs/common";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { RolesGuard } from "./roles.guard";
 import { Roles } from "./roles.decorator";

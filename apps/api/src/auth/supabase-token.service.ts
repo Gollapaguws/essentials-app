@@ -56,7 +56,7 @@ export class SupabaseTokenService {
         role: typeof claimedRole === "string" ? (claimedRole as Role) : null,
         aal: payload.aal === "aal2" ? "aal2" : "aal1",
       };
-    } catch (e) {
+    } catch {
       throw new UnauthorizedException("Invalid or expired token");
     }
   }

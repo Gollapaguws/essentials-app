@@ -1,6 +1,5 @@
 import { Injectable, BadRequestException, Logger } from "@nestjs/common";
 import { execFile } from "child_process";
-import { prisma } from "@essentials/db";
 
 const DOMAIN = "essentialsedm.com";
 const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{1,31}$/;

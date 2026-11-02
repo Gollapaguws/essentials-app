@@ -6,8 +6,6 @@ import { api } from "@essentials/api-client";
 
 interface OpenGig { id: string; title: string; date: string; genres: string[]; venue: { name: string } }
 interface Gig { id: string; slot?: string | null; status: string; startAt: string; performanceFee: number; event: { title: string; date: string } }
-interface Application { id: string; artist: { stageName: string; user: { name: string | null; email: string } }; slot?: string | null; status: string; event: { title: string; date: string } }
-
 const SLOTS = [
   { key: "day", label: "DAY (14:00–20:00)" },
   { key: "evening", label: "EVENING (20:00–00:00)" },
@@ -18,7 +16,6 @@ const SLOTS = [
 export default function GigCalendar() {
   const [open, setOpen] = useState<OpenGig[]>([]);
   const [gigs, setGigs] = useState<Gig[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
   const [slotSel, setSlotSel] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);

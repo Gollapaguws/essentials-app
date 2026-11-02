@@ -1,6 +1,6 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { MailService } from "../mail/mail.service";
-import { emailTemplates, wrapTemplate } from "../mail/templates";
+import { wrapTemplate } from "../mail/templates";
 import { prisma } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 
@@ -54,7 +54,6 @@ export class LoyaltyService {
       if (user) {
         const consent = user.consentRecords.find((c) => c.channel === "email");
         if (consent?.status === "granted") {
-          const appUrl = process.env.APP_URL ?? "https://essentialsedm.com";
           const html = `<h1 style="color:#00FF66;letter-spacing:2px;font-size:22px">FREE ENTRY EARNED</h1>
             <p>${user.name ?? "there"}, ${LOYALTY_TARGET} visits done. Show this code at the door:</p>
             <p style="font-size:20px;font-weight:bold;letter-spacing:3px">${user.referralCode}</p>`;

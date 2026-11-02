@@ -7,7 +7,7 @@ import { SocialPublishService, autoPublishPlatforms, COMPOSER_LINKS, MANUAL_PLAT
 import { SocialAgentService } from "./social-agent.service";
 import { SocialSchedulerService } from "./social-scheduler.service";
 import { ConfigService } from "@nestjs/config";
-import { IsArray, IsIn, IsOptional, IsString, MaxLength } from "class-validator";
+import { IsArray, IsOptional, IsString, MaxLength } from "class-validator";
 
 class GenerateDto {
   @IsString() @MaxLength(500) topic!: string;
@@ -16,13 +16,6 @@ class GenerateDto {
   @IsOptional() includeHashtags?: boolean;
   @IsOptional() @IsString() @MaxLength(40) eventDate?: string;
   @IsOptional() @IsString() @MaxLength(80) venue?: string;
-}
-
-class CreatePostDto {
-  @IsString() @MaxLength(2000) content!: string;
-  @IsArray() platforms!: string[];
-  @IsOptional() @IsString() @MaxLength(500) mediaUrl?: string;
-  @IsOptional() @IsString() scheduledAt?: string;
 }
 
 class PublishDto {
