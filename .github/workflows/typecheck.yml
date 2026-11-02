@@ -1,10 +1,10 @@
-name: Typecheck
+name: CI
 
 on:
   pull_request:
 
 concurrency:
-  group: typecheck-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -57,3 +57,53 @@ jobs:
       - name: Typecheck site
         working-directory: apps/site
         run: npm run typecheck
+
+  web-build:
+    name: Web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/site/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client and build shared packages
+        run: |
+          npm run generate --workspace @essentials/db
+          npm run build --workspace @essentials/db
+          npm run build --workspace @essentials/api-client
+
+      # The Supabase client is created at module scope, so `next build` cannot
+      # prerender a single page without these. Fork PRs get no secrets, hence
+      # the guard rather than a failing build.
+      - name: Check Supabase secrets
+        id: supabase
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && [ -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY are not set, so the web build was skipped."
+          fi
+
+      - name: Build web
+        if: steps.supabase.outputs.available == 'true'
+        working-directory: apps/web
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npm run build
