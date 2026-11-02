@@ -97,6 +97,11 @@ const links: NavLink[] = [
     roles: ["promoter", "admin"],
   },
   {
+    href: "/dashboard/notifications",
+    label: "Notifications",
+    hint: "Your bell feed: DJ calls, applications, confirmations and invoice notices, with unread counts.",
+  },
+  {
     href: "/dashboard/users",
     label: "Users",
     hint: "Every registered account: make someone a DJ, venue manager or promoter.",

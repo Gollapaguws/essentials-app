@@ -93,6 +93,10 @@ export class NotificationsService {
     });
   }
 
+  async unreadCount(userId: string): Promise<number> {
+    return prisma.notification.count({ where: { userId, read: false } });
+  }
+
   async markRead(userId: string, id?: string) {
     await prisma.notification.updateMany({
       where: { userId, ...(id ? { id } : {}) },
