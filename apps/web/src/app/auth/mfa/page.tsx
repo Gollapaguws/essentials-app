@@ -105,7 +105,7 @@ export default function MfaPage() {
 
         {qr && (
           <div className="space-y-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* data: URL from the qrcode package — next/image cannot optimise it */}
             <img src={qr} alt="TOTP QR code" className="mx-auto rounded-lg bg-white p-2" />
             <div className="flex items-center gap-2 text-neutral-500 text-xs break-all">
               <span>
