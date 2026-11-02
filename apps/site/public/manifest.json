@@ -1,0 +1,18 @@
+{
+  "name": "ESSENTIALS — Music Events",
+  "short_name": "ESSENTIALS",
+  "description": "Underground rooms, real sound systems, lineups built for the floor.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#00FF66",
+  "icons": [
+    {
+      "src": "https://base44.com/logo_v2.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
