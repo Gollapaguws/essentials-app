@@ -139,9 +139,14 @@ export default function ArtistPortal() {
 
         {/* Invoices */}
         <section className="border border-line bg-surface rounded-xl p-4">
-          <div className="flex justify-between items-center mb-3">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
             <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Invoices</h2>
-            <button onClick={generateInvoice} className="bg-neon text-bg font-black rounded-lg px-4 py-2 text-sm tracking-widest">GENERATE FROM CONFIRMED GIGS</button>
+            <button
+              onClick={generateInvoice}
+              className="bg-neon text-bg font-black rounded-lg px-3 py-2 text-xs sm:text-sm tracking-widest w-full sm:w-auto whitespace-nowrap"
+            >
+              GENERATE FROM CONFIRMED GIGS
+            </button>
           </div>
           {invoices.map((inv) => (
             <div key={inv.id} className="border-t border-line py-3 text-sm flex flex-wrap justify-between gap-2">
