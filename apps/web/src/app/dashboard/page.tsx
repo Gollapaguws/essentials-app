@@ -32,9 +32,13 @@ export default function Dashboard() {
 
   const [pacing, setPacing] = useState<PacingRow[]>([]);
   useEffect(() => {
-    api.get<Overview>("/analytics/overview").then(setData).catch((e) => setError("Sign in first (start at /) — " + errorMessage(e)));
+    // Analytics is promoter/admin data; other roles get redirected by the layout,
+    // so don't fire requests that can only answer 403.
+    const role = me?.user.role;
+    if (role && role !== "promoter" && role !== "admin") return;
+    api.get<Overview>("/analytics/overview").then(setData).catch((e) => setError(errorMessage(e)));
     api.get<PacingRow[]>("/analytics/pacing").then((rows) => setPacing(rows.filter((r) => r.alert))).catch(() => {});
-  }, []);
+  }, [me]);
 
   return (
     <>

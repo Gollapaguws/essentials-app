@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { DASHBOARD_ROLES } from "@essentials/auth";
+import { usePathname, useRouter } from "next/navigation";
+import { DASHBOARD_ROLES, landingPath } from "@essentials/auth";
 import { useAuth } from "@/components/AuthProvider";
 
 /**
@@ -12,6 +12,7 @@ import { useAuth } from "@/components/AuthProvider";
 export default function DashboardLayout({ children }: { children: import("react").ReactNode }) {
   const { session, me, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (loading) return;
@@ -25,7 +26,12 @@ export default function DashboardLayout({ children }: { children: import("react"
       return;
     }
     if (me.mfaRequired) router.replace("/auth/mfa");
-  }, [loading, session, me, router]);
+    // `/dashboard` is the promoter analytics home. Other roles own other pages,
+    // so send them there before that page renders and 403s.
+    if (pathname === "/dashboard" && me.user.role !== "promoter" && me.user.role !== "admin") {
+      router.replace(landingPath(me.user.role));
+    }
+  }, [loading, session, me, router, pathname]);
 
   if (loading || (session && !me)) {
     return (
