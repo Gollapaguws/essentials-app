@@ -5,6 +5,7 @@ import QRCode from "react-native-qrcode-svg";
 import { api } from "@essentials/api-client";
 import { colors, type } from "../../theme";
 import { supabase } from "../../lib/supabase";
+import { FieldHint } from "../../components/FieldHint";
 
 interface MeResponse {
   user: { role: string; aal: "aal1" | "aal2" };
@@ -105,9 +106,15 @@ export default function Mfa() {
             <QRCode value={uri} size={180} />
           </View>
           {secret && (
-            <Text style={{ color: colors.muted, marginTop: 10, fontSize: 12, textAlign: "center" }}>
-              Manual key: {secret}
-            </Text>
+            <>
+              <Text style={{ color: colors.muted, marginTop: 10, fontSize: 12, textAlign: "center" }}>
+                Manual key: {secret}
+              </Text>
+              <FieldHint
+                label="Can't scan the QR?"
+                hint="Type this key into your authenticator app by hand instead of scanning the code."
+              />
+            </>
           )}
         </View>
       )}
@@ -120,6 +127,10 @@ export default function Mfa() {
         maxLength={6}
         value={code}
         onChangeText={(v) => setCode(v.replace(/\D/g, ""))}
+      />
+      <FieldHint
+        label="Which code?"
+        hint="The 6 digits your authenticator app (Google Authenticator, 1Password, Authy) shows for ESSENTIALS. It changes every 30 seconds, so type it as it appears."
       />
       <Pressable style={s.button} onPress={verify} disabled={busy || code.length !== 6}>
         <Text style={s.buttonText}>{busy ? "CHECKING…" : "VERIFY"}</Text>

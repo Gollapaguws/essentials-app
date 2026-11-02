@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, Linking } from "react-nat
 import * as WebBrowser from "expo-web-browser";
 import { colors, type } from "../theme";
 import { supabase } from "../lib/supabase";
+import { FieldHint } from "../components/FieldHint";
 
 /** Deep link Supabase sends the PKCE code back to. */
 const CALLBACK = "essentials://auth/callback";
@@ -66,12 +67,24 @@ export default function Welcome() {
             value={email}
             onChangeText={setEmail}
           />
+          <FieldHint
+            label="Which email?"
+            hint="The address on your ESSENTIALS account. A new email creates a guest account on its own; admin, promoter and venue roles are assigned by an admin afterwards."
+          />
           <Pressable style={s.button} onPress={sendLink} disabled={loading || !email.includes("@")}>
             <Text style={s.buttonText}>{loading ? "SENDING…" : "SIGN IN"}</Text>
           </Pressable>
+          <FieldHint
+            label="How the link works"
+            hint="Sends a one-time sign-in link to that address — there is no password to remember, and the link expires after one use."
+          />
           <Pressable style={s.ghost} onPress={google}>
             <Text style={{ color: colors.text, fontWeight: "700" }}>CONTINUE WITH GOOGLE</Text>
           </Pressable>
+          <FieldHint
+            label="Using Google"
+            hint="Signs in with the Google account already on this device. First time here? It creates your ESSENTIALS guest account."
+          />
         </>
       )}
 
