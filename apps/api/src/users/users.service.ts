@@ -2,6 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { prisma, type Role } from "@essentials/db";
 import { AuthUserService } from "../auth/auth-user.service";
 import { ArtistsService } from "../artists/artists.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { TelegramService } from "../telegram/telegram.service";
 import type { SetRoleDto, UpdateProfileDto } from "./users.dto";
 
 /** Roles an admin may assign from the dashboard. */
@@ -21,6 +23,7 @@ const USER_SELECT = {
   role: true,
   authUid: true,
   verifiedBadge: true,
+  telegramChatId: true,
   createdAt: true,
   artistProfile: { select: { stageName: true } },
   managedVenues: {
@@ -38,17 +41,19 @@ interface UserRow {
   role: Role;
   authUid: string | null;
   verifiedBadge: boolean;
+  telegramChatId: string | null;
   createdAt: Date;
   artistProfile: { stageName: string } | null;
   managedVenues: { id: string; name: string; capacity: number }[];
 }
 
 function shape(row: UserRow) {
-  const { authUid, artistProfile, managedVenues, ...rest } = row;
+  const { authUid, artistProfile, managedVenues, telegramChatId, ...rest } = row;
   return {
     ...rest,
     // `linked` = the person has signed in at least once (has a Supabase identity).
     linked: Boolean(authUid),
+    telegram: Boolean(telegramChatId),
     stageName: artistProfile?.stageName ?? null,
     venue: managedVenues[0] ?? null,
   };
@@ -59,6 +64,8 @@ export class UsersService {
   constructor(
     private readonly authUsers: AuthUserService,
     private readonly artists: ArtistsService,
+    private readonly notifications: NotificationsService,
+    private readonly telegram: TelegramService,
   ) {}
 
   /** Every registered account, newest first, optionally filtered by email/name. */
@@ -130,6 +137,12 @@ export class UsersService {
           },
         })
         .catch(() => undefined);
+
+      // A new DJ is invited to the bot right away: gig calls and confirmations
+      // then arrive as Telegram messages instead of sitting in the bell feed.
+      if (role === "artist") {
+        await this.inviteDjToTelegram(existing.id, stageName ?? null).catch(() => null);
+      }
     }
 
     return shape(await prisma.user.findUniqueOrThrow({ where: { id }, select: USER_SELECT }));
@@ -170,6 +183,30 @@ export class UsersService {
     }
 
     return shape(await prisma.user.findUniqueOrThrow({ where: { id }, select: USER_SELECT }));
+  }
+
+  /** One-tap Telegram onboarding: a deep link that binds the DJ's chat. */
+  private async inviteDjToTelegram(userId: string, stageName: string | null) {
+    const label = stageName ?? "Your act";
+    const { url } = await this.telegram.linkFor(userId).catch(() => ({ url: null as string | null }));
+
+    if (!url) {
+      await this.notifications.notify(
+        userId,
+        "telegram_onboarding",
+        "Gig alerts go to your inbox",
+        "The ESSENTIALS bot is not configured yet, so DJ calls and confirmations arrive by email. An admin can enable Telegram later.",
+      );
+      return;
+    }
+
+    await this.notifications.deliver([userId], {
+      kind: "telegram_onboarding",
+      title: "Bring DJ calls to Telegram",
+      body: `${label} is on the ESSENTIALS roster. Connect Telegram once and DJ calls, gig confirmations and invoices arrive as messages. Open the link, then press Start.`,
+      link: url,
+      channels: ["inapp", "email", "telegram"],
+    });
   }
 
   private planVenue(input: {

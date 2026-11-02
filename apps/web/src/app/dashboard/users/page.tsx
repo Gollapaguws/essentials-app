@@ -13,6 +13,7 @@ interface RegisteredUser {
   role: string;
   verifiedBadge: boolean;
   linked: boolean;
+  telegram: boolean;
   createdAt: string;
   stageName: string | null;
   venue: { id: string; name: string; capacity: number } | null;
@@ -215,7 +216,10 @@ export default function Users() {
                       <p className="text-neutral-500 text-xs">{u.email}</p>
                       <p className="text-neutral-600 text-[11px] mt-0.5">
                         {u.linked ? "signed in" : "not signed in yet"} · joined{" "}
-                        {new Date(u.createdAt).toLocaleDateString()}
+                        {new Date(u.createdAt).toLocaleDateString()} ·{" "}
+                        <span className={u.telegram ? "text-neon/80" : "text-neutral-600"}>
+                          {u.telegram ? "telegram linked" : "no telegram"}
+                        </span>
                       </p>
                       {u.stageName && <p className="text-neon/80 text-[11px] mt-1">DJ · {u.stageName}</p>}
                       {u.venue && (
