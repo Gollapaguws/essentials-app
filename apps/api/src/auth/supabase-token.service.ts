@@ -1,4 +1,4 @@
-import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { Inject, Injectable, Optional, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
   createRemoteJWKSet,
@@ -29,7 +29,7 @@ export class SupabaseTokenService {
 
   constructor(
     config: ConfigService,
-    @Inject(SUPABASE_JWKS) keySet?: JWTVerifyGetKey,
+    @Optional() @Inject(SUPABASE_JWKS) keySet?: JWTVerifyGetKey,
   ) {
     this.issuer = `${config.getOrThrow<string>("SUPABASE_URL")}/auth/v1`;
     this.keySet =
