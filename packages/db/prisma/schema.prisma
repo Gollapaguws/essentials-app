@@ -378,6 +378,7 @@ model ArtistProfile {
   userId                      String          @unique
   stageName                   String
   bio                         String?
+  imageUrl                    String?
   vehicleConsumptionLPer100km Float           @default(8)
   travelRatePerKm             Float           @default(2.5)
   user                        User            @relation(fields: [userId], references: [id])

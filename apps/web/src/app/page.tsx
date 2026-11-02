@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@essentials/api-client";
-import { DASHBOARD_ROLES, type MeResponse } from "@essentials/auth";
+import { DASHBOARD_ROLES, landingPath, type MeResponse } from "@essentials/auth";
 import { supabase } from "@/lib/supabase";
 import { InfoTip, Tooltip } from "@/components/Tooltip";
 
@@ -21,10 +21,10 @@ export default function LoginPage() {
 
   const routeByRole = (me: MeResponse) => {
     if (!DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
-      setError("Dashboard is for promoters, venue managers and admins.");
+      setError("Dashboard is for DJs, promoters, venue managers and admins.");
       return;
     }
-    router.replace(me.mfaRequired ? "/auth/mfa" : "/dashboard");
+    router.replace(me.mfaRequired ? "/auth/mfa" : landingPath(me.user.role));
   };
 
   // Already signed in (site or dashboard) with a privileged role? Go straight in.

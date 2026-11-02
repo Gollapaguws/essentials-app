@@ -47,3 +47,13 @@ export const MFA_REQUIRED_ROLES: readonly AuthRole[] = ["promoter", "venue_manag
 
 /** Roles allowed into the dashboard. DJs included: the artist portal lives there. */
 export const DASHBOARD_ROLES: readonly AuthRole[] = ["artist", "promoter", "venue_manager", "admin"];
+
+/**
+ * Where a role should land after signing in. `/dashboard` is the promoter
+ * analytics page, so artists and venue managers get their own home instead.
+ */
+export function landingPath(role: AuthRole | null): string {
+  if (role === "artist") return "/dashboard/artist";
+  if (role === "venue_manager") return "/dashboard/venue";
+  return "/dashboard";
+}

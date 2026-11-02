@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { TopNav } from "@/components/TopNav";
+import { useAuth } from "@/components/AuthProvider";
 import { Stat } from "@/components/Stat";
 import { OverviewCharts } from "@/components/OverviewCharts";
 import { api } from "@essentials/api-client";
@@ -15,8 +17,18 @@ interface Overview {
 }
 
 export default function Dashboard() {
+  const { me } = useAuth();
+  const router = useRouter();
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Analytics is the promoter view; a DJ or venue manager who lands here is
+  // sent to the page their role actually owns instead of a 403.
+  useEffect(() => {
+    const role = me?.user.role;
+    if (role === "artist") router.replace("/dashboard/artist");
+    else if (role === "venue_manager") router.replace("/dashboard/venue");
+  }, [me, router]);
 
   const [pacing, setPacing] = useState<PacingRow[]>([]);
   useEffect(() => {

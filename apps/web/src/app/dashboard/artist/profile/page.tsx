@@ -9,6 +9,7 @@ import { errorMessage } from "@/lib/errors";
 interface Profile {
   stageName: string;
   bio: string | null;
+  imageUrl: string | null;
   vehicleConsumptionLPer100km: number;
   travelRatePerKm: number;
 }
@@ -28,6 +29,7 @@ export default function ArtistProfilePage() {
   const [form, setForm] = useState<Profile>({
     stageName: "",
     bio: "",
+    imageUrl: "",
     vehicleConsumptionLPer100km: 8,
     travelRatePerKm: 2.5,
   });
@@ -39,7 +41,7 @@ export default function ArtistProfilePage() {
       .get<Profile | null>("/artists/me")
       .then((p) => {
         setProfile(p);
-        if (p) setForm({ ...p, bio: p.bio ?? "" });
+        if (p) setForm({ ...p, bio: p.bio ?? "", imageUrl: p.imageUrl ?? "" });
       })
       .catch((e) => setError(errorMessage(e)));
     api.get<Gig[]>("/artists/gigs").then(setGigs).catch(() => {});
@@ -61,6 +63,7 @@ export default function ArtistProfilePage() {
       const body = {
         stageName: form.stageName.trim(),
         bio: form.bio ?? "",
+        imageUrl: (form.imageUrl ?? "").trim(),
         vehicleConsumptionLPer100km: form.vehicleConsumptionLPer100km,
         travelRatePerKm: form.travelRatePerKm,
       };
@@ -108,6 +111,30 @@ export default function ArtistProfilePage() {
                 value={form.stageName}
                 onChange={(e) => setForm({ ...form, stageName: e.target.value })}
               />
+            </div>
+
+            <div>
+              <label className={label} htmlFor="imageUrl">Profile image URL</label>
+              <div className="mt-1 flex gap-3 items-start">
+                <input
+                  id="imageUrl"
+                  maxLength={500}
+                  className={field}
+                  placeholder="https://…/photo.jpg"
+                  value={form.imageUrl ?? ""}
+                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                />
+                <div className="w-16 h-16 shrink-0 rounded-lg border border-line overflow-hidden bg-bg grid place-items-center">
+                  {form.imageUrl ? (
+                    <img src={form.imageUrl} alt={form.stageName || "DJ"} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] text-neutral-600 text-center leading-tight">NO IMAGE</span>
+                  )}
+                </div>
+              </div>
+              <p className="text-[11px] text-neutral-600 mt-1">
+                Link to a square photo. Leave it empty to remove the image.
+              </p>
             </div>
 
             <div>
@@ -166,6 +193,17 @@ export default function ArtistProfilePage() {
           <div className="space-y-4">
             <section className="bg-surface border border-line rounded-xl p-5">
               <p className="text-[11px] font-bold tracking-widest text-neutral-500 uppercase mb-3">Preview</p>
+              {form.imageUrl ? (
+                <img
+                  src={form.imageUrl}
+                  alt={form.stageName || "DJ"}
+                  className="w-full aspect-square object-cover rounded-lg border border-line mb-3"
+                />
+              ) : (
+                <div className="w-full aspect-square rounded-lg border border-dashed border-line grid place-items-center text-neutral-600 text-xs mb-3">
+                  No image yet
+                </div>
+              )}
               <p className="text-lg font-black text-neon">{form.stageName.trim() || "Your stage name"}</p>
               <p className="text-sm text-neutral-300 mt-2 whitespace-pre-wrap">
                 {bio.trim() || "No bio yet — promoters only see your stage name."}
@@ -180,8 +218,8 @@ export default function ArtistProfilePage() {
               {profile && (
                 <p className="flex justify-between">
                   <span className="text-neutral-500">Profile</span>
-                  <span className={profile.bio ? "text-neon" : "text-yellow-400"}>
-                    {profile.bio ? "complete" : "bio missing"}
+                  <span className={profile.bio && profile.imageUrl ? "text-neon" : "text-yellow-400"}>
+                    {!profile.bio ? "bio missing" : !profile.imageUrl ? "image missing" : "complete"}
                   </span>
                 </p>
               )}
