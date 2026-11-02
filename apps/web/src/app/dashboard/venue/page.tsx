@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 interface Venue {
   id: string;
@@ -44,7 +45,7 @@ export default function VenuePortal() {
   const loadVenue = (id: string) => {
     setVenueId(id);
     setError(null);
-    api.get<PendingEvent[]>("/venues/events/pending").then(setPending).catch((e) => setError(e.message));
+    api.get<PendingEvent[]>("/venues/events/pending").then(setPending).catch((e) => setError(errorMessage(e)));
     api.get<VenueTable[]>(`/venues/${id}/tables`).then(setTables).catch(() => {});
     api.get<DoorLog[]>(`/venues/${id}/door-logs`).then(setLogs).catch(() => {});
     api.get<Analytics>(`/venues/${id}/analytics`).then(setAnalytics).catch(() => {});
@@ -63,7 +64,7 @@ export default function VenuePortal() {
     api.get<Venue[]>("/venues/mine").then((v) => {
       setVenues(v);
       if (v[0]) loadVenue(v[0].id);
-    }).catch((e) => setError(e.message));
+    }).catch((e) => setError(errorMessage(e)));
   }, []);
 
   // Keep the form in sync with whichever venue is selected.
@@ -88,11 +89,11 @@ export default function VenuePortal() {
       await api.post(`/venues/${venueId}/tables`, tableForm);
       setTableForm({ tableNumber: "", capacity: 6, minSpend: 5000 });
       loadVenue(venueId);
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(errorMessage(err)); }
   };
 
   const removeTable = async (tableNumber: string) => {
-    await api.del(`/venues/${venueId}/tables/${tableNumber}`).catch((e: any) => setError(e.message));
+    await api.del(`/venues/${venueId}/tables/${tableNumber}`).catch((e) => setError(errorMessage(e)));
     loadVenue(venueId);
   };
 
@@ -120,8 +121,8 @@ export default function VenuePortal() {
       });
       await refreshVenues(venueId);
       setNotice("Venue details saved.");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(errorMessage(err));
     } finally {
       setBusyDetails(false);
     }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 interface Profile { stageName: string; vehicleConsumptionLPer100km: number; travelRatePerKm: number }
 interface Gig { id: string; startAt: string; endAt: string; status: string; setupBufferMin: number; teardownBufferMin: number; performanceFee: number; travelFee: number; event: { title: string; venue: { name: string } } }
@@ -29,7 +30,7 @@ export default function ArtistPortal() {
 
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    try { await api.post("/artists/me", form); loadAll(); } catch (err: any) { setError(err.message); }
+    try { await api.post("/artists/me", form); loadAll(); } catch (err) { setError(errorMessage(err)); }
   };
 
   const runPlan = async (save = false) => {
@@ -38,18 +39,18 @@ export default function ArtistPortal() {
         ? await api.post<Plan>("/artists/route-plan/save", { date: planDate })
         : await api.get<Plan>(`/artists/route-plan?date=${planDate}`);
       setPlan(p);
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(errorMessage(err)); }
   };
 
   const generateInvoice = async () => {
-    try { await api.post("/invoices/generate", {}); loadAll(); } catch (err: any) { setError(err.message); }
+    try { await api.post("/invoices/generate", {}); loadAll(); } catch (err) { setError(errorMessage(err)); }
   };
 
   const paymentLink = async (invoiceId: string, provider: "payfast" | "stripe") => {
     try {
       const r = await api.post<{ url: string; reference: string }>(`/invoices/${invoiceId}/payment-link`, { provider });
       alert(`Payment link (${provider}): ${r.url}`);
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(errorMessage(err)); }
   };
 
   /** Phase 4 in-app payment: hosted checkout behind the provider interface. */
@@ -57,7 +58,7 @@ export default function ArtistPortal() {
     try {
       const r = await api.post<{ checkoutUrl: string; provider: string }>(`/payments/checkout/${invoiceId}`);
       window.location.href = r.checkoutUrl;
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(errorMessage(err)); }
   };
 
   return (

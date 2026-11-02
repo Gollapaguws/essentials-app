@@ -5,6 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
 import { OverviewCharts } from "@/components/OverviewCharts";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 interface PacingRow { eventId: string; title: string; rsvps: number; previousRsvps: number | null; ratio: number | null; alert: boolean }
 interface Overview {
@@ -19,7 +20,7 @@ export default function Dashboard() {
 
   const [pacing, setPacing] = useState<PacingRow[]>([]);
   useEffect(() => {
-    api.get<Overview>("/analytics/overview").then(setData).catch((e) => setError("Sign in first (start at /) — " + e.message));
+    api.get<Overview>("/analytics/overview").then(setData).catch((e) => setError("Sign in first (start at /) — " + errorMessage(e)));
     api.get<PacingRow[]>("/analytics/pacing").then((rows) => setPacing(rows.filter((r) => r.alert))).catch(() => {});
   }, []);
 

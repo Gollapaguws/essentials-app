@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 interface Target { id: string; platform: string; label: string | null; url: string; enabled: boolean; live: boolean }
 interface LiveStatus { live: boolean; rtspUrl: string; simulcast: Record<string, boolean> }
@@ -26,7 +27,7 @@ export default function Simulcast() {
   const [error, setError] = useState<string | null>(null);
 
   const load = () => {
-    api.get<Target[]>("/live/targets").then(setTargets).catch((e) => setError(e.message));
+    api.get<Target[]>("/live/targets").then(setTargets).catch((e) => setError(errorMessage(e)));
     api.get<LiveStatus>("/live/status").then(setStatus).catch(() => {});
   };
   useEffect(() => { load(); const id = setInterval(() => api.get<LiveStatus>("/live/status").then(setStatus).catch(() => {}), 5000); return () => clearInterval(id); }, []);
@@ -35,15 +36,15 @@ export default function Simulcast() {
     e.preventDefault();
     setError(null);
     try { await api.post("/live/targets", form); setForm({ ...form, url: "", label: "" }); load(); }
-    catch (err: any) { setError(err.message); }
+    catch (err) { setError(errorMessage(err)); }
   };
 
   const toggle = async (id: string) => {
-    try { await api.post(`/live/targets/${id}/toggle`); load(); } catch (err: any) { setError(err.message); }
+    try { await api.post(`/live/targets/${id}/toggle`); load(); } catch (err) { setError(errorMessage(err)); }
   };
 
   const remove = async (id: string) => {
-    try { await api.del(`/live/targets/${id}`); load(); } catch (err: any) { setError(err.message); }
+    try { await api.del(`/live/targets/${id}`); load(); } catch (err) { setError(errorMessage(err)); }
   };
 
   const input = "w-full bg-bg border border-line rounded-lg px-3 py-2";

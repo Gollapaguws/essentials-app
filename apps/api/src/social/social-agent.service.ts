@@ -25,7 +25,7 @@ export class SocialAgentService {
       body: JSON.stringify({ model: this.model(), prompt, stream: false, keep_alive: "30m" }),
     });
     if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
-    const json: any = await res.json();
+    const json = (await res.json()) as { response?: string };
     return String(json.response ?? "").trim();
   }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 interface Promo { id: string; code: string; kind: string; discountPct: number; maxUses: number; uses: number; active: boolean; _count: { redemptions: number } }
 interface EventRow { id: string; title: string }
@@ -20,7 +21,7 @@ export default function Promotions() {
     if (id) api.get<Promo[]>(`/promotions/event/${id}`).then(setPromos).catch(() => setPromos([]));
   };
   useEffect(() => {
-    api.get<EventRow[]>("/events/manage/list").then((e) => { setEvents(e); if (e[0]) load(e[0].id); }).catch((e) => setError(e.message));
+    api.get<EventRow[]>("/events/manage/list").then((e) => { setEvents(e); if (e[0]) load(e[0].id); }).catch((e) => setError(errorMessage(e)));
   }, []);
 
   const create = async (e2: React.FormEvent) => {
@@ -29,7 +30,7 @@ export default function Promotions() {
       await api.post("/promotions", { ...form, eventId });
       setForm({ code: "", kind: "discount", discountPct: 15, maxUses: 50 });
       load(eventId);
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(errorMessage(err)); }
   };
 
   return (

@@ -73,9 +73,9 @@ export default tseslint.config(
   {
     files: ["**/*.{ts,tsx}"],
     rules: {
-      // `any` is used deliberately at API boundaries (Prisma payloads, JSON
-      // bodies, third-party callbacks); typing those is separate work.
-      "@typescript-eslint/no-explicit-any": "off",
+      // Untrusted JSON is narrowed at the boundary (`unknown` + a cast to the
+      // shape actually read), so an explicit `any` is never needed.
+      "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },

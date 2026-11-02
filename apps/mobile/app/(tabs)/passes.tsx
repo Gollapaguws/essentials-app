@@ -9,7 +9,7 @@ export default function Passes() {
   const [events, setEvents] = useState<(EventSummary & { myRsvp?: { status: string } })[]>([]);
 
   useEffect(() => {
-    api.get<any[]>("/events")
+    api.get<(EventSummary & { myRsvp?: { status: string } })[]>("/events")
       .then(setEvents)
       .catch(() => {});
   }, []);

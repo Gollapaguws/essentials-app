@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://essentialsedm.com/api";
 
@@ -27,7 +28,7 @@ export default function FrontPageEditor() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<FrontPage>("/site/content").then(setC).catch((e) => setError(e.message));
+    api.get<FrontPage>("/site/content").then(setC).catch((e) => setError(errorMessage(e)));
   }, []);
 
   const set = (patch: Partial<FrontPage>) => setC((p) => ({ ...p, ...patch }));
@@ -44,7 +45,7 @@ export default function FrontPageEditor() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? "Upload failed");
       cb(data.url);
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(errorMessage(err)); }
   };
 
   const setEvent = (i: number, patch: Partial<FrontPageEvent>) =>
@@ -55,8 +56,8 @@ export default function FrontPageEditor() {
     try {
       await api.post("/site/content", c);
       setMsg("Saved â€” the front page updates on next load.");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(errorMessage(err));
     }
   };
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 interface Mailbox { username: string; email: string; home: string; created: string }
 
@@ -14,7 +15,7 @@ export default function Mailboxes() {
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = () => api.get<Mailbox[]>("/mailboxes").then(setBoxes).catch((e) => setError(e.message));
+  const load = () => api.get<Mailbox[]>("/mailboxes").then(setBoxes).catch((e) => setError(errorMessage(e)));
   useEffect(() => { load(); }, []);
 
   const create = async (e: React.FormEvent) => {
@@ -25,7 +26,7 @@ export default function Mailboxes() {
       setMsg(`Mailbox ${r.email} created — login at /webmail with "${r.username}" and the password you set.`);
       setForm({ username: "", password: "" });
       load();
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(errorMessage(err)); }
   };
 
   const resetPw = async (username: string) => {
@@ -35,7 +36,7 @@ export default function Mailboxes() {
     try {
       await api.post(`/mailboxes/${username}/password`, { password });
       setMsg(`Password updated for ${username}@essentialsedm.com`);
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(errorMessage(err)); }
   };
 
   const remove = async (username: string) => {
@@ -45,7 +46,7 @@ export default function Mailboxes() {
       await api.del(`/mailboxes/${username}`);
       setMsg(`Mailbox ${username}@essentialsedm.com deleted`);
       load();
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(errorMessage(err)); }
   };
 
   const input = "w-full bg-bg border border-line rounded-lg px-3 py-2";

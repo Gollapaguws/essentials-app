@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 interface Campaign {
   id: string; name: string; flow: string; status: string; subject: string; sentCount: number;
@@ -27,7 +28,7 @@ export default function EmailEngine() {
   const [form, setForm] = useState({ name: "", flow: "weekly_drop", subject: "", segmentId: "" });
 
   const load = () => {
-    api.get<Campaign[]>("/email/campaigns").then(setCampaigns).catch((e) => setError(e.message));
+    api.get<Campaign[]>("/email/campaigns").then(setCampaigns).catch((e) => setError(errorMessage(e)));
     api.get<{ id: string; name: string }[]>("/email/segments").then(setSegments).catch(() => {});
   };
   useEffect(() => { load(); }, []);
@@ -38,7 +39,7 @@ export default function EmailEngine() {
       await api.post("/email/campaigns", { ...form, segmentId: form.segmentId || undefined });
       setForm({ name: "", flow: "weekly_drop", subject: "", segmentId: "" });
       load();
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(errorMessage(err)); }
   };
 
   const showAttribution = async (id: string) => {

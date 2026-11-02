@@ -17,5 +17,5 @@ export interface PaymentProvider {
   readonly name: string;
   createCheckout(input: CreatePaymentInput): Promise<{ url: string; providerRef?: string }>;
   verifyWebhookSignature(rawBody: string, signature: string | undefined): boolean;
-  extractReferenceAndStatus(payload: any): { reference: string; paid: boolean };
+  extractReferenceAndStatus(payload: unknown): { reference: string; paid: boolean };
 }
