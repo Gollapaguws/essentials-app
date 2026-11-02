@@ -93,6 +93,10 @@ model User {
   verifiedBadge Boolean  @default(false)
   // Set when the account appears, cleared once its owner chooses a password.
   mustResetPassword Boolean @default(false)
+  // Per-user Telegram DM target, bound by tapping a /start deep link once.
+  telegramChatId   String?
+  telegramLinkedAt DateTime?
+  telegramLinkCode String?  @unique
   referralCode  String   @unique @default(cuid())
   referredById  String?
   referredBy    User?    @relation("Referrals", fields: [referredById], references: [id])

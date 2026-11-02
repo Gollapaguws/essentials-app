@@ -21,6 +21,7 @@ import { SiteModule } from "./site/site.module";
 import { LiveModule } from "./live/live.module";
 import { MailboxesModule } from "./mailboxes/mailboxes.module";
 import { NotificationsModule } from "./notifications/notifications.module";
+import { TelegramModule } from "./telegram/telegram.module";
 import { SocialPostingModule } from "./social/social-posting.module";
 
 @Module({
@@ -51,6 +52,7 @@ import { SocialPostingModule } from "./social/social-posting.module";
     SiteModule,
     LiveModule,
     MailboxesModule,
+    TelegramModule,
     NotificationsModule,
     SocialPostingModule,
   ],

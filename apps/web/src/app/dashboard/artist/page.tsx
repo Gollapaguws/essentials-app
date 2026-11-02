@@ -11,6 +11,7 @@ interface Profile { stageName: string; bio?: string | null; imageUrl?: string | 
 interface Gig { id: string; startAt: string; endAt: string; status: string; setupBufferMin: number; teardownBufferMin: number; performanceFee: number; travelFee: number; event: { title: string; venue: { name: string } } }
 interface Plan { legs: { distanceKm: number; durationMinutes: number; estimatedFuelCost: number; isConflict: boolean; conflictReason?: string; mapsUrl: string }[]; totals: { distanceKm: number; fuelCost: number; travelFee: number }; conflicts: number }
 interface Invoice { id: string; number: string; status: string; total: number; items: { label: string; amount: number }[] }
+interface TelegramStatus { configured: boolean; bot: string | null; linked: boolean }
 
 /** Phase 3 artist portal: profile, gig calendar, collision alerts, fuel/travel costing, invoices. */
 export default function ArtistPortal() {
@@ -20,6 +21,7 @@ export default function ArtistPortal() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [planDate, setPlanDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [form, setForm] = useState<Profile>({ stageName: "", bio: "", imageUrl: "", vehicleConsumptionLPer100km: 8, travelRatePerKm: 2.5 });
+  const [telegram, setTelegram] = useState<TelegramStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadAll = () => {
@@ -27,7 +29,22 @@ export default function ArtistPortal() {
     api.get<Gig[]>("/artists/gigs").then(setGigs).catch(() => {});
     api.get<Invoice[]>("/invoices").then(setInvoices).catch(() => {});
   };
-  useEffect(() => { loadAll(); }, []);
+  const loadTelegram = () =>
+    api.get<TelegramStatus>("/telegram/status").then(setTelegram).catch(() => {});
+  useEffect(() => { loadAll(); loadTelegram(); }, []);
+
+  /** Copy-free onboarding: one deep link, the DJ presses Start in Telegram. */
+  const connectTelegram = async () => {
+    try {
+      const r = await api.post<{ url: string | null }>("/telegram/link");
+      if (r.url) window.open(r.url, "_blank", "noopener,noreferrer");
+      else setError("Telegram is not configured on the server yet.");
+    } catch (err) { setError(errorMessage(err)); }
+  };
+
+  const disconnectTelegram = async () => {
+    try { await api.post("/telegram/unlink"); loadTelegram(); } catch (err) { setError(errorMessage(err)); }
+  };
 
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,6 +125,41 @@ export default function ArtistPortal() {
             </div>
           ))}
           {!gigs.length && <p className="text-neutral-500 text-sm">No bookings yet — promoters book you from the event lineup.</p>}
+        </section>
+
+        {/* Telegram onboarding */}
+        <section className="border border-line bg-surface rounded-xl p-4">
+          <h2 className="font-bold text-neon uppercase text-sm tracking-wider mb-3">Telegram gig alerts</h2>
+          {telegram?.linked ? (
+            <p className="text-sm text-neutral-300">
+              Linked — DJ calls, gig confirmations and invoices arrive as Telegram messages.
+            </p>
+          ) : (
+            <p className="text-sm text-neutral-400">
+              Connect Telegram once and every DJ call, confirmation and invoice reaches your phone as a
+              message, instead of waiting in the bell feed.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2 mt-3">
+            {telegram?.linked ? (
+              <button onClick={disconnectTelegram} className="border border-line rounded-lg px-4 py-2 text-xs tracking-widest text-neutral-300">
+                DISCONNECT
+              </button>
+            ) : (
+              <button
+                onClick={connectTelegram}
+                disabled={telegram ? !telegram.configured : false}
+                className="bg-neon text-bg font-black rounded-lg px-4 py-2 text-xs tracking-widest disabled:opacity-40"
+              >
+                CONNECT TELEGRAM
+              </button>
+            )}
+          </div>
+          {telegram && !telegram.configured && (
+            <p className="text-neutral-500 text-xs mt-2">
+              The bot is not configured on this server yet — alerts still arrive by email.
+            </p>
+          )}
         </section>
 
         {/* Routing */}
