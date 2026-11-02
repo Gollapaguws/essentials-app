@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import { signInWithPassword, signInWithGoogle } from "@/lib/auth";
 import { authCallbackUrl } from "@/lib/supabase";
 import GoogleIcon from "@/components/GoogleIcon";
@@ -39,7 +38,6 @@ export default function Login() {
 
         <button
           onClick={() => {
-            if (inviteCode) localStorage.setItem("essentials_invite", inviteCode);
             signInWithGoogle(authCallbackUrl).catch(() => setError("Google sign-in failed."));
           }}
           style={{
