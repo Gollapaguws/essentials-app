@@ -10,6 +10,8 @@ class ProfileDto {
   @IsString() stageName!: string;
   /** Free text for the DJ's public profile. Empty string clears it. */
   @IsOptional() @IsString() @MaxLength(2000) bio?: string;
+  /** Absolute http(s) URL of the profile image. Empty string clears it. */
+  @IsOptional() @IsString() @MaxLength(500) imageUrl?: string;
   @IsOptional() @IsNumber() @Min(1) vehicleConsumptionLPer100km?: number;
   @IsOptional() @IsNumber() @Min(0) travelRatePerKm?: number;
 }

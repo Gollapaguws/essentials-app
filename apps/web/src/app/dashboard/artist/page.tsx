@@ -7,7 +7,7 @@ import { Stat } from "@/components/Stat";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 
-interface Profile { stageName: string; bio?: string | null; vehicleConsumptionLPer100km: number; travelRatePerKm: number }
+interface Profile { stageName: string; bio?: string | null; imageUrl?: string | null; vehicleConsumptionLPer100km: number; travelRatePerKm: number }
 interface Gig { id: string; startAt: string; endAt: string; status: string; setupBufferMin: number; teardownBufferMin: number; performanceFee: number; travelFee: number; event: { title: string; venue: { name: string } } }
 interface Plan { legs: { distanceKm: number; durationMinutes: number; estimatedFuelCost: number; isConflict: boolean; conflictReason?: string; mapsUrl: string }[]; totals: { distanceKm: number; fuelCost: number; travelFee: number }; conflicts: number }
 interface Invoice { id: string; number: string; status: string; total: number; items: { label: string; amount: number }[] }
@@ -19,7 +19,7 @@ export default function ArtistPortal() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [planDate, setPlanDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [form, setForm] = useState<Profile>({ stageName: "", bio: "", vehicleConsumptionLPer100km: 8, travelRatePerKm: 2.5 });
+  const [form, setForm] = useState<Profile>({ stageName: "", bio: "", imageUrl: "", vehicleConsumptionLPer100km: 8, travelRatePerKm: 2.5 });
   const [error, setError] = useState<string | null>(null);
 
   const loadAll = () => {
@@ -72,7 +72,18 @@ export default function ArtistPortal() {
             DETAILED PROFILE →
           </Link>
         </div>
-        {profile?.bio && <p className="text-sm text-neutral-300 max-w-3xl whitespace-pre-wrap">{profile.bio}</p>}
+        {(profile?.bio || profile?.imageUrl) && (
+          <div className="flex gap-4 items-start">
+            {profile?.imageUrl && (
+              <img
+                src={profile.imageUrl}
+                alt={profile.stageName}
+                className="w-20 h-20 rounded-xl object-cover border border-line shrink-0"
+              />
+            )}
+            <p className="text-sm text-neutral-300 max-w-3xl whitespace-pre-wrap">{profile?.bio}</p>
+          </div>
+        )}
         {error && <p className="text-red-400 text-sm">{error}</p>}
         {!profile && <p className="text-neutral-500 text-sm">Set up your profile below to unlock gigs, routing and invoices.</p>}
 

@@ -72,9 +72,13 @@ export class ArtistsService {
     return prisma.artistProfile.findUnique({ where: { userId: user.sub } });
   }
 
-  async upsertProfile(user: JwtUser, data: { stageName: string; bio?: string; vehicleConsumptionLPer100km?: number; travelRatePerKm?: number }) {
-    // An empty bio is a clear, not a missing field: store null so the UI hides it.
-    const patch = data.bio !== undefined ? { ...data, bio: data.bio.trim() || null } : data;
+  async upsertProfile(user: JwtUser, data: { stageName: string; bio?: string; imageUrl?: string; vehicleConsumptionLPer100km?: number; travelRatePerKm?: number }) {
+    // An empty text field is a clear, not a missing one: store null so the UI hides it.
+    const patch = {
+      ...data,
+      ...(data.bio !== undefined ? { bio: data.bio.trim() || null } : {}),
+      ...(data.imageUrl !== undefined ? { imageUrl: data.imageUrl.trim() || null } : {}),
+    };
     const existing = await prisma.artistProfile.findUnique({ where: { userId: user.sub } });
     if (existing) {
       return prisma.artistProfile.update({ where: { userId: user.sub }, data: patch });
