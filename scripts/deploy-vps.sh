@@ -18,6 +18,9 @@ env_value() { grep -m1 "^$1=" .env | cut -d= -f2- | sed 's/[[:space:]]*$//'; }
 export NEXT_PUBLIC_SUPABASE_URL="$(env_value NEXT_PUBLIC_SUPABASE_URL)"
 export NEXT_PUBLIC_SUPABASE_ANON_KEY="$(env_value NEXT_PUBLIC_SUPABASE_ANON_KEY)"
 export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://essentialsedm.com/api}"
+# Must match the systemd unit's runtime value, or the HTML and the files disagree
+# about where /_next lives and every chunk 404s into the site's index.html.
+export NEXT_BASE_PATH="${NEXT_BASE_PATH:-/dashboard}"
 
 npm install --no-audit --no-fund
 npm run generate -w @essentials/db
