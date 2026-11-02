@@ -72,12 +72,14 @@ export class ArtistsService {
     return prisma.artistProfile.findUnique({ where: { userId: user.sub } });
   }
 
-  async upsertProfile(user: JwtUser, data: { stageName: string; vehicleConsumptionLPer100km?: number; travelRatePerKm?: number }) {
+  async upsertProfile(user: JwtUser, data: { stageName: string; bio?: string; vehicleConsumptionLPer100km?: number; travelRatePerKm?: number }) {
+    // An empty bio is a clear, not a missing field: store null so the UI hides it.
+    const patch = data.bio !== undefined ? { ...data, bio: data.bio.trim() || null } : data;
     const existing = await prisma.artistProfile.findUnique({ where: { userId: user.sub } });
     if (existing) {
-      return prisma.artistProfile.update({ where: { userId: user.sub }, data });
+      return prisma.artistProfile.update({ where: { userId: user.sub }, data: patch });
     }
-    return prisma.artistProfile.create({ data: { userId: user.sub, ...data } });
+    return prisma.artistProfile.create({ data: { userId: user.sub, ...patch } });
   }
 
   /** Gig calendar: approved upcoming events that the artist has not applied to. */

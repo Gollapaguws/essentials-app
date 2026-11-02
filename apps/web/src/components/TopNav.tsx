@@ -49,6 +49,12 @@ const links: NavLink[] = [
     roles: ["artist", "admin"],
   },
   {
+    href: "/dashboard/artist/profile",
+    label: "My Profile",
+    hint: "Your DJ profile: stage name, bio, and the travel costs used for routing and invoices.",
+    roles: ["artist", "admin"],
+  },
+  {
     href: "/dashboard/insights",
     label: "Insights",
     hint: "Guest lifetime value and cohort retention across previous nights.",

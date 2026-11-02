@@ -4,10 +4,12 @@ import { ArtistsService } from "./artists.service";
 import { DjBookingService } from "./dj-booking.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
-import { IsNumber, IsOptional, IsString, Min } from "class-validator";
+import { IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
 
 class ProfileDto {
   @IsString() stageName!: string;
+  /** Free text for the DJ's public profile. Empty string clears it. */
+  @IsOptional() @IsString() @MaxLength(2000) bio?: string;
   @IsOptional() @IsNumber() @Min(1) vehicleConsumptionLPer100km?: number;
   @IsOptional() @IsNumber() @Min(0) travelRatePerKm?: number;
 }
