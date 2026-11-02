@@ -53,6 +53,10 @@ export default function Users() {
   const [form, setForm] = useState<RoleForm | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [newEmail, setNewEmail] = useState("");
+  const [newRole, setNewRole] = useState<"guest" | "artist" | "promoter" | "venue_manager" | "admin">("guest");
+  const [creating, setCreating] = useState(false);
+  const [provisioned, setProvisioned] = useState<{ email: string; password: string } | null>(null);
 
   const load = useCallback(async (search: string) => {
     setError(null);
@@ -91,6 +95,28 @@ export default function Users() {
       setError(errorMessage(e) ?? "Could not save.");
     } finally {
       setBusyId(null);
+    }
+  };
+
+  /** Provision a login with a temporary password; the owner resets it on first sign-in. */
+  const createAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    setError(null);
+    setNotice(null);
+    setProvisioned(null);
+    try {
+      const result = await api.post<{ user: RegisteredUser; temporaryPassword: string }>("/users", {
+        email: newEmail.trim(),
+        role: newRole,
+      });
+      setUsers((prev) => [result.user, ...prev]);
+      setProvisioned({ email: result.user.email, password: result.temporaryPassword });
+      setNewEmail("");
+    } catch (err) {
+      setError(errorMessage(err) ?? "Could not create the account.");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -192,6 +218,61 @@ export default function Users() {
             </button>
           </form>
         </div>
+
+        <section className="border border-line rounded-xl p-4 space-y-3">
+          <div>
+            <h2 className="text-sm font-bold text-neon uppercase tracking-wider">Create an account</h2>
+            <p className="text-neutral-500 text-xs mt-1">
+              Sets up the login with a temporary password. The person must choose their own before
+              the dashboard opens.
+            </p>
+          </div>
+          <form onSubmit={createAccount} className="flex flex-wrap items-center gap-2">
+            <input
+              type="email"
+              required
+              className={field}
+              placeholder="dj@example.com"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+            />
+            <select
+              className={field}
+              value={newRole}
+              onChange={(e) => setNewRole(e.target.value as typeof newRole)}
+            >
+              {(["guest", "promoter", "artist", "venue_manager", "admin"] as const).map((role) => (
+                <option key={role} value={role}>
+                  {ROLE_LABEL[role]}
+                </option>
+              ))}
+            </select>
+            <button
+              disabled={creating || !newEmail.includes("@")}
+              className="bg-neon text-bg font-black rounded-lg px-3 py-2 text-xs tracking-widest disabled:opacity-50"
+            >
+              {creating ? "CREATING…" : "CREATE ACCOUNT"}
+            </button>
+          </form>
+          {provisioned && (
+            <div className="border border-neon/40 rounded-lg p-3">
+              <p className="text-neon text-sm">Account ready for {provisioned.email}.</p>
+              <p className="text-neutral-400 text-xs mt-1">
+                Temporary password — shown once, passed on by you, changed by them at first sign-in:
+              </p>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <code className="bg-bg border border-line rounded px-2 py-1 text-sm">{provisioned.password}</code>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(provisioned.password)}
+                  className="text-[11px] tracking-widest text-neutral-400 hover:text-neon"
+                >
+                  COPY
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
 
         {notice && <p className="text-neon text-sm">{notice}</p>}
         {error && <p className="text-red-400 text-sm">{error}</p>}

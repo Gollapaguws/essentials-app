@@ -37,11 +37,10 @@ export class AuthUserService {
       return linked;
     }
 
-    // A brand-new address starts on a throwaway password: whoever set the
-    // account up knows it, so the owner has to choose their own before the
-    // dashboard opens.
+    // Self sign-ups choose their own password, so they are not sent through the
+    // reset gate. Only admin-provisioned accounts (UsersService.create) are.
     const created = await prisma.user.create({
-      data: { authUid: sub, email: normalized, role: "guest", mustResetPassword: true },
+      data: { authUid: sub, email: normalized, role: "guest" },
     });
     this.remember(sub, created);
     return created;
