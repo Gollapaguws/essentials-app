@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.next/
+.expo/
+.env
+.env.local
+*.log
+coverage/
+.turbo/
+dist/
+.superpowers/
+tsbuildinfo
+supabase/.temp/
+supabase/.branches/
+apps/site/.env.production
+supabase/config.toml
+supabase/config.toml
