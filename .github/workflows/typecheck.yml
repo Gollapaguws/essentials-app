@@ -58,6 +58,10 @@ jobs:
         working-directory: apps/site
         run: npm run typecheck
 
+      - name: Lint site
+        working-directory: apps/site
+        run: npm run lint
+
   web-build:
     name: Web build
     runs-on: ubuntu-latest
