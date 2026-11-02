@@ -78,6 +78,18 @@ export class EventsController {
     return this.tools.clone(user, id);
   }
 
+  @Post(":id/cancel")
+  @Auth("promoter")
+  cancelEvent(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.tools.cancel(user, id);
+  }
+
+  @Post(":id/reopen")
+  @Auth("promoter")
+  reopen(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.tools.reopen(user, id);
+  }
+
   @Delete(":id")
   @Auth("promoter")
   remove(@Param("id") id: string, @CurrentUser() user: JwtUser) {

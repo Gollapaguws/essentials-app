@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { Injectable, ForbiddenException, NotFoundException, ConflictException } from "@nestjs/common";
 import { prisma } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 import type { Response } from "express";
@@ -32,6 +32,24 @@ export class EventToolsService {
       await prisma.eventGroupChat.create({ data: { eventId: cloned.id } }).catch(() => null);
     }
     return cloned;
+  }
+
+  /** Cancel an event: nothing is deleted, it just leaves guest feeds and reminders. */
+  async cancel(user: JwtUser, eventId: string) {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) throw new NotFoundException("Event not found");
+    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    if (event.status === "cancelled") throw new ConflictException("Event is already cancelled");
+    return prisma.event.update({ where: { id: eventId }, data: { status: "cancelled" } });
+  }
+
+  /** Bring a cancelled event back: guest lists intact, back in the venue's approval queue. */
+  async reopen(user: JwtUser, eventId: string) {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) throw new NotFoundException("Event not found");
+    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    if (event.status !== "cancelled") throw new ConflictException("Event is not cancelled");
+    return prisma.event.update({ where: { id: eventId }, data: { status: "pending_venue_approval" } });
   }
 
   /** Delete an event and its dependent rows (guest lists, bookings, chat, promos). Campaigns keep their history, detached. */
