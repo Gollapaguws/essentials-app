@@ -49,6 +49,18 @@ export default function EventManager() {
     }));
   };
 
+  const remove = async (event: EventRow) => {
+    const label = `${event.title} (${new Date(event.date).toLocaleDateString()})`;
+    if (!window.confirm(`Delete ${label}?\n\nIts guest list, table bookings, chat and promotions go with it. This cannot be undone.`)) return;
+    setError(null);
+    try {
+      await api.del(`/events/${event.id}`);
+      load();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
+
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -131,6 +143,7 @@ export default function EventManager() {
                   <td className="px-4 py-3 space-x-2">
                     <button onClick={async () => { await api.post(`/events/${e.id}/clone`); load(); }} className="text-neon underline text-xs">Clone</button>
                     <a href={`${process.env.NEXT_PUBLIC_API_URL}/events/${e.id}/guest-list.csv`} className="text-neutral-300 underline text-xs">CSV</a>
+                    <button onClick={() => remove(e)} className="text-red-400 underline text-xs">Delete</button>
                   </td>
                 </tr>
               ))}

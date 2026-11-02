@@ -78,6 +78,12 @@ export class EventsController {
     return this.tools.clone(user, id);
   }
 
+  @Delete(":id")
+  @Auth("promoter")
+  remove(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.tools.remove(user, id);
+  }
+
   @Get(":id/guest-list.csv")
   @Auth("promoter", "venue_manager")
   exportCsv(@Param("id") id: string, @CurrentUser() user: JwtUser, @Res() res: Response) {
