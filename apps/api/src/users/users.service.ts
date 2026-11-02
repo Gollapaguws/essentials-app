@@ -1,10 +1,17 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
+import { randomBytes } from "crypto";
 import { prisma, type Role } from "@essentials/db";
 import { AuthUserService } from "../auth/auth-user.service";
+import { SupabaseAdminService } from "../auth/supabase-admin.service";
 import { ArtistsService } from "../artists/artists.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { TelegramService } from "../telegram/telegram.service";
-import type { SetRoleDto, UpdateProfileDto } from "./users.dto";
+import type { CreateUserDto, SetRoleDto, UpdateProfileDto } from "./users.dto";
 
 /** Roles an admin may assign from the dashboard. */
 export const ASSIGNABLE_ROLES: readonly Role[] = [
@@ -66,7 +73,74 @@ export class UsersService {
     private readonly artists: ArtistsService,
     private readonly notifications: NotificationsService,
     private readonly telegram: TelegramService,
+    private readonly admin: SupabaseAdminService,
   ) {}
+
+  /**
+   * Provision an account on someone's behalf: a Supabase identity with a
+   * temporary password, the Prisma row that carries the role, and the reset flag
+   * that forces the owner to pick their own password on first sign-in.
+   */
+  async create(dto: CreateUserDto) {
+    const email = dto.email.trim().toLowerCase();
+    const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    if (existing) throw new ConflictException(`${email} already has an account.`);
+
+    const role = dto.role ?? "guest";
+    if (!ASSIGNABLE_ROLES.includes(role)) {
+      throw new BadRequestException(`Unknown role: ${role}`);
+    }
+
+    // Validate the profile payload before creating the identity, so a bad venue
+    // cannot leave an orphaned Supabase user behind.
+    const stageName = dto.stageName?.trim();
+    let venuePlan: VenuePlan | null = null;
+    if (role === "venue_manager" && dto.venueName?.trim()) {
+      venuePlan = this.planVenue({
+        name: dto.venueName,
+        capacity: dto.venueCapacity,
+        address: dto.venueAddress,
+        lat: dto.venueLat,
+        lng: dto.venueLng,
+        requiringCapacity: true,
+      });
+    }
+
+    const temporaryPassword = dto.password?.trim() || randomBytes(9).toString("base64url");
+    const authUid = await this.admin.createUser(email, temporaryPassword);
+
+    let userId: string;
+    try {
+      const created = await prisma.user.create({
+        data: { email, authUid, role, mustResetPassword: true },
+      });
+      userId = created.id;
+    } catch (err) {
+      // No half-provisioned identity: the Supabase user goes back if the row fails.
+      await this.admin.deleteUser(authUid).catch(() => null);
+      throw err;
+    }
+
+    if (role === "artist" && stageName) await this.saveStageName(userId, stageName);
+    if (venuePlan) await this.saveVenue(userId, venuePlan);
+
+    await prisma.authEvent
+      .create({
+        data: {
+          kind: "account_created",
+          userId,
+          email,
+          meta: { role, provisioned: true },
+        },
+      })
+      .catch(() => undefined);
+
+    return {
+      user: shape(await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: USER_SELECT })),
+      // Shown once, in the admin UI, so the admin can pass it on.
+      temporaryPassword,
+    };
+  }
 
   /** Every registered account, newest first, optionally filtered by email/name. */
   async list(q?: string) {

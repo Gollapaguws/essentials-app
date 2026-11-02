@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsEmail,
   IsIn,
   IsInt,
   IsNumber,
@@ -20,6 +21,55 @@ import { ASSIGNABLE_ROLES } from "./users.service";
 export class SetRoleDto {
   @IsIn(ASSIGNABLE_ROLES as unknown as string[])
   role!: Role;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  stageName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  venueName?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  venueCapacity?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  venueAddress?: string;
+
+  @IsOptional()
+  @IsNumber()
+  venueLat?: number;
+
+  @IsOptional()
+  @IsNumber()
+  venueLng?: number;
+}
+
+/**
+ * Admin-provisioned account. The password (generated when omitted) is temporary:
+ * the owner is forced to choose a new one on first sign-in.
+ */
+export class CreateUserDto {
+  @IsEmail()
+  email!: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  @MaxLength(72)
+  password?: string;
+
+  @IsOptional()
+  @IsIn(ASSIGNABLE_ROLES as unknown as string[])
+  role?: Role;
 
   @IsOptional()
   @IsString()
