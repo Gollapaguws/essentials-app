@@ -19,8 +19,8 @@ const API = process.env.API_URL ?? "http://127.0.0.1:4000/api";
 
 const GUEST_EMAIL = "proof-guest@example.test";
 const PROMOTER_EMAIL = "promoter@essentials.example";
+const ADMIN_EMAIL = "admin@essentials.example";
 const PASSWORD = "proof-password-123";
-const INVITE_CODE = "PROOF-INVITE";
 
 let failures = 0;
 
@@ -88,27 +88,36 @@ async function main() {
 
   // 1. Setup ---------------------------------------------------------------
   await ensureUser(GUEST_EMAIL);
-  await ensureUser(PROMOTER_EMAIL); // so the guard's DB fallback finds a real promoter
-  await prisma.invite.deleteMany({ where: { code: INVITE_CODE } });
-  await prisma.invite.create({
-    data: { code: INVITE_CODE, role: "guest", maxUses: 5, createdBy: "auth-proof" },
-  });
-  console.log("\nSetup: proof users + PROOF-INVITE ready");
+  await ensureUser(PROMOTER_EMAIL); // so the guard resolves a real promoter role
+  await ensureUser(ADMIN_EMAIL); // seeded admin row, Supabase identity created here
+  console.log("\nSetup: proof users ready");
 
   const guest = await passwordToken(GUEST_EMAIL);
   const promoter = await passwordToken(PROMOTER_EMAIL);
+  const admin = await passwordToken(ADMIN_EMAIL);
 
   // 2. /auth/me for a first-time identity --------------------------------
   const me1 = await api("/auth/me", { token: guest });
   check("GET /auth/me as new identity → 200", me1.status === 200, me1.body);
+  check(
+    "/auth/me reports guest + a Prisma id",
+    me1.body?.user?.role === "guest" && typeof me1.body?.user?.id === "string",
+    me1.body,
+  );
 
   const me2 = await api("/auth/me", { token: guest });
   check("GET /auth/me again → still 200 (idempotent lazy-link)", me2.status === 200, me2.body);
+  check(
+    "the same Prisma account is reused",
+    me2.body?.user?.id === me1.body?.user?.id,
+    { first: me1.body?.user?.id, second: me2.body?.user?.id },
+  );
 
-  const lazyLinks = await prisma.authEvent.count({
-    where: { kind: "lazy_link", email: GUEST_EMAIL },
+  const row = await prisma.user.findUnique({ where: { email: GUEST_EMAIL } });
+  check("Prisma User row exists and is linked to the Supabase uid", Boolean(row?.authUid), {
+    id: row?.id,
+    authUid: row?.authUid,
   });
-  check("exactly one lazy_link event recorded", lazyLinks <= 1, { lazyLinks });
 
   // 3. Role gate for a guest ---------------------------------------------
   const guestAnalytics = await api("/analytics/overview", { token: guest });
@@ -118,7 +127,26 @@ async function main() {
     guestAnalytics.body,
   );
 
-  // 4. MFA gate for a privileged aal1 session ----------------------------
+  // 4. Admin-only account list -------------------------------------------
+  const guestUsers = await api("/users", { token: guest });
+  check("GET /users as guest → 403", guestUsers.status === 403, guestUsers.body);
+
+  const adminUsers = await api("/users", { token: admin });
+  check(
+    "GET /users as aal1 admin → 401 MFA_REQUIRED (admin gate still applies)",
+    adminUsers.status === 401 && adminUsers.body?.code === "MFA_REQUIRED",
+    adminUsers.body,
+  );
+
+  // 5. Role assignment requires an admin --------------------------------
+  const guestAssign = await api(`/users/${row?.id}/role`, {
+    token: guest,
+    method: "PATCH",
+    body: { role: "admin" },
+  });
+  check("PATCH /users/:id/role as guest → 403", guestAssign.status === 403, guestAssign.body);
+
+  // 6. MFA gate for a privileged aal1 session ----------------------------
   const promoterAnalytics = await api("/analytics/overview", { token: promoter });
   check(
     "GET /analytics/overview as aal1 promoter → 401 MFA_REQUIRED",
@@ -126,47 +154,19 @@ async function main() {
     promoterAnalytics.body,
   );
 
-  // 5. Invite redemption --------------------------------------------------
-  const before = await prisma.invite.findUnique({ where: { code: INVITE_CODE } });
-  const redeem = await api("/auth/invite/redeem", {
-    token: guest,
-    method: "POST",
-    body: { code: INVITE_CODE },
-  });
-  check("POST /auth/invite/redeem → 200", redeem.status === 200, redeem.body);
-
-  const after = await prisma.invite.findUnique({ where: { code: INVITE_CODE } });
-  check(
-    "invite use count incremented by exactly 1",
-    after.uses === before.uses + 1,
-    { before: before.uses, after: after.uses },
-  );
-
-  const me3 = await api("/auth/me", { token: guest });
-  check(
-    "/auth/me now reports the invited role (cache invalidated)",
-    me3.status === 200 && me3.body?.user?.role === "guest" && me3.body?.inviteRequired === undefined,
-    me3.body,
-  );
-
-  // 6. Rate limit: 5/hour per ip+email -----------------------------------
-  const statuses = [];
-  for (let i = 0; i < 6; i++) {
-    const attempt = await api("/auth/invite/redeem", {
-      token: guest,
-      method: "POST",
-      body: { code: `BAD-CODE-${i}` },
-    });
-    statuses.push(attempt.status);
-  }
-  check("6th redeem attempt in the same hour → 429", statuses[5] === 429, { statuses });
-
   // 7. Removed contracts --------------------------------------------------
   const magicLink = await api("/auth/magic-link", { method: "POST", body: { email: GUEST_EMAIL } });
   check("POST /auth/magic-link → 404 (contract deleted)", magicLink.status === 404, magicLink.body);
 
   const verify = await api("/auth/verify", { method: "POST", body: { token: "x" } });
   check("POST /auth/verify → 404 (contract deleted)", verify.status === 404, verify.body);
+
+  const invite = await api("/auth/invite/redeem", {
+    token: guest,
+    method: "POST",
+    body: { code: "PROOF-INVITE" },
+  });
+  check("POST /auth/invite/redeem → 404 (invite system removed)", invite.status === 404, invite.body);
 
   console.log(`\n${failures === 0 ? "ALL CHECKS PASSED" : `${failures} CHECK(S) FAILED`}`);
   process.exit(failures === 0 ? 0 : 1);

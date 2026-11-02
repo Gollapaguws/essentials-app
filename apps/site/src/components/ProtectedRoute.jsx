@@ -10,10 +10,10 @@ const DefaultFallback = () => (
 
 /**
  * Route guard for site pages that need an account.
- * Unauthenticated → /login; signed in but not onboarded → /join.
+ * Unauthenticated → /login.
  */
 export default function ProtectedRoute({ fallback = <DefaultFallback /> }) {
-  const { isAuthenticated, isLoadingAuth, authChecked, inviteRequired, checkUserAuth } = useAuth();
+  const { isAuthenticated, isLoadingAuth, authChecked, checkUserAuth } = useAuth();
 
   useEffect(() => {
     if (!authChecked && !isLoadingAuth) checkUserAuth();
@@ -21,7 +21,6 @@ export default function ProtectedRoute({ fallback = <DefaultFallback /> }) {
 
   if (isLoadingAuth || !authChecked) return fallback;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (inviteRequired) return <Navigate to="/join" replace />;
 
   return <Outlet />;
 }

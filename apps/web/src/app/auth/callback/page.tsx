@@ -28,11 +28,6 @@ function CallbackInner() {
 
       try {
         const me = await api.get<MeResponse>("/auth/me");
-        if ("inviteRequired" in me) {
-          await supabase.auth.signOut();
-          setError("No dashboard account yet — ask an admin for an invite.");
-          return;
-        }
         if (!DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
           await supabase.auth.signOut();
           setError("Dashboard is for promoters, venue managers and admins.");

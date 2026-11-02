@@ -9,7 +9,7 @@ import { liveStatus, setLiveSource, stopLiveSource, startScreenIngest, viewerUrl
  * - GO LIVE: admin captures screen+audio → server FFmpeg → rtsp://essentialsedm.com:8554/essentials
  */
 export default function LivePanel() {
-  const [status, setStatus] = useState({ live: false, sourceUp: false, hls: null, rtspUrl: "" });
+  const [status, setStatus] = useState({ live: false, sourceUp: false, studioLive: false, hls: null, rtspUrl: "" });
   const [me, setMe] = useState(null);
   const [casting, setCasting] = useState(false);
   const [unmuted, setUnmuted] = useState(false);
@@ -50,7 +50,7 @@ export default function LivePanel() {
   const goLive = async () => {
     setError(null);
     try {
-      const handle = await startScreenIngest({});
+      const handle = await startScreenIngest();
       ingestRef.current = handle;
       setCasting(true);
       setTimeout(() => liveStatus().then(setStatus).catch(() => {}), 3000);

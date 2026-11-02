@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, Linking } from "react-native";
-import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { colors, type } from "../theme";
 import { supabase } from "../lib/supabase";
+import { FieldHint } from "../components/FieldHint";
 
 /** Deep link Supabase sends the PKCE code back to. */
 const CALLBACK = "essentials://auth/callback";
 
-/** 1/4 — Welcome: enter email -> sign-in link, or continue with Google. */
+/** 1/3 — Welcome: enter email -> sign-in link, or continue with Google. */
 export default function Welcome() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -67,15 +67,24 @@ export default function Welcome() {
             value={email}
             onChangeText={setEmail}
           />
+          <FieldHint
+            label="Which email?"
+            hint="The address on your ESSENTIALS account. A new email creates a guest account on its own; admin, promoter and venue roles are assigned by an admin afterwards."
+          />
           <Pressable style={s.button} onPress={sendLink} disabled={loading || !email.includes("@")}>
             <Text style={s.buttonText}>{loading ? "SENDING…" : "SIGN IN"}</Text>
           </Pressable>
+          <FieldHint
+            label="How the link works"
+            hint="Sends a one-time sign-in link to that address — there is no password to remember, and the link expires after one use."
+          />
           <Pressable style={s.ghost} onPress={google}>
             <Text style={{ color: colors.text, fontWeight: "700" }}>CONTINUE WITH GOOGLE</Text>
           </Pressable>
-          <Pressable onPress={() => router.push("/auth/invite")}>
-            <Text style={{ color: colors.muted, marginTop: 16 }}>Got an invite code? →</Text>
-          </Pressable>
+          <FieldHint
+            label="Using Google"
+            hint="Signs in with the Google account already on this device. First time here? It creates your ESSENTIALS guest account."
+          />
         </>
       )}
 

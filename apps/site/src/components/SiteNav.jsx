@@ -78,12 +78,7 @@ export default function SiteNav() {
         <div className="noir-overlay">
           <div className="noir-navbar">
             <span className="noir-brand">ESSENTIALS</span>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label="Close menu"
-              className="noir-menu"
-            >
+            <button type="button" onClick={() => setOpen(false)} aria-label="Close menu" className="noir-menu">
               CLOSE
             </button>
           </div>

@@ -336,7 +336,7 @@ model Consent {
   email     String
   channel   ConsentChannel @default(email)
   status    ConsentStatus  @default(granted)
-  source    String // signup | invite | preference_center
+  source    String // signup | preference_center
   updatedAt DateTime       @updatedAt
   User      User?          @relation(fields: [userId], references: [id])
 
@@ -477,7 +477,7 @@ model SiteContent {
 // ===== Auth audit (Supabase auth overhaul) =====
 model AuthEvent {
   id        String   @id @default(cuid())
-  kind      String // sign_in | lazy_link | invite_redeemed | role_change | mfa_enrolled | mfa_escalated
+  kind      String // sign_in | lazy_link | role_change | mfa_enrolled | mfa_escalated
   userId    String?
   email     String?
   meta      Json     @default("{}")
@@ -487,21 +487,6 @@ model AuthEvent {
   @@index([kind, createdAt])
   @@index([userId])
   @@index([email])
-}
-
-// ===== Admin-issued invites =====
-model Invite {
-  id        String    @id @default(cuid())
-  code      String    @unique
-  role      Role
-  maxUses   Int       @default(1)
-  uses      Int       @default(0)
-  revoked   Boolean   @default(false)
-  expiresAt DateTime?
-  createdBy String
-  createdAt DateTime  @default(now())
-
-  @@index([role, revoked])
 }
 
 // ===== Simulcast targets (YouTube, TikTok, Mixcloud, Facebook, Instagram, custom) =====

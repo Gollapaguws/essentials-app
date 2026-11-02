@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import { api } from "@essentials/api-client";
 import type { MeResponse } from "@essentials/auth";
 import { supabase } from "@/lib/supabase";
+import { InfoTip } from "@/components/Tooltip";
 
 /**
  * Privileged roles must reach aal2 before any data endpoint answers.
@@ -83,7 +84,7 @@ export default function MfaPage() {
     await supabase.auth.refreshSession();
     try {
       const me = await api.get<MeResponse>("/auth/me");
-      if (!("inviteRequired" in me) && !me.mfaRequired) {
+      if (!me.mfaRequired) {
         router.replace("/dashboard");
         return;
       }
@@ -106,14 +107,22 @@ export default function MfaPage() {
           <div className="space-y-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={qr} alt="TOTP QR code" className="mx-auto rounded-lg bg-white p-2" />
-            <p className="text-neutral-500 text-xs break-all">
-              Manual key: <span className="font-mono text-neutral-300">{secret}</span>
-            </p>
+            <div className="flex items-center gap-2 text-neutral-500 text-xs break-all">
+              <span>
+                Manual key: <span className="font-mono text-neutral-300">{secret}</span>
+              </span>
+              <InfoTip label="Use this if the camera cannot scan the QR code: type the key into your authenticator app by hand." />
+            </div>
           </div>
         )}
 
         <form className="space-y-3" onSubmit={verify}>
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
+            <label htmlFor="totp">Authenticator code</label>
+            <InfoTip label="The 6 digits your authenticator app (Google Authenticator, 1Password, Authy) shows for ESSENTIALS. It changes every 30 seconds." />
+          </div>
           <input
+            id="totp"
             className="w-full bg-bg border border-line rounded-lg px-4 py-3 outline-none focus:border-neon font-mono tracking-widest text-center"
             placeholder="123456"
             inputMode="numeric"

@@ -46,7 +46,7 @@ Auth architecture, redirect URLs and the MFA policy: `docs/auth.md`.
 | guests | guest1@essentials.example … guest12@essentials.example |
 
 ## API surface (Phase 1)
-`GET /api/auth/me` · `POST /api/auth/session-established` · `POST /api/auth/invite/redeem` ·
+`GET /api/auth/me` · `GET /api/users` · `PATCH /api/users/:id/role` · 
 `GET /api/events` · `GET /api/events/:id` · `POST/DELETE /api/events/:id/rsvp` ·
 `GET /api/events/:id/door-pass` · `POST /api/events/check-in` ·
 `GET /api/tables/inventory/:eventId` · `POST /api/tables/book` ·

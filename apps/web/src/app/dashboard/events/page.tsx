@@ -10,17 +10,47 @@ interface EventRow {
   _count: { guestLists: number; tableBookings: number };
 }
 
-/** Event manager: CRUD, capacity caps, live guest lists. */
+interface VenueOption {
+  id: string;
+  name: string;
+  address: string | null;
+  lat: number;
+  lng: number;
+  capacity: number;
+  hasLocation: boolean;
+}
+
+const field = "bg-bg border border-line rounded-lg px-3 py-2";
+
+/** Event manager: pick a venue from the list, CRUD, capacity caps, live guest lists. */
 export default function EventManager() {
   const [events, setEvents] = useState<EventRow[]>([]);
+  const [venues, setVenues] = useState<VenueOption[]>([]);
   const [form, setForm] = useState({ title: "", venueId: "", date: "", capacity: 100 });
   const [error, setError] = useState<string | null>(null);
 
+  const selectedVenue = venues.find((v) => v.id === form.venueId) ?? null;
+
   const load = () => api.get<EventRow[]>("/events/manage/list").then(setEvents).catch((e) => setError(e.message));
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    api.get<VenueOption[]>("/venues/options").then(setVenues).catch((e) => setError(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const pickVenue = (venueId: string) => {
+    const venue = venues.find((v) => v.id === venueId) ?? null;
+    // Never start above the venue's own cap: the API rejects it.
+    setForm((f) => ({
+      ...f,
+      venueId,
+      capacity: venue ? Math.min(f.capacity || venue.capacity, venue.capacity) : f.capacity,
+    }));
+  };
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     try {
       await api.post("/events", { ...form, date: new Date(form.date).toISOString() });
       setForm({ title: "", venueId: "", date: "", capacity: 100 });
@@ -37,12 +67,44 @@ export default function EventManager() {
         <h1 className="text-2xl font-black tracking-wide">EVENT MANAGER</h1>
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
-        <form onSubmit={create} className="grid md:grid-cols-5 gap-3 items-end border border-line bg-surface rounded-xl p-4">
-          <input required className="bg-bg border border-line rounded-lg px-3 py-2" placeholder="Event title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <input required className="bg-bg border border-line rounded-lg px-3 py-2" placeholder="Venue ID" value={form.venueId} onChange={(e) => setForm({ ...form, venueId: e.target.value })} />
-          <input required type="datetime-local" className="bg-bg border border-line rounded-lg px-3 py-2" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-          <input required type="number" min={1} className="bg-bg border border-line rounded-lg px-3 py-2" placeholder="Capacity" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: +e.target.value })} />
-          <button className="bg-neon text-bg font-black rounded-lg py-2 tracking-widest">CREATE (pending approval)</button>
+        <form onSubmit={create} className="space-y-3 border border-line bg-surface rounded-xl p-4">
+          <div className="grid md:grid-cols-4 gap-3 items-end">
+            <input required className={field} placeholder="Event title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <select required className={field} value={form.venueId} onChange={(e) => pickVenue(e.target.value)}>
+              <option value="">Pick a venue</option>
+              {venues.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                  {v.hasLocation ? "" : " (no location)"}
+                </option>
+              ))}
+            </select>
+            <input required type="datetime-local" className={field} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+            <input required type="number" min={1} className={field} placeholder="Capacity" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: +e.target.value })} />
+          </div>
+
+          {selectedVenue && (
+            <p className="text-xs text-neutral-500">
+              {selectedVenue.name}
+              {selectedVenue.address ? ` | ${selectedVenue.address}` : ""}
+              {` | capacity ${selectedVenue.capacity}`}
+            </p>
+          )}
+          {selectedVenue && !selectedVenue.hasLocation && (
+            <p className="text-yellow-400 text-xs">
+              {selectedVenue.name} has no coordinates yet. The event can still be created, but DJ route
+              planning between gigs will be wrong until its manager sets the location in the venue portal.
+            </p>
+          )}
+          {!venues.length && (
+            <p className="text-yellow-400 text-xs">
+              No venues exist yet. An admin has to assign a venue manager before an event can be created.
+            </p>
+          )}
+
+          <button className="bg-neon text-bg font-black rounded-lg px-4 py-2 tracking-widest">
+            CREATE (pending approval)
+          </button>
         </form>
 
         <div className="border border-line rounded-xl overflow-hidden">
@@ -72,7 +134,7 @@ export default function EventManager() {
                 </tr>
               ))}
               {!events.length && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-neutral-500">No events yet. Seed the demo data to see one.</td></tr>
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-neutral-500">No events yet. Seed the demo data to see one.</td></tr>
               )}
             </tbody>
           </table>
