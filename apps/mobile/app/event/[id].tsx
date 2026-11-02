@@ -12,17 +12,31 @@ function mapsUrl(name: string, lat: number, lng: number) {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
 
+interface Match {
+  userId: string;
+  name: string | null;
+  sharedTastes: string[];
+  score: number;
+}
+
+/** `GET /events/:id`: the feed summary plus the guest's own RSVP and full venue. */
+interface EventDetailResponse extends EventSummary {
+  status?: string;
+  myRsvp?: { status: string };
+  venue: EventSummary["venue"] & { address?: string | null };
+}
+
 /** Event detail: venue + map link, lineup, capacity, live headcount, RSVP + waitlist. */
 export default function EventDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [event, setEvent] = useState<EventSummary & { status?: string } | null>(null);
+  const [event, setEvent] = useState<EventDetailResponse | null>(null);
   const [rsvpState, setRsvpState] = useState<string | null>(null);
-  const [matches, setMatches] = useState<{ userId: string; name: string | null; sharedTastes: string[]; score: number }[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
     try {
-      const detail = await api.get<any>(`/events/${id}`);
+      const detail = await api.get<EventDetailResponse>(`/events/${id}`);
       setEvent(detail);
       if (detail.myRsvp) setRsvpState(detail.myRsvp.status);
     } catch { setError("Couldn't load this event."); }
@@ -30,7 +44,7 @@ export default function EventDetail() {
   useEffect(() => { load(); }, [id]);
 
   useEffect(() => {
-    api.get<any[]>(`/social/events/${id}/matches`).then(setMatches).catch(() => {});
+    api.get<Match[]>(`/social/events/${id}/matches`).then(setMatches).catch(() => {});
   }, [id, rsvpState]);
 
   const rsvp = async () => {
@@ -41,7 +55,7 @@ export default function EventDetail() {
     } catch { setError("RSVP failed - maybe you're already on the list."); }
   };
 
-  const venue = event?.venue as { name: string; address?: string | null; lat?: number; lng?: number } | undefined;
+  const venue = event?.venue;
   // 0,0 is the "never geocoded" sentinel the venue portal and route planner use.
   const hasLocation = typeof venue?.lat === "number" && typeof venue?.lng === "number" && (venue.lat !== 0 || venue.lng !== 0);
 
@@ -49,7 +63,7 @@ export default function EventDetail() {
     if (!venue || !hasLocation) return;
     const fallback = `https://www.google.com/maps/search/?api=1&query=${venue.lat},${venue.lng}`;
     try {
-      await Linking.openURL(mapsUrl(venue.name, venue.lat as number, venue.lng as number));
+      await Linking.openURL(mapsUrl(venue.name, venue.lat, venue.lng));
     } catch {
       await Linking.openURL(fallback).catch(() => setError("Could not open a map on this device."));
     }

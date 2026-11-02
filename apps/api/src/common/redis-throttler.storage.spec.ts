@@ -24,10 +24,14 @@ function mockRedis() {
   };
 }
 
+/** The in-memory double implements only the Redis calls the storage makes. */
+const asRedis = (redis: ReturnType<typeof mockRedis>) =>
+  redis as unknown as ConstructorParameters<typeof RedisThrottlerStorage>[0];
+
 describe("RedisThrottlerStorage", () => {
   it("increments and returns a positive expiry", async () => {
     const redis = mockRedis();
-    const storage = new RedisThrottlerStorage(redis as any);
+    const storage = new RedisThrottlerStorage(asRedis(redis));
     const rec = await storage.increment("k", 60_000, 5, 0, "default");
     expect(rec.totalHits).toBe(1);
     expect(rec.timeToExpire).toBeGreaterThan(0);
@@ -37,7 +41,7 @@ describe("RedisThrottlerStorage", () => {
 
   it("sets the TTL only on the first hit", async () => {
     const redis = mockRedis();
-    const storage = new RedisThrottlerStorage(redis as any);
+    const storage = new RedisThrottlerStorage(asRedis(redis));
     await storage.increment("k", 60_000, 5, 0, "default");
     await storage.increment("k", 60_000, 5, 0, "default");
     expect(redis.pexpire).toHaveBeenCalledTimes(1);
@@ -46,7 +50,7 @@ describe("RedisThrottlerStorage", () => {
 
   it("blocks after the limit and reports the block window", async () => {
     const redis = mockRedis();
-    const storage = new RedisThrottlerStorage(redis as any);
+    const storage = new RedisThrottlerStorage(asRedis(redis));
     for (let i = 0; i < 5; i++) await storage.increment("k", 60_000, 5, 30_000, "default");
     const over = await storage.increment("k", 60_000, 5, 30_000, "default");
     expect(over.totalHits).toBe(6);
@@ -57,7 +61,7 @@ describe("RedisThrottlerStorage", () => {
 
   it("counts independently per key", async () => {
     const redis = mockRedis();
-    const storage = new RedisThrottlerStorage(redis as any);
+    const storage = new RedisThrottlerStorage(asRedis(redis));
     await storage.increment("a", 60_000, 5, 0, "default");
     expect((await storage.increment("b", 60_000, 5, 0, "default")).totalHits).toBe(1);
   });

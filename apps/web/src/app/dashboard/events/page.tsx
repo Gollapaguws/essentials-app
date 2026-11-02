@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 interface EventRow {
   id: string; title: string; date: string; status: string; capacity: number;
@@ -31,10 +32,10 @@ export default function EventManager() {
 
   const selectedVenue = venues.find((v) => v.id === form.venueId) ?? null;
 
-  const load = () => api.get<EventRow[]>("/events/manage/list").then(setEvents).catch((e) => setError(e.message));
+  const load = () => api.get<EventRow[]>("/events/manage/list").then(setEvents).catch((e) => setError(errorMessage(e)));
   useEffect(() => {
     load();
-    api.get<VenueOption[]>("/venues/options").then(setVenues).catch((e) => setError(e.message));
+    api.get<VenueOption[]>("/venues/options").then(setVenues).catch((e) => setError(errorMessage(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -55,8 +56,8 @@ export default function EventManager() {
       await api.post("/events", { ...form, date: new Date(form.date).toISOString() });
       setForm({ title: "", venueId: "", date: "", capacity: 100 });
       load();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(errorMessage(err));
     }
   };
 

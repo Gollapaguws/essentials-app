@@ -24,9 +24,13 @@ export class StripeProvider implements PaymentProvider {
       headers: { Authorization: `Bearer ${this.key}`, "Content-Type": "application/x-www-form-urlencoded" },
       body,
     });
-    const json: any = await res.json();
-    if (!res.ok) throw new Error(json?.error?.message ?? "Stripe checkout failed");
-    return { url: json.url as string, providerRef: json.id as string };
+    const json = (await res.json()) as {
+      url?: string;
+      id?: string;
+      error?: { message?: string };
+    };
+    if (!res.ok) throw new Error(json.error?.message ?? "Stripe checkout failed");
+    return { url: json.url ?? "", providerRef: json.id };
   }
 
   verifyWebhookSignature(rawBody: string, signature: string | undefined) {
@@ -41,9 +45,13 @@ export class StripeProvider implements PaymentProvider {
     }
   }
 
-  extractReferenceAndStatus(payload: any) {
-    const paid = payload?.type === "checkout.session.completed";
-    return { reference: payload?.data?.object?.client_reference_id ?? "", paid };
+  extractReferenceAndStatus(payload: unknown) {
+    const p = (payload ?? {}) as {
+      type?: string;
+      data?: { object?: { client_reference_id?: string } };
+    };
+    const paid = p.type === "checkout.session.completed";
+    return { reference: p.data?.object?.client_reference_id ?? "", paid };
   }
 }
 
@@ -87,9 +95,10 @@ export class PayfastProvider implements PaymentProvider {
     }
   }
 
-  extractReferenceAndStatus(payload: any) {
+  extractReferenceAndStatus(payload: unknown) {
     // PayFast ITN posts form-encoded; parsed upstream into an object
-    return { reference: payload?.m_payment_id ?? "", paid: payload?.payment_status === "COMPLETE" };
+    const p = (payload ?? {}) as { m_payment_id?: string; payment_status?: string };
+    return { reference: p.m_payment_id ?? "", paid: p.payment_status === "COMPLETE" };
   }
 }
 
@@ -102,7 +111,8 @@ export class SandboxProvider implements PaymentProvider {
     return { url: `${base}/pay/sandbox?ref=${input.reference}&amount=${input.amountMinor}` };
   }
   verifyWebhookSignature() { return true; }
-  extractReferenceAndStatus(payload: any) {
-    return { reference: payload?.reference ?? "", paid: true };
+  extractReferenceAndStatus(payload: unknown) {
+    const p = (payload ?? {}) as { reference?: string };
+    return { reference: p.reference ?? "", paid: true };
   }
 }

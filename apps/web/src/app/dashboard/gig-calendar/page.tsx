@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 interface OpenGig { id: string; title: string; date: string; genres: string[]; venue: { name: string } }
 interface Gig { id: string; slot?: string | null; status: string; startAt: string; performanceFee: number; event: { title: string; date: string } }
@@ -33,7 +34,7 @@ export default function GigCalendar() {
       await api.post("/artists/gig-calendar/apply", { eventId, slot });
       setMsg("Application sent — the promoter will confirm.");
       load();
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(errorMessage(err)); }
   };
 
   return (

@@ -68,8 +68,8 @@ export class SocialPublishService {
       headers: { Authorization: oauth, "Content-Type": "application/json" },
       body: JSON.stringify({ text: payload.slice(0, 280) }),
     });
-    const body: any = await res.json().catch(() => ({}));
-    return res.ok ? { ok: true, detail: `tweet ${body?.data?.id ?? ""}` } : { ok: false, detail: body?.detail ?? `HTTP ${res.status}` };
+    const body = (await res.json().catch(() => ({}))) as { data?: { id?: string }; detail?: string };
+    return res.ok ? { ok: true, detail: `tweet ${body.data?.id ?? ""}` } : { ok: false, detail: body.detail ?? `HTTP ${res.status}` };
   }
 
   private xAuthHeader(method: string, url: string, c: { key: string; secret: string; token: string; tokenSecret: string }) {
@@ -118,8 +118,8 @@ export class SocialPublishService {
     const body = new URLSearchParams({ message: content, access_token: token });
     if (mediaUrl) body.set("url", mediaUrl);
     const res = await fetch(endpoint, { method: "POST", body });
-    const json: any = await res.json().catch(() => ({}));
-    return res.ok ? { ok: true, detail: `facebook post ${json?.id ?? ""}` } : { ok: false, detail: json?.error?.message ?? `HTTP ${res.status}` };
+    const json = (await res.json().catch(() => ({}))) as { id?: string; error?: { message?: string } };
+    return res.ok ? { ok: true, detail: `facebook post ${json.id ?? ""}` } : { ok: false, detail: json.error?.message ?? `HTTP ${res.status}` };
   }
 
   private async publishWebhook(content: string, mediaUrl?: string) {

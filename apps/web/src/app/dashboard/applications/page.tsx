@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 interface Application {
   id: string; slot?: string | null; status: string; appliedAt?: string;
@@ -15,7 +16,7 @@ export default function Applications() {
   const [apps, setApps] = useState<Application[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const load = () => api.get<Application[]>("/artists/applications").then(setApps).catch((e) => setError(e.message));
+  const load = () => api.get<Application[]>("/artists/applications").then(setApps).catch((e) => setError(errorMessage(e)));
   useEffect(() => { load(); }, []);
 
   const decide = async (id: string, confirm: boolean) => {
@@ -23,7 +24,7 @@ export default function Applications() {
     try {
       await api.post(`/artists/applications/${id}/decide`, { confirm });
       load();
-    } catch (err: any) { setError(err.message); }
+    } catch (err) { setError(errorMessage(err)); }
   };
 
   return (

@@ -5,6 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 interface Ltv { averageLtv: number; topGuests: { userId: string; name: string | null; email: string; visits: number; tableSpend: number; doorSpend: number; ltv: number }[] }
 interface Cohort { cohort: string; size: number; retention: { month: number; pct: number }[] }
@@ -19,7 +20,7 @@ export default function Insights() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<Ltv>("/insights/ltv").then(setLtv).catch((e) => setError(e.message));
+    api.get<Ltv>("/insights/ltv").then(setLtv).catch((e) => setError(errorMessage(e)));
     api.get<Cohort[]>("/insights/cohorts").then(setCohorts).catch(() => {});
   }, []);
 

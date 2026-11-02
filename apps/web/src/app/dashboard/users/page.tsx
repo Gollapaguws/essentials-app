@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { useAuth } from "@/components/AuthProvider";
 import { api } from "@essentials/api-client";
+import { errorMessage } from "@/lib/errors";
 
 interface RegisteredUser {
   id: string;
@@ -57,8 +58,8 @@ export default function Users() {
     try {
       const query = search.trim() ? `?q=${encodeURIComponent(search.trim())}` : "";
       setUsers(await api.get<RegisteredUser[]>(`/users${query}`));
-    } catch (e: any) {
-      setError(e?.message ?? "Could not load users.");
+    } catch (e) {
+      setError(errorMessage(e) ?? "Could not load users.");
     }
   }, []);
 
@@ -85,8 +86,8 @@ export default function Users() {
       replace(updated);
       setForm(null);
       setNotice(`${updated.email} — ${message} (${describe(updated)}).`);
-    } catch (e: any) {
-      setError(e?.message ?? "Could not save.");
+    } catch (e) {
+      setError(errorMessage(e) ?? "Could not save.");
     } finally {
       setBusyId(null);
     }
