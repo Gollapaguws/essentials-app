@@ -49,6 +49,40 @@ export default function EventManager() {
     }));
   };
 
+  const cancel = async (event: EventRow) => {
+    const label = `${event.title} (${new Date(event.date).toLocaleDateString()})`;
+    if (!window.confirm(`Cancel ${label}?\n\nGuest lists, door scans and table bookings stay; the night just drops off the guest feed and reminders.`)) return;
+    setError(null);
+    try {
+      await api.post(`/events/${event.id}/cancel`);
+      load();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
+
+  const reopen = async (event: EventRow) => {
+    setError(null);
+    try {
+      await api.post(`/events/${event.id}/reopen`);
+      load();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
+
+  const remove = async (event: EventRow) => {
+    const label = `${event.title} (${new Date(event.date).toLocaleDateString()})`;
+    if (!window.confirm(`Delete ${label}?\n\nIts guest list, table bookings, chat and promotions go with it. This cannot be undone.`)) return;
+    setError(null);
+    try {
+      await api.del(`/events/${event.id}`);
+      load();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
+
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -122,7 +156,7 @@ export default function EventManager() {
             </thead>
             <tbody>
               {events.map((e) => (
-                <tr key={e.id} className="border-t border-line">
+                <tr key={e.id} className={`border-t border-line${e.status === "cancelled" ? " opacity-50" : ""}`}>
                   <td className="px-4 py-3 font-bold">{e.title}</td>
                   <td className="px-4 py-3 text-neutral-400">{e.venue.name}</td>
                   <td className="px-4 py-3">{new Date(e.date).toLocaleDateString()}</td>
@@ -131,6 +165,12 @@ export default function EventManager() {
                   <td className="px-4 py-3 space-x-2">
                     <button onClick={async () => { await api.post(`/events/${e.id}/clone`); load(); }} className="text-neon underline text-xs">Clone</button>
                     <a href={`${process.env.NEXT_PUBLIC_API_URL}/events/${e.id}/guest-list.csv`} className="text-neutral-300 underline text-xs">CSV</a>
+                    {e.status === "cancelled" ? (
+                      <button onClick={() => reopen(e)} className="text-neutral-300 underline text-xs">Reopen</button>
+                    ) : (
+                      <button onClick={() => cancel(e)} className="text-yellow-400 underline text-xs">Cancel</button>
+                    )}
+                    <button onClick={() => remove(e)} className="text-red-400 underline text-xs">Delete</button>
                   </td>
                 </tr>
               ))}

@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { Injectable, ForbiddenException, NotFoundException, ConflictException } from "@nestjs/common";
 import { prisma } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 import type { Response } from "express";
@@ -32,6 +32,55 @@ export class EventToolsService {
       await prisma.eventGroupChat.create({ data: { eventId: cloned.id } }).catch(() => null);
     }
     return cloned;
+  }
+
+  /** Cancel an event: nothing is deleted, it just leaves guest feeds and reminders. */
+  async cancel(user: JwtUser, eventId: string) {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) throw new NotFoundException("Event not found");
+    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    if (event.status === "cancelled") throw new ConflictException("Event is already cancelled");
+    return prisma.event.update({ where: { id: eventId }, data: { status: "cancelled" } });
+  }
+
+  /** Bring a cancelled event back: guest lists intact, back in the venue's approval queue. */
+  async reopen(user: JwtUser, eventId: string) {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) throw new NotFoundException("Event not found");
+    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    if (event.status !== "cancelled") throw new ConflictException("Event is not cancelled");
+    return prisma.event.update({ where: { id: eventId }, data: { status: "pending_venue_approval" } });
+  }
+
+  /** Delete an event and its dependent rows (guest lists, bookings, chat, promos). Campaigns keep their history, detached. */
+  async remove(user: JwtUser, eventId: string) {
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: { groupChat: { select: { id: true } } },
+    });
+    if (!event) throw new NotFoundException("Event not found");
+    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+
+    await prisma.$transaction(async (tx) => {
+      if (event.groupChat) {
+        await tx.groupMessage.deleteMany({ where: { chatId: event.groupChat.id } });
+        await tx.eventGroupChat.delete({ where: { id: event.groupChat.id } });
+      }
+      const promotions = await tx.promotion.findMany({ where: { eventId }, select: { id: true } });
+      await tx.promotionRedemption.deleteMany({ where: { promotionId: { in: promotions.map((p) => p.id) } } });
+      await tx.promotion.deleteMany({ where: { eventId } });
+      const bookings = await tx.artistBooking.findMany({ where: { eventId }, select: { id: true } });
+      await tx.bookingRouteLeg.deleteMany({ where: { bookingId: { in: bookings.map((b) => b.id) } } });
+      await tx.artistBooking.deleteMany({ where: { eventId } });
+      await tx.guestList.deleteMany({ where: { eventId } });
+      await tx.tableBooking.deleteMany({ where: { eventId } });
+      await tx.match.deleteMany({ where: { eventId } });
+      await tx.doorLog.deleteMany({ where: { eventId } });
+      // Campaigns may already have been sent, so keep them and just drop the link.
+      await tx.campaign.updateMany({ where: { eventId }, data: { eventId: null } });
+      await tx.event.delete({ where: { id: eventId } });
+    });
+    return { ok: true, id: eventId };
   }
 
   /** Guest-list CSV export for door teams. */
