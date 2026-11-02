@@ -129,7 +129,6 @@ export class VenuesService {
       eventId: event.id,
       title: event.title,
       displayDate: event.date.toDateString(),
-      city: "JOHANNESBURG",
       venue: venue?.name ?? "TBA",
       doors: "22:00",
       price: "TBA",

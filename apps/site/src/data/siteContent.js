@@ -37,13 +37,13 @@ export const visuals = [
 export const defaultContent = {
   tagline: "All sound. No filler. Underground rooms, real sound systems and lineups built for the floor.",
   ctaLabel: "GET ON THE LIST",
-  city: "JOHANNESBURG",
+  city: "CAPE TOWN",
   quote: "WE BUILD ROOMS,\nNOT PLAYLISTS.",
   manifestoP1:
     "ESSENTIALS is a music events company running warehouse parties, club nights and open-format sessions across South Africa. We book the records that move a floor, not the ones that chase a trend — house, techno, amapiano, hip-hop and everything in between, in the same room, on the same night.",
   manifestoP2:
     "Every event is built the same way: a sound system that can carry a low end, a lineup with range, and a door that stays open until the last record.",
   events: [],
-  footerLeft: "© 2026 ESSENTIALS — JOHANNESBURG",
+  footerLeft: "© 2026 ESSENTIALS — CAPE TOWN",
   footerRight: "ALL SOUND. NO FILLER.",
 };

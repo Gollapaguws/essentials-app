@@ -19,7 +19,7 @@ interface FrontPage {
   lineupPublishAt?: string;
 }
 
-const emptyEvent: FrontPageEvent = { title: "", displayDate: "", city: "JOHANNESBURG", venue: "", doors: "22:00", price: "R150", status: "ANNOUNCED" };
+const emptyEvent: FrontPageEvent = { title: "", displayDate: "", city: "", venue: "", doors: "22:00", price: "R150", status: "ANNOUNCED" };
 
 /** Admin editor for the essentialsedm.com front page. Saves to /api/site/content (admin-only). */
 export default function FrontPageEditor() {

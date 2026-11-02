@@ -65,7 +65,7 @@ export default function SiteFooter() {
       </div>
 
       <div className="noir-foot">
-        <span className="noir-micro">© 2026 ESSENTIALS — JOHANNESBURG</span>
+        <span className="noir-micro">{c.footerLeft}</span>
         <span className="noir-micro">{c.footerRight}</span>
       </div>
     </footer>

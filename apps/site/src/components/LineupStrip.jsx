@@ -21,7 +21,7 @@ export default function LineupStrip({ events = [] }) {
                 <span className="noir-micro">{event.displayDate}</span>
                 <span className="noir-frame-title">{event.title}</span>
                 <span className="noir-micro">
-                  {event.city} — {event.venue}
+                  {event.city ? `${event.city} — ${event.venue}` : event.venue}
                 </span>
                 <span className="noir-frame-meta">
                   <span className="noir-micro">Doors {event.doors}</span>
