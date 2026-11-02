@@ -3,6 +3,21 @@ import { cn } from "../../lib/utils"
 import { buildSrcSet, buildTransformUrl, splitImageProps } from "./image-helpers"
 import { useResponsiveImage } from "./use-responsive-image"
 
+/**
+ * @typedef {Object} ResponsiveImageProps
+ * @property {string} [src]
+ * @property {{ baseUrl: string, filename: string }} parsed
+ * @property {"fill" | "fit"} [fittingType]
+ * @property {{ x: number, y: number }} [focalPoint]
+ * @property {number} [quality]
+ * @property {string} [className]
+ * @property {React.CSSProperties} [style]
+ * @property {string} [aspectRatio]
+ * @property {(event: React.SyntheticEvent<HTMLImageElement>) => void} [onLoad]
+ * @property {(value: string, className?: string) => void} [onSourceChange]
+ */
+
+/** @type {React.ForwardRefExoticComponent<ResponsiveImageProps & Omit<React.HTMLAttributes<HTMLSpanElement>, keyof ResponsiveImageProps> & React.RefAttributes<HTMLSpanElement>>} */
 export const ResponsiveImage = React.forwardRef(
   ({ src, parsed, fittingType, focalPoint, quality, className, style, aspectRatio, onLoad, onSourceChange, ...props }, ref) => {
     const { wrapperRef, imgRef, loaded, options, handleLoad } = useResponsiveImage(

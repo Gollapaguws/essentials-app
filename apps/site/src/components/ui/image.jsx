@@ -18,6 +18,22 @@ const FALLBACK_IMAGE_URL =
  * as a plain <img>. Failed transforms retry the original URL; only a broken
  * original swaps to the generic fallback image.
  */
+/**
+ * Props accepted by `Image`. Everything else is passed through to the underlying
+ * `<img>` or to `ResponsiveImage`.
+ *
+ * @typedef {Object} ImageProps
+ * @property {string} [src]
+ * @property {"fill" | "fit"} [fittingType]
+ * @property {number} [originWidth]
+ * @property {number} [originHeight]
+ * @property {number} [focalPointX]
+ * @property {number} [focalPointY]
+ * @property {number} [quality]
+ * @property {(event: React.SyntheticEvent<HTMLImageElement>) => void} [onError]
+ */
+
+/** @type {React.ForwardRefExoticComponent<ImageProps & Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src" | "onError"> & React.RefAttributes<HTMLImageElement>>} */
 const Image = React.forwardRef(
   (
     {
