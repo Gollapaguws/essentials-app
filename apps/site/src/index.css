@@ -942,4 +942,21 @@
     width: 36px;
     height: 36px;
   }
+
+  /* Film-strip labels (ROLL / slogan / SEASON): the row had a fixed 46px
+     height, so a wrapped label was clipped and bled up under the nav. Size it
+     to its content and tighten the tracking so all three fit one line. */
+  .noir-bar {
+    height: auto;
+    min-height: 44px;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    padding: 8px var(--noir-gutter);
+  }
+
+  .noir-bar .noir-micro {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    white-space: nowrap;
+  }
 }
