@@ -8,9 +8,11 @@ export interface AuthUser {
   email: string;
   role: AuthRole | null;
   aal: "aal1" | "aal2";
+  /** True until the account's owner has chosen their own password. */
+  mustResetPassword?: boolean;
 }
 
-export type MeResponse = { user: AuthUser; mfaRequired: boolean };
+export type MeResponse = { user: AuthUser; mfaRequired: boolean; mustResetPassword: boolean };
 
 export interface AuthStorage {
   getItem(key: string): string | null | Promise<string | null>;

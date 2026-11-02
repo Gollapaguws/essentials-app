@@ -4,6 +4,7 @@ import { prisma, type Role, type User } from "@essentials/db";
 export interface ResolvedIdentity {
   id: string;
   role: Role;
+  mustResetPassword: boolean;
 }
 
 interface CacheEntry extends ResolvedIdentity {
@@ -36,8 +37,11 @@ export class AuthUserService {
       return linked;
     }
 
+    // A brand-new address starts on a throwaway password: whoever set the
+    // account up knows it, so the owner has to choose their own before the
+    // dashboard opens.
     const created = await prisma.user.create({
-      data: { authUid: sub, email: normalized, role: "guest" },
+      data: { authUid: sub, email: normalized, role: "guest", mustResetPassword: true },
     });
     this.remember(sub, created);
     return created;
@@ -46,13 +50,24 @@ export class AuthUserService {
   /** Prisma id + canonical role for a session; null when the account cannot be resolved. */
   async resolveUser(sub: string, email: string): Promise<ResolvedIdentity | null> {
     const hit = this.cache.get(sub);
-    if (hit && hit.exp > Date.now()) return { id: hit.id, role: hit.role };
+    if (hit && hit.exp > Date.now()) {
+      return { id: hit.id, role: hit.role, mustResetPassword: hit.mustResetPassword };
+    }
     try {
       const user = await this.ensureUser(sub, email);
-      return { id: user.id, role: user.role };
+      return { id: user.id, role: user.role, mustResetPassword: user.mustResetPassword };
     } catch {
       return null;
     }
+  }
+
+  /** The owner has chosen their own password: drop the first-login gate. */
+  async clearPasswordReset(userId: string): Promise<void> {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { mustResetPassword: false },
+    });
+    this.invalidateById(userId);
   }
 
   /** Canonical role for a session, or null when no account exists and cannot be created. */
@@ -72,7 +87,12 @@ export class AuthUserService {
     }
   }
 
-  private remember(sub: string, user: Pick<User, "id" | "role">): void {
-    this.cache.set(sub, { id: user.id, role: user.role, exp: Date.now() + this.TTL_MS });
+  private remember(sub: string, user: Pick<User, "id" | "role" | "mustResetPassword">): void {
+    this.cache.set(sub, {
+      id: user.id,
+      role: user.role,
+      mustResetPassword: user.mustResetPassword,
+      exp: Date.now() + this.TTL_MS,
+    });
   }
 }

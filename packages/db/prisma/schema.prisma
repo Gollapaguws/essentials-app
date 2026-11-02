@@ -91,6 +91,8 @@ model User {
   musicTastes   String[] @default([]) // House, Techno, Hip-Hop, Afro, Amapiano
   vibeTag       VibeTag?
   verifiedBadge Boolean  @default(false)
+  // Set when the account appears, cleared once its owner chooses a password.
+  mustResetPassword Boolean @default(false)
   referralCode  String   @unique @default(cuid())
   referredById  String?
   referredBy    User?    @relation("Referrals", fields: [referredById], references: [id])

@@ -20,6 +20,11 @@ export default function LoginPage() {
   const router = useRouter();
 
   const routeByRole = (me: MeResponse) => {
+    // A new address picks its own password before any role gate applies.
+    if (me.mustResetPassword) {
+      router.replace("/auth/password");
+      return;
+    }
     if (!DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
       setError("Dashboard is for DJs, promoters, venue managers and admins.");
       return;
