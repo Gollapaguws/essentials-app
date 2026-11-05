@@ -1190,6 +1190,12 @@
   letter-spacing: 0.04em;
 }
 
+/* A note that follows the subtitle (rather than sitting in an auth stack) needs
+   its own spacing, or it reads as the last line of the subtitle. */
+.noir-door-sub + .noir-auth-note {
+  margin-top: 14px;
+}
+
 .noir-door-foot {
   margin-top: 22px;
   padding-top: 16px;
