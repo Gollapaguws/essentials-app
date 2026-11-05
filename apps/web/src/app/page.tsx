@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
+  const [mailDown, setMailDown] = useState(false);
   const router = useRouter();
 
   const routeByRole = (me: MeResponse) => {
@@ -40,6 +41,24 @@ export default function LoginPage() {
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Say the relay is down before the click, not after: otherwise staff ask for a
+  // reset link, get "sent", and wait for something that cannot arrive. A failed
+  // check on its own is not proof, so only a definite "down" raises the banner.
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get<{ ok: boolean }>("/mail/status")
+      .then((status) => {
+        if (!cancelled) setMailDown(!status.ok);
+      })
+      .catch(() => {
+        /* the endpoint being unreachable is not evidence about the mail server */
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const sendReset = async () => {
@@ -82,6 +101,12 @@ export default function LoginPage() {
       <div className="w-full max-w-md border border-line bg-surface rounded-2xl p-8">
         <h1 className="text-neon text-3xl font-black tracking-widest">ESSENTIALS</h1>
         <p className="text-neutral-500 mt-2 text-sm">Promoter dashboard — sign in to continue.</p>
+        {mailDown && (
+          <p className="mt-4 text-xs text-amber-400" role="status">
+            Password reset email is down right now, so a reset link will not arrive. An admin can set
+            a password for you from Users.
+          </p>
+        )}
 
         <form className="mt-6 space-y-4" onSubmit={submit}>
           <div className="space-y-1">
