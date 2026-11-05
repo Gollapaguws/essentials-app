@@ -82,28 +82,47 @@ export default function LivePanel() {
         <h2 className="noir-h2">THE ROOM</h2>
       </div>
 
-      <div style={{ position: "relative", width: "100%", maxWidth: 960, margin: "0 auto", aspectRatio: "16/9", background: "#000", border: "1px solid rgba(255,255,255,.12)" }}>
-        {showPlayer ? (
-          <video ref={videoRef} muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        ) : (
-          <div style={{ display: "grid", placeItems: "center", height: "100%", color: "rgba(255,255,255,.35)" }}>
-            {casting ? "CONNECTING TO THE ROOM…" : studioLive ? "LIVE FROM THE STUDIO" : "NO STREAM IN THE ROOM YET"}
-          </div>
-        )}
-        {(casting || showPlayer) && (
-          <span style={{ position: "absolute", top: 10, left: 10, background: "#e11d48", color: "#fff", fontWeight: 900, letterSpacing: 2, fontSize: 12, padding: "4px 10px" }}>
-            ● LIVE
+      <figure className="noir-stream">
+        <div className="noir-stream-slate">
+          <span className="noir-micro">ROLL 07</span>
+          <span className="noir-micro">
+            {casting ? "BROADCASTING" : showPlayer ? "SIGNAL LIVE" : "STANDBY"}
           </span>
-        )}
-        {showPlayer && (
-          <button
-            onClick={() => { const v = videoRef.current; if (v) { v.muted = !v.muted; setUnmuted(!v.muted); } }}
-            style={{ position: "absolute", bottom: 10, right: 10, background: "rgba(0,0,0,.6)", color: "#fff", border: "1px solid rgba(255,255,255,.3)", padding: "6px 12px", cursor: "pointer", fontWeight: 700 }}
-          >
-            {unmuted ? "🔇 MUTE" : "🔊 UNMUTE"}
-          </button>
-        )}
-      </div>
+          <span className="noir-micro">24 FPS</span>
+        </div>
+
+        <div className="noir-stream-screen">
+          {showPlayer ? (
+            <video ref={videoRef} muted playsInline />
+          ) : (
+            <div className="noir-stream-empty">
+              <span className="noir-micro">{casting ? "LINKING" : "STANDING BY"}</span>
+              <span className="noir-frame-title">
+                {casting ? "CONNECTING TO THE ROOM…" : "NO STREAM IN THE ROOM YET"}
+              </span>
+              <span className="noir-micro">THE FEED APPEARS HERE WHEN THE ROOM OPENS</span>
+            </div>
+          )}
+
+          <span className="noir-scan" aria-hidden="true" />
+
+          {(casting || showPlayer) && <span className="noir-stream-live">LIVE</span>}
+
+          {showPlayer && (
+            <button
+              className="noir-stream-btn"
+              onClick={() => { const v = videoRef.current; if (v) { v.muted = !v.muted; setUnmuted(!v.muted); } }}
+            >
+              {unmuted ? "Sound off" : "Sound on"}
+            </button>
+          )}
+        </div>
+
+        <figcaption className="noir-stream-foot">
+          <span className="noir-micro">ESSENTIALS — ROOM FEED</span>
+          <span className="noir-micro">{showPlayer ? "MUTED BY DEFAULT" : "NO SIGNAL"}</span>
+        </figcaption>
+      </figure>
 
       {isAdmin && (
         <div style={{ maxWidth: 960, margin: "14px auto 0", display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
