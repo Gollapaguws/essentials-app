@@ -5,6 +5,7 @@ import HeroCinema from "@/components/HeroCinema";
 import LineupStrip from "@/components/LineupStrip";
 import ManifestoQuote from "@/components/ManifestoQuote";
 import LivePanel from "@/components/LivePanel";
+import LiveChat from "@/components/LiveChat";
 import SiteFooter from "@/components/SiteFooter";
 
 export default function Home() {
@@ -15,6 +16,7 @@ export default function Home() {
       <main>
         <HeroCinema />
         <LivePanel />
+        <LiveChat />
         <LineupStrip events={content.events} />
         <ManifestoQuote />
       </main>

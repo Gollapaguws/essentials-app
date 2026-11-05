@@ -1,0 +1,133 @@
+/* --- room chat --------------------------------------------------------
+   Sits directly under the stream frame: same border and deep ground, one
+   scrolling log, and a single row to post. Anonymous by design.
+------------------------------------------------------------------------ */
+.noir-chat {
+  max-width: 1080px;
+  margin: 18px auto 0;
+  border: 1px solid var(--noir-line);
+  background: var(--noir-deep);
+}
+
+.noir-chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px clamp(14px, 3vw, 28px);
+  border-bottom: 1px solid var(--noir-line);
+}
+
+.noir-chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  padding: 18px clamp(14px, 3vw, 28px);
+  overflow-y: auto;
+  scrollbar-color: var(--noir-steel) transparent;
+}
+
+.noir-chat-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.noir-chat-time {
+  flex: 0 0 auto;
+  color: rgba(138, 162, 200, 0.75);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  font-variant-numeric: tabular-nums;
+}
+
+.noir-chat-name {
+  flex: 0 0 auto;
+  max-width: 38%;
+  overflow: hidden;
+  color: #ffd166;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.noir-chat-body {
+  color: var(--noir-ice);
+  overflow-wrap: anywhere;
+}
+
+.noir-chat-empty {
+  margin: 0;
+  color: var(--noir-steel);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.noir-chat-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px clamp(14px, 3vw, 28px);
+  border-top: 1px solid var(--noir-line);
+}
+
+.noir-chat-input {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--noir-line);
+  background: rgba(5, 7, 13, 0.6);
+  color: var(--noir-ice);
+  font: inherit;
+  font-size: 13px;
+}
+
+.noir-chat-input::placeholder {
+  color: rgba(138, 162, 200, 0.7);
+}
+
+.noir-chat-input:focus {
+  outline: none;
+  border-color: var(--noir-ice);
+}
+
+.noir-chat-namefield {
+  flex: 0 1 170px;
+}
+
+.noir-chat-field {
+  flex: 1 1 260px;
+}
+
+.noir-chat-form .noir-btn {
+  min-height: 42px;
+}
+
+.noir-chat-error {
+  margin: 0;
+  padding: 0 clamp(14px, 3vw, 28px) 12px;
+  color: #ff5b7f;
+  font-size: 12px;
+}
+
+.noir-chat-note {
+  margin: 0;
+  padding: 0 clamp(14px, 3vw, 28px) 14px;
+  color: var(--noir-steel);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 620px) {
+  .noir-chat-namefield {
+    flex: 1 1 100%;
+  }
+}

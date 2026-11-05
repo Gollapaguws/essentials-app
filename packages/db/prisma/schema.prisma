@@ -82,27 +82,27 @@ enum PaymentStatus {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  authUid       String?  @unique // Supabase auth.users.id (lazy-linked on first sign-in)
-  name          String?
-  avatar        String?
-  role          Role     @default(guest)
-  musicTastes   String[] @default([]) // House, Techno, Hip-Hop, Afro, Amapiano
-  vibeTag       VibeTag?
-  verifiedBadge Boolean  @default(false)
+  id                String    @id @default(cuid())
+  email             String    @unique
+  authUid           String?   @unique // Supabase auth.users.id (lazy-linked on first sign-in)
+  name              String?
+  avatar            String?
+  role              Role      @default(guest)
+  musicTastes       String[]  @default([]) // House, Techno, Hip-Hop, Afro, Amapiano
+  vibeTag           VibeTag?
+  verifiedBadge     Boolean   @default(false)
   // Set when the account appears, cleared once its owner chooses a password.
-  mustResetPassword Boolean @default(false)
+  mustResetPassword Boolean   @default(false)
   // Per-user Telegram DM target, bound by tapping a /start deep link once.
-  telegramChatId   String?
-  telegramLinkedAt DateTime?
-  telegramLinkCode String?  @unique
-  referralCode  String   @unique @default(cuid())
-  referredById  String?
-  referredBy    User?    @relation("Referrals", fields: [referredById], references: [id])
-  referrals     User[]   @relation("Referrals")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  telegramChatId    String?
+  telegramLinkedAt  DateTime?
+  telegramLinkCode  String?   @unique
+  referralCode      String    @unique @default(cuid())
+  referredById      String?
+  referredBy        User?     @relation("Referrals", fields: [referredById], references: [id])
+  referrals         User[]    @relation("Referrals")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   managedVenues   Venue[]        @relation("VenueManagers")
   promotedEvents  Event[]        @relation("EventPromoter")
@@ -536,4 +536,15 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, read])
+}
+
+/// Live-room chat under the front-page stream. Anonymous display name, throttled
+/// per IP at the API; the newest messages are the only ones the page reads.
+model LiveChatMessage {
+  id        String   @id @default(cuid())
+  name      String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
