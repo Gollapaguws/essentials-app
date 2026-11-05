@@ -1,4 +1,5 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { prisma } from "@essentials/db";
 import { MailService } from "../mail/mail.service";
 import { wrapTemplate } from "../mail/templates";
@@ -15,6 +16,22 @@ export interface NotificationInput {
   channels?: NotificationChannel[];
 }
 
+export interface DeliveryResult {
+  /** Email + Telegram messages that actually went out. */
+  delivered: number;
+  /** How many people each channel reached, so callers can report it honestly. */
+  channels: Record<NotificationChannel, number>;
+}
+
+/** One DJ the admin can fire a test notification at. */
+export interface DjTarget {
+  id: string;
+  email: string;
+  name: string | null;
+  stageName: string | null;
+  telegram: boolean;
+}
+
 /**
  * The one place a notification is created. In-app rows always land in the bell
  * feed; email and Telegram are best-effort so a dead provider never fails the
@@ -25,6 +42,7 @@ export class NotificationsService {
   constructor(
     private readonly mail: MailService,
     private readonly telegram: TelegramService,
+    private readonly config: ConfigService,
   ) {}
 
   async notify(userId: string, kind: string, title: string, body: string, link?: string) {
@@ -44,29 +62,30 @@ export class NotificationsService {
    * Notify a set of accounts on the requested channels. Telegram only reaches
    * people who have linked their chat; everyone else still gets email.
    */
-  async deliver(userIds: string[], input: NotificationInput) {
+  async deliver(userIds: string[], input: NotificationInput): Promise<DeliveryResult> {
     const ids = [...new Set(userIds.filter(Boolean))];
-    if (!ids.length) return { delivered: 0 };
+    const counts: Record<NotificationChannel, number> = { inapp: 0, email: 0, telegram: 0 };
+    if (!ids.length) return { delivered: 0, channels: counts };
 
     const channels = new Set<NotificationChannel>(input.channels ?? ["inapp"]);
     if (channels.has("inapp")) {
       await this.notifyMany(ids, input.kind, input.title, input.body, input.link);
+      counts.inapp = ids.length;
     }
 
     const wantsEmail = channels.has("email");
     const wantsTelegram = channels.has("telegram");
-    if (!wantsEmail && !wantsTelegram) return { delivered: 0 };
+    if (!wantsEmail && !wantsTelegram) return { delivered: 0, channels: counts };
 
     const users = await prisma.user.findMany({
       where: { id: { in: ids } },
       select: { id: true, email: true, name: true, telegramChatId: true },
     });
 
-    let delivered = 0;
     for (const user of users) {
       if (wantsTelegram && user.telegramChatId) {
         if (await this.telegram.sendMessage(user.telegramChatId, this.telegramText(input))) {
-          delivered++;
+          counts.telegram++;
         }
       }
       if (wantsEmail && user.email) {
@@ -76,13 +95,76 @@ export class NotificationsService {
             subject: input.title,
             html: wrapTemplate(this.emailHtml(input, user.name)),
           });
-          delivered++;
+          counts.email++;
         } catch {
           // Mail provider down: the in-app row is already written.
         }
       }
     }
-    return { delivered };
+    return { delivered: counts.email + counts.telegram, channels: counts };
+  }
+
+  /** Every DJ account, for the admin test-notification picker. */
+  async djTargets(): Promise<DjTarget[]> {
+    const users = await prisma.user.findMany({
+      where: { role: "artist" },
+      orderBy: [{ email: "asc" }],
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        telegramChatId: true,
+        artistProfile: { select: { stageName: true } },
+      },
+    });
+    return users.map((user) => ({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      stageName: user.artistProfile?.stageName ?? null,
+      telegram: Boolean(user.telegramChatId),
+    }));
+  }
+
+  /**
+   * Admin-only: fire one notice at a DJ on every channel a real DJ call uses, so
+   * a dead mail or Telegram path surfaces now instead of during a live booking.
+   */
+  async sendTest(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        telegramChatId: true,
+        artistProfile: { select: { stageName: true } },
+      },
+    });
+    if (!user) throw new NotFoundException("Account not found");
+    if (user.role !== "artist") {
+      throw new BadRequestException("Test notifications only go to DJ accounts.");
+    }
+
+    const result = await this.deliver([user.id], {
+      kind: "generic",
+      title: "TEST NOTIFICATION",
+      body: "This is a test notification from ESSENTIALS — DJ calls, gig confirmations and invoices will land here. Nothing to do.",
+      link: `${this.appUrl()}/dashboard/notifications`,
+      channels: ["inapp", "email", "telegram"],
+    });
+
+    return {
+      recipient: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        stageName: user.artistProfile?.stageName ?? null,
+        telegram: Boolean(user.telegramChatId),
+      },
+      ...result,
+    };
   }
 
   listFor(userId: string) {
@@ -103,6 +185,11 @@ export class NotificationsService {
       data: { read: true },
     });
     return { ok: true };
+  }
+
+  /** Absolute links: the same URL is used in the bell feed, email and Telegram. */
+  private appUrl() {
+    return (this.config.get<string>("APP_URL") ?? "https://essentialsedm.com").replace(/\/$/, "");
   }
 
   private telegramText(input: NotificationInput) {

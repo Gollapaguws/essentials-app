@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
+import { useAuth } from "@/components/AuthProvider";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 
@@ -16,6 +17,20 @@ interface NotificationRow {
   createdAt: string;
 }
 
+interface DjTarget {
+  id: string;
+  email: string;
+  name: string | null;
+  stageName: string | null;
+  telegram: boolean;
+}
+
+interface TestResult {
+  recipient: DjTarget;
+  delivered: number;
+  channels: { inapp: number; email: number; telegram: number };
+}
+
 const KIND_LABEL: Record<string, string> = {
   dj_call: "DJ CALL",
   application: "APPLICATION",
@@ -25,12 +40,21 @@ const KIND_LABEL: Record<string, string> = {
   generic: "NOTICE",
 };
 
+const field = "bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-neon";
+
 /** The bell feed: everything sent to this account, newest first. */
 export default function Notifications() {
+  const { me } = useAuth();
+  const isAdmin = me?.user.role === "admin";
+
   const [rows, setRows] = useState<NotificationRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [djs, setDjs] = useState<DjTarget[]>([]);
+  const [targetId, setTargetId] = useState("");
+  const [sending, setSending] = useState(false);
+  const [testNotice, setTestNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -44,6 +68,14 @@ export default function Notifications() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    api
+      .get<DjTarget[]>("/notifications/djs")
+      .then(setDjs)
+      .catch((err) => setError(errorMessage(err) ?? "Could not load DJ accounts."));
+  }, [isAdmin]);
 
   const unread = rows.filter((r) => !r.read).length;
   const visible = onlyUnread ? rows.filter((r) => !r.read) : rows;
@@ -67,6 +99,30 @@ export default function Notifications() {
       setRows((prev) => prev.map((r) => (r.id === id ? { ...r, read: true } : r)));
     } catch (err) {
       setError(errorMessage(err) ?? "Could not mark that notification read.");
+    }
+  };
+
+  /** Admin check: prove the bell + email + Telegram paths reach a real DJ. */
+  const sendTest = async () => {
+    if (!targetId) return;
+    setSending(true);
+    setError(null);
+    setTestNotice(null);
+    try {
+      const result = await api.post<TestResult>("/notifications/test", { userId: targetId });
+      const who =
+        result.recipient.stageName ?? result.recipient.name ?? result.recipient.email;
+      const parts = [`in-app ${result.channels.inapp}`];
+      if (result.channels.email) parts.push(`email ${result.channels.email}`);
+      if (result.channels.telegram) parts.push(`telegram ${result.channels.telegram}`);
+      const silent = !result.channels.email && !result.channels.telegram;
+      setTestNotice(
+        `Test sent to ${who} — ${parts.join(" · ")}.${silent ? " No email or Telegram went out: the account has neither." : ""}`,
+      );
+    } catch (err) {
+      setError(errorMessage(err) ?? "Could not send the test notification.");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -107,6 +163,44 @@ export default function Notifications() {
             </button>
           </div>
         </div>
+
+        {isAdmin && (
+          <section className="border border-line rounded-xl p-4 space-y-3">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-neon">
+                Send a test notification
+              </h2>
+              <p className="text-neutral-500 text-xs mt-1">
+                Sends the same notice a DJ call sends: the bell feed, plus email and Telegram where
+                the DJ has them.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                className={field}
+                value={targetId}
+                onChange={(e) => setTargetId(e.target.value)}
+                aria-label="DJ to notify"
+              >
+                <option value="">{djs.length ? "Choose a DJ" : "No DJ accounts yet"}</option>
+                {djs.map((dj) => (
+                  <option key={dj.id} value={dj.id}>
+                    {dj.stageName ? `${dj.stageName} — ${dj.email}` : dj.email}
+                    {dj.telegram ? " (telegram)" : ""}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={sendTest}
+                disabled={!targetId || sending}
+                className="bg-neon text-bg font-black rounded-lg px-3 py-2 text-xs tracking-widest disabled:opacity-50"
+              >
+                {sending ? "SENDING…" : "SEND TEST"}
+              </button>
+            </div>
+            {testNotice && <p className="text-neon text-sm">{testNotice}</p>}
+          </section>
+        )}
 
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
