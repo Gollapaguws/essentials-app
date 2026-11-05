@@ -102,8 +102,62 @@
   flex: 0 1 170px;
 }
 
-.noir-chat-field {
+.noir-chat-fieldwrap {
+  position: relative;
+  display: flex;
   flex: 1 1 260px;
+  min-width: 0;
+}
+
+.noir-chat-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.noir-chat-emoji {
+  width: 42px;
+  border: 1px solid var(--noir-line);
+  border-left: 0;
+  background: rgba(5, 7, 13, 0.6);
+  color: var(--noir-ice);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.noir-chat-emoji:hover,
+.noir-chat-emoji[aria-expanded="true"] {
+  border-color: var(--noir-ice);
+  color: #ffd166;
+}
+
+/* Opens upward over the log so the palette never pushes the page down. */
+.noir-chat-emoji-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--noir-line);
+  background: var(--noir-void);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.noir-chat-emoji-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  background: none;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.noir-chat-emoji-btn:hover {
+  border-color: var(--noir-line);
+  background: rgba(207, 227, 255, 0.08);
 }
 
 .noir-chat-form .noir-btn {
@@ -127,7 +181,8 @@
 }
 
 @media (max-width: 620px) {
-  .noir-chat-namefield {
+  .noir-chat-namefield,
+  .noir-chat-fieldwrap {
     flex: 1 1 100%;
   }
 }

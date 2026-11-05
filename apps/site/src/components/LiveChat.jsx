@@ -5,6 +5,14 @@ const API = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
 const NAME_KEY = "essentials.liveChatName";
 const POLL_MS = 5000;
 
+/** The palette the room actually uses: decks, moves and reactions. */
+const EMOJIS = [
+  "🔥", "💃", "🕺", "🎧", "🎵", "🎶", "🔊", "🥁",
+  "🎤", "💥", "✨", "💫", "🌙", "⚡", "🖤", "❤️",
+  "😍", "😂", "😎", "🤯", "🥵", "🫠", "👀", "🙌",
+  "👏", "🤝", "🍸", "🥂", "🍾", "🚀", "💯", "🆙",
+];
+
 const clock = (iso) => {
   const at = new Date(iso);
   return Number.isNaN(at.getTime()) ? "" : at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -20,7 +28,9 @@ export default function LiveChat() {
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const logRef = useRef(null);
+  const bodyRef = useRef(null);
 
   const load = async (signal) => {
     try {
@@ -47,6 +57,20 @@ export default function LiveChat() {
     const log = logRef.current;
     if (log) log.scrollTop = log.scrollHeight;
   }, [messages]);
+
+  /** Drop an emoji in at the caret so it does not land at the end of a long message. */
+  const addEmoji = (emoji) => {
+    const input = bodyRef.current;
+    const start = input?.selectionStart ?? body.length;
+    const end = input?.selectionEnd ?? body.length;
+    setBody((body.slice(0, start) + emoji + body.slice(end)).slice(0, 280));
+    requestAnimationFrame(() => {
+      if (!input) return;
+      const caret = start + emoji.length;
+      input.focus();
+      input.setSelectionRange(caret, caret);
+    });
+  };
 
   const send = async (event) => {
     event.preventDefault();
@@ -111,14 +135,46 @@ export default function LiveChat() {
             maxLength={24}
             aria-label="Your name"
           />
-          <input
-            className="noir-chat-input noir-chat-field"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Say something to the room"
-            maxLength={280}
-            aria-label="Message"
-          />
+          <div
+            className="noir-chat-fieldwrap"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setEmojiOpen(false);
+            }}
+          >
+            <input
+              ref={bodyRef}
+              className="noir-chat-input noir-chat-field"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Say something to the room"
+              maxLength={280}
+              aria-label="Message"
+            />
+            <button
+              type="button"
+              className="noir-chat-emoji"
+              aria-label="Add an emoji"
+              aria-expanded={emojiOpen}
+              onClick={() => setEmojiOpen((open) => !open)}
+            >
+              ☺
+            </button>
+            {emojiOpen && (
+              <div className="noir-chat-emoji-panel" role="group" aria-label="Emoji">
+                {EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className="noir-chat-emoji-btn"
+                    aria-label={`Insert ${emoji}`}
+                    onClick={() => addEmoji(emoji)}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button className="noir-btn" type="submit" disabled={sending}>
             {sending ? "SENDING…" : "SEND"}
           </button>
