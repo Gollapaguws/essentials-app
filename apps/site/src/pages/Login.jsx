@@ -2,38 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { signInWithPassword, signInWithGoogle } from "@/lib/auth";
 import { authCallbackUrl } from "@/lib/supabase";
+import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
-import Tip from "@/components/Tip";
-
-const input = {
-  padding: 14,
-  borderRadius: 8,
-  border: "1px solid rgba(255,255,255,.2)",
-  background: "transparent",
-  color: "inherit",
-};
-
-const labelRow = { display: "flex", alignItems: "center", gap: 8 };
-const labelText = { fontSize: 10, letterSpacing: 2, opacity: 0.55 };
-const marker = {
-  width: 16,
-  height: 16,
-  padding: 0,
-  borderRadius: "50%",
-  border: "1px solid rgba(255,255,255,.25)",
-  background: "transparent",
-  color: "rgba(255,255,255,.55)",
-  fontSize: 10,
-  fontWeight: 700,
-  lineHeight: 1,
-  display: "grid",
-  placeItems: "center",
-  cursor: "help",
-};
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -46,114 +21,105 @@ export default function Login() {
       // Signing in here is only half the job: the dashboard owns MFA and role
       // routing, so hand off instead of leaving the visitor on a silent form.
       window.location.href = "/dashboard";
-    } catch (err) {
-      setError("Wrong email or password.");
+    } catch {
+      setError("That email and password do not match an account. Check both, or use Google.");
     } finally {
       setBusy(false);
     }
   };
 
+  const google = () => {
+    setError(null);
+    signInWithGoogle(authCallbackUrl).catch(() =>
+      setError("Google sign-in did not finish. Try again, or use your email and password."),
+    );
+  };
+
   return (
-    <div className="noir" style={{ minHeight: "80vh", display: "grid", placeItems: "center", padding: 24 }}>
-      <div style={{ maxWidth: 420, width: "100%" }}>
-        <h1 style={{ letterSpacing: 4 }}>SIGN IN</h1>
-        <p style={{ opacity: 0.7, marginTop: 8 }}>Welcome back.</p>
+    <AuthLayout
+      title="SIGN IN"
+      subtitle="Your guest list, door pass and table bookings are behind this door."
+      footer={
+        <div className="noir-auth-foot noir-auth-foot--split">
+          <Link to="/forgot-password" className="noir-quiet-link">
+            Forgot password?
+          </Link>
+          <Link to="/register" className="noir-quiet-link noir-quiet-link--gold">
+            Create an account
+          </Link>
+        </div>
+      }
+    >
+      <div className="noir-auth-stack">
+        <button type="button" onClick={google} className="noir-auth-google">
+          <GoogleIcon className="w-4 h-4" />
+          Continue with Google
+        </button>
+        <p className="noir-auth-note">
+          Uses the Google account already in this browser. First time here? It creates your guest account.
+        </p>
 
-        <Tip
-          style={{ width: "100%", marginTop: 20 }}
-          label="Uses the Google account already in this browser. First time here? It creates your ESSENTIALS guest account, and an admin can upgrade it later."
-        >
-          <button
-            onClick={() => {
-              signInWithGoogle(authCallbackUrl).catch(() => setError("Google sign-in failed."));
-            }}
-            style={{
-              width: "100%",
-              padding: 14,
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,.3)",
-              background: "transparent",
-              color: "inherit",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              cursor: "pointer",
-            }}
-          >
-            <GoogleIcon className="w-5 h-5" />
-            CONTINUE WITH GOOGLE
-          </button>
-        </Tip>
+        <div className="noir-auth-or">or use your email</div>
 
-        <form onSubmit={submit} style={{ display: "grid", gap: 12, marginTop: 16 }}>
-          <div style={{ display: "grid", gap: 6 }}>
-            <div style={labelRow}>
-              <span style={labelText}>EMAIL</span>
-              <Tip label="The email your account uses. Guest sign-ups enter their own; staff are set up by an admin first.">
-                <button type="button" aria-label="About the email field" style={marker}>
-                  ?
-                </button>
-              </Tip>
-            </div>
+        <form onSubmit={submit} className="noir-auth-stack">
+          <div className="noir-fieldgroup">
+            <label className="noir-label" htmlFor="email">
+              Email
+            </label>
             <input
+              id="email"
+              className="noir-field"
               type="email"
               required
+              autoFocus
               autoComplete="email"
-              placeholder="you@email.com"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              style={input}
             />
           </div>
 
-          <div style={{ display: "grid", gap: 6 }}>
-            <div style={labelRow}>
-              <span style={labelText}>PASSWORD</span>
-              <Tip label="The password set when the account was created. If you never set one, use the Google button above or reset it below.">
-                <button type="button" aria-label="About the password field" style={marker}>
-                  ?
-                </button>
-              </Tip>
+          <div className="noir-fieldgroup">
+            <div className="noir-labelrow">
+              <label className="noir-label" htmlFor="password">
+                Password
+              </label>
+              <button
+                type="button"
+                className="noir-quiet-link"
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((v) => !v)}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
             </div>
             <input
-              type="password"
+              id="password"
+              className="noir-field"
+              type={showPassword ? "text" : "password"}
               required
               autoComplete="current-password"
-              placeholder="Password"
+              placeholder="Your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              style={input}
             />
           </div>
 
-          <Tip
-            style={{ width: "100%" }}
-            label="Signs you in with the email and password above. Promoter, venue and admin accounts then finish with a 6-digit authenticator code."
-          >
-            <button
-              disabled={busy}
-              style={{ width: "100%", padding: 14, borderRadius: 8, border: 0, fontWeight: 800, letterSpacing: 2, cursor: "pointer" }}
-            >
-              {busy ? "WORKING…" : "SIGN IN"}
-            </button>
-          </Tip>
+          {error && (
+            <p className="noir-auth-error" role="alert">
+              {error}
+            </p>
+          )}
 
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <Tip label="Emails a reset link to the address in the email box above.">
-              <a href="/forgot-password" style={{ opacity: 0.6, fontSize: 12 }}>
-                Forgot password?
-              </a>
-            </Tip>
-          </div>
-
-          <Link to="/register" style={{ marginTop: 4, textAlign: "center", fontSize: 12, letterSpacing: 1, color: "#FFD873" }}>
-            New here? Create an account
-          </Link>
+          <button type="submit" disabled={busy} className="noir-auth-primary">
+            {busy ? "Signing in…" : "Sign in"}
+          </button>
         </form>
 
-        {error && <p style={{ color: "#ff5b7f", marginTop: 12 }}>{error}</p>}
+        <p className="noir-auth-note">
+          Promoters, venues and admins add the 6-digit authenticator code after signing in.
+        </p>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

@@ -2,21 +2,15 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { signUpWithPassword, signInWithGoogle } from "@/lib/auth";
 import { authCallbackUrl } from "@/lib/supabase";
+import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
-
-const input = {
-  padding: 14,
-  borderRadius: 8,
-  border: "1px solid rgba(255,255,255,.2)",
-  background: "transparent",
-  color: "inherit",
-};
 
 /** Public sign-up. The role starts as guest; an admin assigns DJ/venue/promoter. */
 export default function Register() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -30,83 +24,112 @@ export default function Register() {
       if (session) navigate("/", { replace: true });
       else setSent(true);
     } catch (err) {
-      setError(err.message || "Could not create the account.");
+      setError(err.message || "Could not create the account. Try again.");
     } finally {
       setBusy(false);
     }
   };
 
+  const google = () => {
+    setError(null);
+    signInWithGoogle(authCallbackUrl).catch(() =>
+      setError("Google sign-up did not finish. Try again, or use your email and password."),
+    );
+  };
+
   return (
-    <div className="noir" style={{ minHeight: "80vh", display: "grid", placeItems: "center", padding: 24 }}>
-      <div style={{ maxWidth: 420, width: "100%" }}>
-        <h1 style={{ letterSpacing: 4 }}>JOIN THE LIST</h1>
-        <p style={{ opacity: 0.7, marginTop: 8 }}>Create an account to get on the guest list.</p>
+    <AuthLayout
+      title="JOIN THE LIST"
+      subtitle="Create a guest account. Your name goes on the door for every night you book."
+      footer={
+        <div className="noir-auth-foot">
+          <span>Already have an account?</span>
+          <Link to="/login" className="noir-quiet-link noir-quiet-link--gold">
+            Sign in
+          </Link>
+        </div>
+      }
+    >
+      {sent ? (
+        <div className="noir-auth-stack">
+          <p className="noir-auth-note">
+            We sent a confirmation link to <strong>{email}</strong>. Open it, then sign in.
+          </p>
+          <Link to="/login" className="noir-auth-primary">
+            Go to sign in
+          </Link>
+        </div>
+      ) : (
+        <div className="noir-auth-stack">
+          <button type="button" onClick={google} className="noir-auth-google">
+            <GoogleIcon className="w-4 h-4" />
+            Continue with Google
+          </button>
+          <p className="noir-auth-note">
+            One click, and your guest account is ready. An admin upgrades staff accounts later.
+          </p>
 
-        {sent ? (
-          <>
-            <p style={{ marginTop: 24 }}>Check {email} to confirm your account, then sign in.</p>
-            <Link to="/login" style={{ display: "inline-block", marginTop: 16, opacity: 0.7, fontSize: 13 }}>
-              Back to sign in
-            </Link>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => {
-                signInWithGoogle(authCallbackUrl).catch(() => setError("Google sign-up failed."));
-              }}
-              style={{
-                marginTop: 20,
-                width: "100%",
-                padding: 14,
-                borderRadius: 8,
-                border: "1px solid rgba(255,255,255,.3)",
-                background: "transparent",
-                color: "inherit",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                cursor: "pointer",
-              }}
-            >
-              <GoogleIcon className="w-5 h-5" />
-              CONTINUE WITH GOOGLE
-            </button>
+          <div className="noir-auth-or">or use your email</div>
 
-            <form onSubmit={submit} style={{ display: "grid", gap: 12, marginTop: 16 }}>
+          <form onSubmit={submit} className="noir-auth-stack">
+            <div className="noir-fieldgroup">
+              <label className="noir-label" htmlFor="email">
+                Email
+              </label>
               <input
+                id="email"
+                className="noir-field"
                 type="email"
                 required
-                placeholder="you@email.com"
+                autoFocus
+                autoComplete="email"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                style={input}
               />
+            </div>
+
+            <div className="noir-fieldgroup">
+              <div className="noir-labelrow">
+                <label className="noir-label" htmlFor="password">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  className="noir-quiet-link"
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
               <input
-                type="password"
+                id="password"
+                className="noir-field"
+                type={showPassword ? "text" : "password"}
                 required
                 minLength={8}
-                placeholder="Password (8+ characters)"
+                autoComplete="new-password"
+                placeholder="At least 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={input}
               />
-              <button
-                disabled={busy}
-                style={{ padding: 14, borderRadius: 8, border: 0, fontWeight: 800, letterSpacing: 2, cursor: "pointer" }}
-              >
-                {busy ? "WORKING…" : "CREATE ACCOUNT"}
-              </button>
-              <Link to="/login" style={{ opacity: 0.6, fontSize: 12, textAlign: "center" }}>
-                Already have an account? Sign in
-              </Link>
-            </form>
-          </>
-        )}
+            </div>
 
-        {error && <p style={{ color: "#ff5b7f", marginTop: 12 }}>{error}</p>}
-      </div>
-    </div>
+            {error && (
+              <p className="noir-auth-error" role="alert">
+                {error}
+              </p>
+            )}
+
+            <button type="submit" disabled={busy} className="noir-auth-primary">
+              {busy ? "Creating account…" : "Create account"}
+            </button>
+          </form>
+
+          <p className="noir-auth-note">We use this email only for your door pass and account notices.</p>
+        </div>
+      )}
+    </AuthLayout>
   );
 }

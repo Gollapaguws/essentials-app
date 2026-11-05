@@ -70,6 +70,12 @@ export async function requestPasswordReset(email, redirectTo) {
   if (error) throw new Error(error.message);
 }
 
+/** True when this browser holds a live session (a recovery link establishes one). */
+export async function hasSession() {
+  const { data } = await supabase.auth.getSession();
+  return Boolean(data.session);
+}
+
 export async function updatePassword(password) {
   const { error } = await supabase.auth.updateUser({ password });
   if (error) throw new Error(error.message);

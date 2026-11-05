@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { DASHBOARD_ROLES } from "@essentials/auth";
 import { supabase } from "@/lib/supabase";
 import { fetchMe } from "@/lib/auth";
 
@@ -25,6 +26,12 @@ export default function AuthCallback() {
       return;
     }
     if (!code) {
+      // Recovery links get the reset screen either way: it explains a spent link
+      // and offers a fresh one, so nobody is stranded on a sign-in failure here.
+      if (type === "recovery") {
+        navigate("/reset-password?recovery=1", { replace: true });
+        return;
+      }
       setError("This link is incomplete or has expired.");
       return;
     }
@@ -32,6 +39,12 @@ export default function AuthCallback() {
     (async () => {
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
       if (exchangeError) {
+        // A used or expired recovery link cannot open a session; send it to the
+        // screen that can explain that and mint a new one.
+        if (type === "recovery") {
+          navigate("/reset-password?recovery=1", { replace: true });
+          return;
+        }
         setError("This link has expired. Request a new one.");
         return;
       }
@@ -46,7 +59,13 @@ export default function AuthCallback() {
         setError("Signed in, but your account could not be loaded.");
         return;
       }
-      // Privileged roles finish two-step setup in the dashboard, not here.
+      // Promoters and other staff have a dashboard, and two-step setup happens
+      // there — hand them over exactly like the password form does. Guests and
+      // signed-out-onboarding accounts stay on the public site.
+      if (DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
+        window.location.href = "/dashboard";
+        return;
+      }
       navigate("/", { replace: true });
     })();
   }, [params, navigate]);
