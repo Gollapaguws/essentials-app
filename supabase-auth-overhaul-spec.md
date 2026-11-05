@@ -51,7 +51,7 @@ Replace the homegrown magic-link + HS256 JWT system with **Supabase Auth** acros
 Prisma `User.role` stays canonical and is mirrored into Supabase **`app_metadata.role`** whenever it changes (invite redeem, admin role change, seed) using the service-role key. The guard reads the claim first and only falls back to the DB when the claim is absent — hot paths stay off the database. The `aal` claim reports whether MFA was satisfied.
 
 ### 4.3 Sign-in flows
-- **Dashboard (Next.js):** `signInWithOtp` with `emailRedirectTo: APP_URL/auth/callback` → one click in the email → PKCE code exchange at `/auth/callback` → session → role gate → `/dashboard`. The paste-the-token box is deleted.
+- **Dashboard (Next.js):** email + password only (`signInWithPassword`) → session → `GET /auth/me` role gate → `/dashboard`. There is no one-time email link: staff who never chose a password have it set by an admin, and `mustResetPassword` sends them to `/auth/password` to pick their own. `/auth/callback` (PKCE) stays for the apps that still use OAuth and recovery.
 - **Site (Vite):** same PKCE callback route, plus Google OAuth and email+password sign-in replacing the Base44 pages; `SITE_URL/auth/callback` allow-listed.
 - **Mobile (Expo):** `emailRedirectTo: essentials://auth/callback` deep link (Expo dev URL in dev), OAuth via `WebBrowser.openAuthSessionAsync`, session persisted to **expo-secure-store** (fixes the token-lost-on-restart bug).
 - **Invite onboarding (preserved):** after first Supabase sign-in with no matching Prisma user, the API returns `INVITE_REQUIRED` → invite screen → `POST /api/auth/invite/redeem` validates the code **and then** sets `app_metadata.role` server-side before creating the user. Role is never trusted from the client — the same invariant as today.
@@ -78,7 +78,7 @@ Removed: `JWT_SECRET`, `JWT_EXPIRES_IN`, `MAGIC_LINK_TTL_MINUTES`. `MOBILE_URL` 
   - The **dashboard owns enrollment** (`/auth/mfa`).
   - The **site** shows a "finish two-step setup in dashboard" handoff for privileged users.
   - Artists and guests stay aal1; guests never see MFA UI.
-- **Password fallback:** `signInWithPassword` offered on dashboard and site alongside magic link; a wrong/absent password falls back to "email me a link". Supabase recovery emails replace the Base44 reset pages.
+- **Password sign-in:** `signInWithPassword` is the email door on the dashboard, site and mobile; Google OAuth is offered on the site and mobile. The one-time email link is gone, so a wrong password means recovery — Supabase recovery emails replace the Base44 reset pages.
 
 ---
 
@@ -88,7 +88,7 @@ Removed: `JWT_SECRET`, `JWT_EXPIRES_IN`, `MAGIC_LINK_TTL_MINUTES`. `MOBILE_URL` 
 Token plumbing becomes one injected `getAccessToken()` hook wired to the Supabase session, with a single refresh-and-retry on 401. The module-level `localStorage` read at import time (the first-load race) is removed.
 
 ### 6.2 `apps/web` (dashboard)
-- `app/auth/callback/route.ts` performs the PKCE exchange; the login page sends the link.
+- `app/auth/callback/route.ts` performs the PKCE exchange; the login page takes an email and password.
 - `SessionProvider` exposes `{ user, role, aal }` to client components.
 - **`TopNav` gains a sign-out button** (today there is none).
 - `/auth/mfa` enrollment page; client-side route guard on `/dashboard/*` (session + role).

@@ -1,7 +1,7 @@
 # Authentication
 
-Supabase Auth owns every session: it issues and rotates the tokens, sends the sign-in
-mail, and stores the TOTP factors. This repo owns **authorization**: the Prisma `User`
+Supabase Auth owns every session: it issues and rotates the tokens, sends the confirmation
+and recovery mail, and stores the TOTP factors. This repo owns **authorization**: the Prisma `User`
 row is the single source of truth for a role.
 
 ```
@@ -76,8 +76,10 @@ identity and stop there.
   CONTINUE WITH GOOGLE.
 - **Mobile** — the welcome screen's email + password form or Google button (`signInWithPassword` /
   `signInWithOAuth`, both back to `essentials://auth/callback`).
-- **Dashboard** — `/` takes an email and password; it is meant for staff, but
-  nothing stops a stranger from signing in.
+- **Dashboard** — `/` takes an email and password, and nothing else: there is no
+  one-time email link any more. Someone who never chose a password has it set by an admin;
+  the next sign-in lands on `/auth/password` (`mustResetPassword`) to pick their own. The
+  door is meant for staff, but nothing stops a stranger from signing in.
 
 Supabase writes `auth.users`, sends the confirmation, and returns her to the app's
 `/auth/callback`, where the **client** exchanges the PKCE code
@@ -240,12 +242,13 @@ the session is still `aal1`, which is what routes clients to `/auth/mfa`.
 
 ## Manual E2E checklist (run before deploying)
 
-- [ ] Dashboard: email link → `/auth/callback` → `/dashboard`.
+- [ ] Dashboard: email + password → `/auth/me` role gate → `/dashboard` (no email link offered).
 - [ ] Dashboard: promoter without TOTP is redirected to `/auth/mfa`, enrolls, lands on `/dashboard`.
 - [ ] Dashboard: SIGN OUT returns to `/`, and `/dashboard` is no longer reachable.
 - [ ] Site: password sign-in and Google sign-in both land on `/auth/callback`.
 - [ ] Site: `/forgot-password` → email → `/reset-password` → new password works.
-- [ ] Mobile: link opens `essentials://auth/callback`; after force-quit the session is still there.
+- [ ] Mobile: email + password signs in; Google opens `essentials://auth/callback`; after
+      force-quit the session is still there.
 - [ ] Mobile: staff account lands on `/auth/mfa`; guest never sees it.
 - [ ] API: `GET /auth/me` without a token → 401; as a guest → 200 `guest`.
 - [ ] Admin: `/dashboard/users` lists every sign-up; making one a DJ refreshes their role
