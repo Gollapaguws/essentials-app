@@ -74,9 +74,9 @@ identity and stop there.
 
 - **Site** — `/register` for email + password (linked from `/login`), or `/login` →
   CONTINUE WITH GOOGLE.
-- **Mobile** — the welcome screen's email link or Google button (`signInWithOtp` /
+- **Mobile** — the welcome screen's email + password form or Google button (`signInWithPassword` /
   `signInWithOAuth`, both back to `essentials://auth/callback`).
-- **Dashboard** — `/` sends a sign-in link or takes a password; it is meant for staff, but
+- **Dashboard** — `/` takes an email and password; it is meant for staff, but
   nothing stops a stranger from signing in.
 
 Supabase writes `auth.users`, sends the confirmation, and returns her to the app's

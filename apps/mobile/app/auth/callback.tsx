@@ -20,14 +20,14 @@ export default function AuthCallback() {
 
   useEffect(() => {
     if (!code) {
-      setError("This link is incomplete or has expired.");
+      setError("This sign-in is incomplete or has expired.");
       return;
     }
 
     (async () => {
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
       if (exchangeError) {
-        setError("This link has expired. Request a new one.");
+        setError("This sign-in has expired. Try again.");
         return;
       }
 
@@ -48,7 +48,7 @@ export default function AuthCallback() {
           <Text style={[type.title, { color: colors.text }]}>Sign-in failed</Text>
           <Text style={{ color: colors.muted, marginTop: 8, textAlign: "center" }}>{error}</Text>
           <Pressable style={s.button} onPress={() => router.replace("/")}>
-            <Text style={s.buttonText}>SEND A NEW LINK</Text>
+            <Text style={s.buttonText}>BACK TO SIGN IN</Text>
           </Pressable>
         </>
       ) : (
