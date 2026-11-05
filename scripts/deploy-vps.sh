@@ -26,6 +26,8 @@ npm install --no-audit --no-fund
 npm run generate -w @essentials/db
 npm run migrate:deploy -w @essentials/db
 npm run build -w @essentials/db
+# dist/ is not committed, so web would typecheck against a stale client without this.
+npm run build -w @essentials/api-client
 npm run build -w @essentials/api
 npm run build -w @essentials/web
 
