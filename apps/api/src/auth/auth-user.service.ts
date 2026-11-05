@@ -60,6 +60,11 @@ export class AuthUserService {
     }
   }
 
+  /** Store the account's profile photo; avatars appear in chat and guest lists. */
+  async setAvatar(userId: string, avatar: string): Promise<void> {
+    await prisma.user.update({ where: { id: userId }, data: { avatar } });
+  }
+
   /** The owner has chosen their own password: drop the first-login gate. */
   async clearPasswordReset(userId: string): Promise<void> {
     await prisma.user.update({

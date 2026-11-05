@@ -10,6 +10,9 @@ export const API_URL =
 
 export type AccessTokenProvider = () => string | null | Promise<string | null>;
 
+/** A browser Blob, or the { uri, name, type } descriptor React Native's FormData expects. */
+export type UploadFile = Blob | { uri: string; name: string; type: string };
+
 let tokenProvider: AccessTokenProvider | null = null;
 
 /** Register how to read the current Supabase access token (null clears it). */
@@ -51,10 +54,12 @@ async function toError(res: Response): Promise<ApiError> {
 }
 
 async function send(path: string, init: RequestInit | undefined, token: string | null) {
+  // FormData must set its own multipart boundary, so only JSON gets the header.
+  const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
   return fetch(`${API_URL}${path}`, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init?.headers,
     },
@@ -82,6 +87,13 @@ export const api = {
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  /** Multipart upload (images, files); the server answers with the stored URL. */
+  upload: <T>(path: string, file: UploadFile, field = "file") => {
+    const body = new FormData();
+    // React Native accepts a file descriptor here; the DOM accepts a Blob.
+    body.append(field, file as unknown as Blob);
+    return request<T>(path, { method: "POST", body });
+  },
 };
 
 // ---- typed endpoints ----

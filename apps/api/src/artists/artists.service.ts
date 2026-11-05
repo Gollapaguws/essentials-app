@@ -1,7 +1,12 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { prisma, ArtistBookingStatus } from "@essentials/db";
+import { rmSync } from "fs";
+import { join } from "path";
+import { storeImage } from "../common/media-storage";
 import type { JwtUser } from "../common/roles.guard";
+
+export { MAX_PROFILE_IMAGE_BYTES, PROFILE_IMAGE_EXTENSIONS } from "../common/media-storage";
 
 /** Haversine distance in km. */
 function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
@@ -72,7 +77,7 @@ export class ArtistsService {
     return prisma.artistProfile.findUnique({ where: { userId: user.sub } });
   }
 
-  async upsertProfile(user: JwtUser, data: { stageName: string; bio?: string; imageUrl?: string; vehicleConsumptionLPer100km?: number; travelRatePerKm?: number }) {
+  async upsertProfile(user: JwtUser, data: { stageName: string; bio?: string; imageUrl?: string; vehicleConsumptionLPer100km?: number; travelRatePerKm?: number }, origin: string) {
     // An empty text field is a clear, not a missing one: store null so the UI hides it.
     const patch = {
       ...data,
@@ -81,9 +86,60 @@ export class ArtistsService {
     };
     const existing = await prisma.artistProfile.findUnique({ where: { userId: user.sub } });
     if (existing) {
-      return prisma.artistProfile.update({ where: { userId: user.sub }, data: patch });
+      const updated = await prisma.artistProfile.update({ where: { userId: user.sub }, data: patch });
+      // The old photo is unreferenced once the profile points at a replacement (or none).
+      if (data.imageUrl !== undefined && existing.imageUrl !== updated.imageUrl) {
+        this.deleteStoredImage(existing.imageUrl, origin);
+      }
+      return updated;
     }
     return prisma.artistProfile.create({ data: { userId: user.sub, ...patch } });
+  }
+
+  /** Store an uploaded profile photo and return the absolute URL to save on the profile. */
+  saveProfileImage(file: Express.Multer.File, origin: string) {
+    const mediaDir = this.config.get<string>("MEDIA_DIR") ?? "/var/www/essentialsedm/media";
+    const publicBase = this.config.get<string>("PUBLIC_MEDIA_URL") ?? "/media";
+    const { url } = storeImage(file, { mediaDir, publicBase, origin });
+    return { ok: true, url };
+  }
+
+  /**
+   * Remove a profile photo this API stored. Anything outside the media base — a
+   * hand-pasted external URL, or a filename we did not generate — is left alone,
+   * so a profile edit can never delete unrelated files.
+   */
+  private deleteStoredImage(url: string | null, origin: string) {
+    if (!url) return;
+    const publicBase = (this.config.get<string>("PUBLIC_MEDIA_URL") ?? "/media").replace(/\/+$/, "");
+    const absoluteBase = /^https?:\/\//.test(publicBase);
+    let allowedHost: string;
+    let basePath: string;
+    try {
+      const baseUrl = absoluteBase ? new URL(publicBase) : new URL(origin);
+      allowedHost = baseUrl.host;
+      basePath = absoluteBase ? baseUrl.pathname.replace(/\/+$/, "") : publicBase;
+    } catch {
+      return;
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(url, origin);
+    } catch {
+      return;
+    }
+    if (parsed.host !== allowedHost || !parsed.pathname.startsWith(`${basePath}/`)) return;
+
+    const name = parsed.pathname.slice(basePath.length + 1);
+    if (!/^\d+-[a-f0-9]{8}\.(?:jpe?g|png|webp|avif)$/i.test(name)) return;
+
+    const mediaDir = this.config.get<string>("MEDIA_DIR") ?? "/var/www/essentialsedm/media";
+    try {
+      rmSync(join(mediaDir, name), { force: true });
+    } catch {
+      // An unwritable media directory must not block saving the profile.
+    }
   }
 
   /** Gig calendar: approved upcoming events that the artist has not applied to. */

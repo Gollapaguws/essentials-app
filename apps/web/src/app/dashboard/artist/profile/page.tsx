@@ -35,6 +35,29 @@ export default function ArtistProfilePage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const uploadPhoto = async (file: File) => {
+    setError(null);
+    setSaved(null);
+    if (!file.type.startsWith("image/")) {
+      setError("Choose an image file (JPG, PNG, WebP or AVIF).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Photos must be 5 MB or smaller.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const { url } = await api.upload<{ ok: boolean; url: string }>("/artists/me/image", file);
+      setForm((f) => ({ ...f, imageUrl: url }));
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const load = () => {
     api
@@ -114,16 +137,8 @@ export default function ArtistProfilePage() {
             </div>
 
             <div>
-              <label className={label} htmlFor="imageUrl">Profile image URL</label>
-              <div className="mt-1 flex gap-3 items-start">
-                <input
-                  id="imageUrl"
-                  maxLength={500}
-                  className={field}
-                  placeholder="https://…/photo.jpg"
-                  value={form.imageUrl ?? ""}
-                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                />
+              <span className={label}>Profile photo</span>
+              <div className="mt-1 flex gap-3 items-center">
                 <div className="w-16 h-16 shrink-0 rounded-lg border border-line overflow-hidden bg-bg grid place-items-center">
                   {form.imageUrl ? (
                     <img src={form.imageUrl} alt={form.stageName || "DJ"} className="w-full h-full object-cover" />
@@ -131,9 +146,34 @@ export default function ArtistProfilePage() {
                     <span className="text-[10px] text-neutral-600 text-center leading-tight">NO IMAGE</span>
                   )}
                 </div>
+                <div className="flex flex-col items-start gap-1.5">
+                  <label className={`border border-line rounded-lg px-3 py-2 text-xs font-bold tracking-widest cursor-pointer hover:border-neon hover:text-neon ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                    {uploading ? "UPLOADING…" : form.imageUrl ? "CHANGE PHOTO" : "UPLOAD PHOTO"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/avif"
+                      className="hidden"
+                      disabled={uploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void uploadPhoto(file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  {form.imageUrl && !uploading && (
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, imageUrl: "" })}
+                      className="text-[11px] text-neutral-500 hover:text-red-400"
+                    >
+                      Remove photo
+                    </button>
+                  )}
+                </div>
               </div>
               <p className="text-[11px] text-neutral-600 mt-1">
-                Link to a square photo. Leave it empty to remove the image.
+                Square photo, up to 5 MB. Saved with the rest of your profile.
               </p>
             </div>
 

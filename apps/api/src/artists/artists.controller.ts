@@ -1,9 +1,12 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, HttpCode } from "@nestjs/common";
+import { Controller, Get, Post, Body, Param, Query, UseGuards, HttpCode, BadRequestException, Req, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import type { Request } from "express";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { ArtistsService } from "./artists.service";
 import { DjBookingService } from "./dj-booking.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
+import { MAX_PROFILE_IMAGE_BYTES } from "../common/media-storage";
 import { IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
 
 class ProfileDto {
@@ -29,8 +32,17 @@ export class ArtistsController {
 
   @Post("me")
   @Auth("artist", "admin")
-  upsertProfile(@CurrentUser() user: JwtUser, @Body() dto: ProfileDto) {
-    return this.artists.upsertProfile(user, dto);
+  upsertProfile(@CurrentUser() user: JwtUser, @Body() dto: ProfileDto, @Req() req: Request) {
+    return this.artists.upsertProfile(user, dto, this.requestOrigin(req));
+  }
+
+  /** Profile photo upload (jpg/png/webp/avif, max 5 MB). Returns the URL to save via POST /artists/me. */
+  @Post("me/image")
+  @Auth("artist", "admin")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_PROFILE_IMAGE_BYTES } }))
+  uploadProfileImage(@UploadedFile() file: Express.Multer.File | undefined, @Req() req: Request) {
+    if (!file) throw new BadRequestException("No file");
+    return this.artists.saveProfileImage(file, this.requestOrigin(req));
   }
 
   @Get("gigs")
@@ -85,5 +97,9 @@ export class ArtistsController {
   @Auth("artist", "admin")
   bookingStatus(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body("status") status: "pending" | "confirmed" | "cancelled") {
     return this.artists.updateBooking(user, id, { status });
+  }
+
+  private requestOrigin(req: Request) {
+    return `${req.protocol}://${req.get("host")}`;
   }
 }
