@@ -54,8 +54,17 @@ npm run proof:auth                 # live check, see below
    - `https://<site-host>/auth/callback`
    - `essentials://auth/callback`
    - `http://localhost:3000/auth/callback`, `http://localhost:5173/auth/callback` (dev)
-3. **Email**: point Supabase's SMTP at Resend. This is *separate* from the app's own
-   `MAIL_PROVIDER`/`RESEND_API_KEY`, which sends campaign and welcome mail through the API.
+3. **Email**: auth mail leaves through the VPS's own Postfix, the same MTA the API uses
+   (`MAIL_PROVIDER=smtp`, `127.0.0.1:25`), with the DKIM key and PTR already in place for
+   the domain. GoTrue runs in Docker, so set `[auth.email.smtp]` in the server-only
+   `supabase/config.toml` to `host.docker.internal`, port 25, no user/password, sender
+   `hello@essentialsedm.com`; Postfix permits the supabase bridge to relay
+   (`mynetworks`) and skips STARTTLS for that CIDR only, because its certificate does not
+   cover the docker hostname. Recovery links come from `GOTRUE_MAILER_URLPATHS_*`, which
+   must be the public auth URL (`https://<site>/supabase/auth/v1/verify`) rather than
+   `127.0.0.1:54321` — otherwise every emailed link redirects to the site root. This is
+   *separate* from the app's own `MAIL_PROVIDER`/`RESEND_API_KEY`, which sends campaign and
+   welcome mail through the API.
 4. **Google**: enable the provider, add the Supabase callback
    `https://<project>.supabase.co/auth/v1/callback` to the Google console.
 5. **Apple**: behind `AUTH_APPLE_ENABLED`; the site and mobile both call
