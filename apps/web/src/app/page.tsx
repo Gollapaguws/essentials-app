@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
   const router = useRouter();
 
   const routeByRole = (me: MeResponse) => {
@@ -40,6 +41,22 @@ export default function LoginPage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const sendReset = async () => {
+    setError(null);
+    if (!email.includes("@")) {
+      setError("Type the email on your account first, then tap Forgot password.");
+      return;
+    }
+    // The recovery mail has to come back to this app's callback, which sits under the
+    // dashboard's base path (`/dashboard` in production, empty in dev).
+    const basePath = window.location.pathname.replace(/\/$/, "");
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}${basePath}/auth/callback?type=recovery`,
+    });
+    if (err) setError("Could not send the reset email. Try again in a moment.");
+    else setResetSent(true);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +104,13 @@ export default function LoginPage() {
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
               <label htmlFor="password">Password</label>
               <InfoTip label="At least 8 characters, chosen when the account was created." />
+              <button
+                type="button"
+                onClick={sendReset}
+                className="ml-auto text-[11px] normal-case tracking-normal text-neutral-500 underline hover:text-neon"
+              >
+                Forgot password?
+              </button>
             </div>
             <input
               id="password"
@@ -111,6 +135,12 @@ export default function LoginPage() {
             </button>
           </Tooltip>
         </form>
+
+        {resetSent && (
+          <p className="text-neutral-400 text-xs mt-4">
+            Recovery email sent to {email}. Open it to choose a new password, then sign in here.
+          </p>
+        )}
 
         {error && <p className="text-red-400 text-sm mt-4">{error}</p>}
       </div>

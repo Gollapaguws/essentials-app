@@ -76,10 +76,12 @@ identity and stop there.
   CONTINUE WITH GOOGLE.
 - **Mobile** — the welcome screen's email + password form or Google button (`signInWithPassword` /
   `signInWithOAuth`, both back to `essentials://auth/callback`).
-- **Dashboard** — `/` takes an email and password, and nothing else: there is no
-  one-time email link any more. Someone who never chose a password has it set by an admin;
-  the next sign-in lands on `/auth/password` (`mustResetPassword`) to pick their own. The
-  door is meant for staff, but nothing stops a stranger from signing in.
+- **Dashboard** — `/` takes an email and password, and nothing else: there is no one-time
+  sign-in link. **Forgot password?** mails a Supabase recovery link that returns to
+  `/auth/callback?type=recovery`, exchanges the code, and lands on
+  `/auth/password?recovery=1` to choose a new one. Someone who never chose a password has it
+  set by an admin instead, and `mustResetPassword` sends them to the same screen. The door is
+  meant for staff, but nothing stops a stranger from signing in.
 
 Supabase writes `auth.users`, sends the confirmation, and returns her to the app's
 `/auth/callback`, where the **client** exchanges the PKCE code
@@ -243,6 +245,7 @@ the session is still `aal1`, which is what routes clients to `/auth/mfa`.
 ## Manual E2E checklist (run before deploying)
 
 - [ ] Dashboard: email + password → `/auth/me` role gate → `/dashboard` (no email link offered).
+- [ ] Dashboard: Forgot password? → recovery email → `/auth/password` → new password → `/dashboard`.
 - [ ] Dashboard: promoter without TOTP is redirected to `/auth/mfa`, enrolls, lands on `/dashboard`.
 - [ ] Dashboard: SIGN OUT returns to `/`, and `/dashboard` is no longer reachable.
 - [ ] Site: password sign-in and Google sign-in both land on `/auth/callback`.

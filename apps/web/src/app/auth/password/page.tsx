@@ -17,19 +17,24 @@ export default function SetPasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [recovery, setRecovery] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const leave = (me: MeResponse) =>
     router.replace(me.mfaRequired ? "/auth/mfa" : landingPath(me.user.role ?? "guest"));
 
   useEffect(() => {
+    // Read here rather than with useSearchParams so the page keeps prerendering.
+    const isRecovery = new URLSearchParams(window.location.search).get("recovery") === "1";
+    setRecovery(isRecovery);
     (async () => {
       const { data } = await supabase.auth.getSession();
       if (!data.session) return router.replace("/");
       try {
         const me = await api.get<MeResponse>("/auth/me");
         // Already done, or never needed: don't trap the account on this screen.
-        if (!me.mustResetPassword) {
+        // A recovery link is allowed through even when no reset was pending.
+        if (!isRecovery && !me.mustResetPassword) {
           leave(me);
           return;
         }
@@ -58,7 +63,9 @@ export default function SetPasswordPage() {
     }
 
     try {
-      await api.post<{ mustResetPassword: boolean }>("/auth/password/complete", {});
+      // Only the first-sign-in screen clears the mustResetPassword flag; a recovery
+      // link just needs the password written before the dashboard opens.
+      if (!recovery) await api.post<{ mustResetPassword: boolean }>("/auth/password/complete", {});
       leave(await api.get<MeResponse>("/auth/me"));
     } catch {
       setBusy(false);
@@ -71,8 +78,9 @@ export default function SetPasswordPage() {
       <div className="w-full max-w-md border border-line bg-surface rounded-2xl p-8 space-y-4">
         <h1 className="text-neon text-2xl font-black tracking-widest">CHOOSE A NEW PASSWORD</h1>
         <p className="text-neutral-400 text-sm">
-          This is the first sign-in for this address. Set your own password — the one it was
-          created with stops working for you here.
+          {recovery
+            ? "You opened a recovery link. Choose a new password — the old one stops working straight away."
+            : "This is the first sign-in for this address. Set your own password — the one it was created with stops working for you here."}
         </p>
 
         {checking ? (

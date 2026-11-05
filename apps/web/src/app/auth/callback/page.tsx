@@ -26,6 +26,13 @@ function CallbackInner() {
         return;
       }
 
+      // Recovery links sign the account in just to change the password: skip the role
+      // gate and send them to the screen that owns that one job.
+      if (params.get("type") === "recovery") {
+        router.replace("/auth/password?recovery=1");
+        return;
+      }
+
       try {
         const me = await api.get<MeResponse>("/auth/me");
         if (!DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
