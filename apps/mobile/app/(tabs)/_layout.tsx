@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { Tabs } from "expo-router";
-import { Briefcase, Calendar, Ticket, User, Users } from "lucide-react-native";
+import { Briefcase, Calendar, Disc3, Ticket, User, Users } from "lucide-react-native";
 import { api } from "@essentials/api-client";
 import { colors } from "../../theme";
 
 /** Roles that own events; the API gates /events/manage/list the same way. */
 const STAFF_ROLES = ["promoter", "admin"];
+/** Roles that have a DJ profile; the gig endpoints gate the same way. */
+const DJ_ROLES = ["artist", "admin"];
 
 export default function TabsLayout() {
   const [role, setRole] = useState<string | null>(null);
@@ -20,6 +22,7 @@ export default function TabsLayout() {
   }, []);
 
   const staff = role !== null && STAFF_ROLES.includes(role);
+  const dj = role !== null && DJ_ROLES.includes(role);
 
   return (
     <Tabs
@@ -32,6 +35,15 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="events" options={{ title: "EVENTS", tabBarIcon: ({ color }) => <Calendar color={color} size={22} /> }} />
+      {/* DJs apply for slots and check what they are owed from the phone. */}
+      <Tabs.Screen
+        name="gigs"
+        options={
+          dj
+            ? { title: "GIGS", tabBarIcon: ({ color }) => <Disc3 color={color} size={22} /> }
+            : { href: null }
+        }
+      />
       {/* The file becomes a tab whether or not it is declared here, so non-staff
           accounts get `href: null` rather than no declaration at all. */}
       <Tabs.Screen
