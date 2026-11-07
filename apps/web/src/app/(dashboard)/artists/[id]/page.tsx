@@ -19,6 +19,12 @@ interface Booking {
   event: { id: string; title: string; date: string; status: string; venue: { name: string } };
 }
 
+interface ArtistNote {
+  id: string;
+  body: string;
+  updatedAt: string;
+}
+
 interface ArtistDetail {
   id: string;
   stageName: string;
@@ -29,6 +35,7 @@ interface ArtistDetail {
   user: { name: string | null; email: string };
   confirmedGigs: number;
   bookings: Booking[];
+  note: ArtistNote | null;
 }
 
 const statusClass = (status: string) =>
@@ -39,11 +46,33 @@ export default function ArtistDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [artist, setArtist] = useState<ArtistDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [noteState, setNoteState] = useState<"idle" | "saving" | "saved">("idle");
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
-    api.get<ArtistDetail>(`/artists/${id}`).then(setArtist).catch((e) => setError(errorMessage(e)));
+    api
+      .get<ArtistDetail>(`/artists/${id}`)
+      .then((a) => {
+        setArtist(a);
+        setNote(a.note?.body ?? "");
+      })
+      .catch((e) => setError(errorMessage(e)));
   }, [id]);
+
+  // An empty body clears the note server-side, so the same button both saves and resets.
+  const saveNote = async () => {
+    setNoteState("saving");
+    setNoteError(null);
+    try {
+      await api.patch(`/artists/${id}/note`, { body: note });
+      setNoteState("saved");
+    } catch (e) {
+      setNoteError(errorMessage(e));
+      setNoteState("idle");
+    }
+  };
 
   return (
     <>
@@ -77,6 +106,38 @@ export default function ArtistDetailPage() {
                 </p>
               </div>
               {artist.bio && <p className="text-neutral-400 text-sm w-full whitespace-pre-line">{artist.bio}</p>}
+            </section>
+
+            <section className="border border-line bg-surface rounded-xl p-5 space-y-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Private note</h2>
+                <span className="text-neutral-500 text-xs">
+                  Only you can see this — it appears when this DJ applies again.
+                </span>
+              </div>
+              <textarea
+                value={note}
+                onChange={(e) => {
+                  setNote(e.target.value);
+                  setNoteState("idle");
+                }}
+                rows={3}
+                maxLength={2000}
+                placeholder="How did the last set go? Anything to remember before booking them again."
+                className="w-full bg-bg border border-line rounded-lg px-3 py-2 text-sm"
+              />
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <button
+                  onClick={saveNote}
+                  disabled={noteState === "saving"}
+                  className="bg-neon text-bg font-black rounded-lg px-3 py-1 tracking-widest disabled:opacity-50"
+                >
+                  {noteState === "saving" ? "SAVING…" : "SAVE NOTE"}
+                </button>
+                {noteState === "saved" && <span className="text-neon">Saved</span>}
+                {!note.trim() && <span className="text-neutral-500">Saving an empty note clears it.</span>}
+                {noteError && <span className="text-red-400">{noteError}</span>}
+              </div>
             </section>
 
             <section className="space-y-3">

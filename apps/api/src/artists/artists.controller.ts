@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, HttpCode, BadRequestException, Req, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpCode, BadRequestException, Req, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Request } from "express";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
@@ -17,6 +17,11 @@ class ProfileDto {
   @IsOptional() @IsString() @MaxLength(500) imageUrl?: string;
   @IsOptional() @IsNumber() @Min(1) vehicleConsumptionLPer100km?: number;
   @IsOptional() @IsNumber() @Min(0) travelRatePerKm?: number;
+}
+
+class NoteDto {
+  /** The promoter's private note on a DJ. An empty string clears it. */
+  @IsString() @MaxLength(2000) body!: string;
 }
 
 @Controller("artists")
@@ -106,11 +111,25 @@ export class ArtistsController {
     return this.artists.updateBooking(user, id, { status });
   }
 
+  /** Promoter: their own private note on a DJ (null when none). */
+  @Get(":id/note")
+  @Auth("promoter", "admin")
+  note(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.artists.artistNote(user, id);
+  }
+
+  /** Promoter: save (or clear) their private note on a DJ. */
+  @Patch(":id/note")
+  @Auth("promoter", "admin")
+  saveNote(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: NoteDto) {
+    return this.artists.saveArtistNote(user, id, dto.body ?? "");
+  }
+
   /** Promoter: one DJ's full profile and every booking they have had, for judging an application. */
   @Get(":id")
   @Auth("promoter", "admin")
-  detail(@Param("id") id: string) {
-    return this.artists.artistDetail(id);
+  detail(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.artists.artistDetail(user, id);
   }
 
   private requestOrigin(req: Request) {

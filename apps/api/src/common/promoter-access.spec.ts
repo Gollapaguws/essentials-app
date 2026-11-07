@@ -32,6 +32,8 @@ describe("promoter access", () => {
     ["edit its venues", VenuesController, "update"],
     ["view the artist roster", ArtistsController, "roster"],
     ["open a DJ's profile and booking history", ArtistsController, "detail"],
+    ["read their own note on a DJ", ArtistsController, "note"],
+    ["save their own note on a DJ", ArtistsController, "saveNote"],
     ["list DJ applications", ArtistsController, "applications"],
     ["confirm or decline a DJ application", ArtistsController, "decide"],
   ])("allows a promoter to %s", (_label, controller, method) => {

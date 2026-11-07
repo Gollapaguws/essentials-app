@@ -10,6 +10,8 @@ interface Application {
   id: string; slot?: string | null; status: string; appliedAt?: string;
   artist: { id: string; stageName: string; user: { name: string | null; email: string } };
   event: { title: string; date: string };
+  /** The promoter's own note from last time, or null. */
+  note: { body: string } | null;
 }
 
 /** Promoter: review DJ applications — confirm or decline. */
@@ -49,6 +51,12 @@ export default function Applications() {
                   <span className="text-neutral-500 font-normal">· {a.slot ?? "slot TBA"}</span>
                 </p>
                 <p className="text-neutral-500 text-xs">{a.event.title} · {new Date(a.event.date).toLocaleDateString()} · {a.artist.user.email}</p>
+                {a.note && (
+                  <p className="text-yellow-400/90 text-xs mt-1 max-w-md">
+                    <span className="uppercase tracking-widest text-[10px] text-neutral-500">your note</span>{" "}
+                    {a.note.body}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <span className={a.status === "confirmed" ? "text-neon" : a.status === "pending" ? "text-yellow-400" : "text-neutral-500"}>{a.status}</span>

@@ -115,6 +115,7 @@ model User {
   loyaltyVisits   LoyaltyVisit[]
   referralsGiven  Referral[]     @relation("Referrer")
   artistProfile   ArtistProfile?
+  artistNotes     ArtistNote[]
   consentRecords  Consent[]
   emailEvents     EmailEvent[]
 
@@ -390,6 +391,23 @@ model ArtistProfile {
   user                        User            @relation(fields: [userId], references: [id])
   bookings                    ArtistBooking[]
   invoices                    Invoice[]
+  // Private promoter notes about this DJ; never shown to the DJ or other promoters.
+  notes                       ArtistNote[]
+}
+
+/// A promoter's own running note on a DJ. One row per promoter/DJ pair.
+model ArtistNote {
+  id         String   @id @default(cuid())
+  artistId   String
+  promoterId String
+  body       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  artist     ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  promoter   User          @relation(fields: [promoterId], references: [id], onDelete: Cascade)
+
+  @@unique([promoterId, artistId])
+  @@index([artistId])
 }
 
 model ArtistBooking {

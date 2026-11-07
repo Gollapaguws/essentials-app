@@ -120,9 +120,9 @@ export class DjBookingService {
     return prisma.artistBooking.findUnique({ where: { id: bookingId } });
   }
 
-  /** Promoter: applications for their events. */
+  /** Promoter: applications for their events, with their own note on each DJ. */
   async applications(user: JwtUser, eventId?: string) {
-    return prisma.artistBooking.findMany({
+    const bookings = await prisma.artistBooking.findMany({
       where: {
         ...(eventId ? { eventId } : {}),
         event: user.role === "admin" ? {} : { promoterId: user.sub },
@@ -134,5 +134,14 @@ export class DjBookingService {
       orderBy: { appliedAt: "desc" },
       take: 100,
     });
+
+    // The note the promoter left on a previous application should be in view
+    // while deciding this one. Only their own notes are attached.
+    const artistIds = [...new Set(bookings.map((b) => b.artistId))];
+    const notes = artistIds.length
+      ? await prisma.artistNote.findMany({ where: { promoterId: user.sub, artistId: { in: artistIds } } })
+      : [];
+    const byArtist = new Map(notes.map((n) => [n.artistId, n]));
+    return bookings.map((b) => ({ ...b, note: byArtist.get(b.artistId) ?? null }));
   }
 }

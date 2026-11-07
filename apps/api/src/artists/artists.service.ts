@@ -81,7 +81,7 @@ export class ArtistsService {
    * Promoter: one DJ in full — profile, travel terms and their whole booking
    * history (pending, confirmed and cancelled), newest first.
    */
-  async artistDetail(artistId: string) {
+  async artistDetail(user: JwtUser, artistId: string) {
     const profile = await prisma.artistProfile.findUnique({
       where: { id: artistId },
       include: {
@@ -107,6 +107,7 @@ export class ArtistsService {
     const { bookings, ...artist } = profile;
     return {
       ...artist,
+      note: await this.artistNote(user, artistId),
       confirmedGigs: bookings.filter((b) => b.status === ArtistBookingStatus.confirmed).length,
       bookings: bookings.map((b) => ({
         id: b.id,
@@ -120,6 +121,34 @@ export class ArtistsService {
         event: b.event,
       })),
     };
+  }
+
+  /**
+   * The signed-in promoter's own note on a DJ, or null. Notes are per promoter:
+   * another promoter's judgement is theirs, and the DJ never sees either.
+   */
+  async artistNote(user: JwtUser, artistId: string) {
+    return prisma.artistNote.findUnique({
+      where: { promoterId_artistId: { promoterId: user.sub, artistId } },
+    });
+  }
+
+  /** Save (or clear, with an empty body) this promoter's note on a DJ. */
+  async saveArtistNote(user: JwtUser, artistId: string, body: string) {
+    const artist = await prisma.artistProfile.findUnique({ where: { id: artistId }, select: { id: true } });
+    if (!artist) throw new NotFoundException("Artist not found");
+
+    const text = body.trim();
+    if (!text) {
+      // Clearing the note deletes the row: an empty "note" would look like a note.
+      await prisma.artistNote.deleteMany({ where: { promoterId: user.sub, artistId } });
+      return null;
+    }
+    return prisma.artistNote.upsert({
+      where: { promoterId_artistId: { promoterId: user.sub, artistId } },
+      create: { promoterId: user.sub, artistId, body: text },
+      update: { body: text },
+    });
   }
 
   /**
