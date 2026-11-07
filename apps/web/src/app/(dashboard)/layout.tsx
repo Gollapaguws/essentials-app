@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { DASHBOARD_ROLES, landingPath } from "@essentials/auth";
 import { useAuth } from "@/components/AuthProvider";
+import { WhatsNew } from "@/components/WhatsNew";
 
 /**
  * Guard only — each dashboard page renders its own <TopNav />, so mounting one
@@ -49,5 +50,10 @@ export default function DashboardLayout({ children }: { children: import("react"
 
   if (!session) return null;
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <WhatsNew />
+    </>
+  );
 }
