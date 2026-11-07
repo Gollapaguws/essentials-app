@@ -29,7 +29,7 @@ export default function SetPasswordPage() {
     setRecovery(isRecovery);
     (async () => {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) return router.replace("/");
+      if (!data.session) return router.replace("/login");
       try {
         const me = await api.get<MeResponse>("/auth/me");
         // Already done, or never needed: don't trap the account on this screen.

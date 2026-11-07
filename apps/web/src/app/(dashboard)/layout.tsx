@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }: { children: import("react"
   useEffect(() => {
     if (loading) return;
     if (!session) {
-      router.replace("/");
+      router.replace("/login");
       return;
     }
     if (!me) return; // /auth/me still in flight or failed; the page surfaces its own error
@@ -31,9 +31,10 @@ export default function DashboardLayout({ children }: { children: import("react"
       return;
     }
     if (me.mfaRequired) router.replace("/auth/mfa");
-    // `/dashboard` is the promoter analytics home. Other roles own other pages,
-    // so send them there before that page renders and 403s.
-    if (pathname === "/dashboard" && me.user.role !== "promoter" && me.user.role !== "admin") {
+    // `/` is the promoter analytics home. Other roles own other pages, so send
+    // them there before that page renders and 403s. (Paths here exclude the
+    // `/dashboard` base path — Next strips it from `usePathname`.)
+    if (pathname === "/" && me.user.role !== "promoter" && me.user.role !== "admin") {
       router.replace(landingPath(me.user.role));
     }
   }, [loading, session, me, router, pathname]);

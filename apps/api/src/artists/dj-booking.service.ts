@@ -43,7 +43,7 @@ export class DjBookingService {
         kind: "dj_call",
         title: `DJ CALL: ${event.title}`,
         body: `${event.venue.name} · ${event.date.toDateString()} — slots open (day / evening / late-night). Apply now.`,
-        link: `${this.appUrl()}/dashboard/artist`,
+        link: `${this.appUrl()}/artist`,
         channels: ["inapp", "email", "telegram"],
       },
     );
@@ -87,7 +87,7 @@ export class DjBookingService {
       kind: "application",
       title: `DJ application: ${booking.artist.stageName}`,
       body: `${booking.artist.stageName} applied for ${slot} at ${event.title}. Confirm in your dashboard.`,
-      link: `${this.appUrl()}/dashboard/applications`,
+      link: `${this.appUrl()}/applications`,
       channels: ["inapp", "email", "telegram"],
     });
     return booking;
@@ -113,7 +113,7 @@ export class DjBookingService {
       kind: confirm ? "confirmed" : "declined",
       title,
       body,
-      link: `${this.appUrl()}/dashboard/artist`,
+      link: `${this.appUrl()}/artist`,
       // A decline is worth a bell, not a message on every channel.
       channels: confirm ? ["inapp", "email", "telegram"] : ["inapp"],
     });

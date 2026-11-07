@@ -85,7 +85,7 @@ export default function ArtistPortal() {
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h1 className="text-2xl font-black tracking-wide">ARTIST PORTAL</h1>
-          <Link href="/dashboard/artist/profile" className="text-xs tracking-widest text-neutral-400 hover:text-neon">
+          <Link href="/artist/profile" className="text-xs tracking-widest text-neutral-400 hover:text-neon">
             DETAILED PROFILE →
           </Link>
         </div>

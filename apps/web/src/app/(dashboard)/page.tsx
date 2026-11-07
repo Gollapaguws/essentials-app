@@ -26,8 +26,8 @@ export default function Dashboard() {
   // sent to the page their role actually owns instead of a 403.
   useEffect(() => {
     const role = me?.user.role;
-    if (role === "artist") router.replace("/dashboard/artist");
-    else if (role === "venue_manager") router.replace("/dashboard/venue");
+    if (role === "artist") router.replace("/artist");
+    else if (role === "venue_manager") router.replace("/venue");
   }, [me, router]);
 
   const [pacing, setPacing] = useState<PacingRow[]>([]);

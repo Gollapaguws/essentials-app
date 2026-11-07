@@ -113,7 +113,7 @@ export default function ArtistProfilePage() {
               What promoters and venues see, plus the travel costs your invoices are built from.
             </p>
           </div>
-          <Link href="/dashboard/artist" className="text-xs tracking-widest text-neutral-400 hover:text-neon">
+          <Link href="/artist" className="text-xs tracking-widest text-neutral-400 hover:text-neon">
             ← ARTIST PORTAL
           </Link>
         </div>

@@ -151,7 +151,7 @@ export class NotificationsService {
       kind: "generic",
       title: "TEST NOTIFICATION",
       body: "This is a test notification from ESSENTIALS — DJ calls, gig confirmations and invoices will land here. Nothing to do.",
-      link: `${this.appUrl()}/dashboard/notifications`,
+      link: `${this.appUrl()}/notifications`,
       channels: ["inapp", "email", "telegram"],
     });
 

@@ -85,7 +85,7 @@ export default function MfaPage() {
     try {
       const me = await api.get<MeResponse>("/auth/me");
       if (!me.mfaRequired) {
-        router.replace("/dashboard");
+        router.replace("/");
         return;
       }
     } catch {

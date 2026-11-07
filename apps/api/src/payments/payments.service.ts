@@ -41,8 +41,8 @@ export class PaymentsService {
       amountMinor: invoice.total * 100,
       description,
       payerEmail: invoice.artist.user.email,
-      successUrl: `${appUrl}/dashboard/artist?payment=success`,
-      cancelUrl: `${appUrl}/dashboard/artist?payment=cancelled`,
+      successUrl: `${appUrl}/artist?payment=success`,
+      cancelUrl: `${appUrl}/artist?payment=cancelled`,
     });
 
     if (pending) {

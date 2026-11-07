@@ -68,8 +68,9 @@ export default function LoginPage() {
       return;
     }
     // The recovery mail has to come back to this app's callback, which sits under the
-    // dashboard's base path (`/dashboard` in production, empty in dev).
-    const basePath = window.location.pathname.replace(/\/$/, "");
+    // dashboard's base path (`/dashboard` in production, empty in dev). This page is
+    // `<basePath>/login`, so strip that segment rather than assuming where it is.
+    const basePath = window.location.pathname.replace(/\/login\/?$/, "");
     const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}${basePath}/auth/callback?type=recovery`,
     });

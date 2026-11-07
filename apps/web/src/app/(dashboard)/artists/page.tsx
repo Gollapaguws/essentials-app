@@ -67,7 +67,7 @@ export default function ArtistRoster() {
                         )}
                       </div>
                       <div>
-                        <Link href={`/dashboard/artists/${a.id}`} className="font-bold hover:text-neon">
+                        <Link href={`/artists/${a.id}`} className="font-bold hover:text-neon">
                           {a.stageName}
                         </Link>
                         {a.bio && <p className="text-neutral-500 text-xs max-w-xs line-clamp-2">{a.bio}</p>}

@@ -49,7 +49,7 @@ export default function ArtistDetailPage() {
     <>
       <TopNav />
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        <Link href="/dashboard/applications" className="text-xs text-neutral-500 hover:text-neon">
+        <Link href="/applications" className="text-xs text-neutral-500 hover:text-neon">
           ← Back to applications
         </Link>
         {error && <p className="text-red-400 text-sm">{error}</p>}

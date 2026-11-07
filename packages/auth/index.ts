@@ -55,7 +55,7 @@ export const DASHBOARD_ROLES: readonly AuthRole[] = ["artist", "promoter", "venu
  * analytics page, so artists and venue managers get their own home instead.
  */
 export function landingPath(role: AuthRole | null): string {
-  if (role === "artist") return "/dashboard/artist";
-  if (role === "venue_manager") return "/dashboard/venue";
-  return "/dashboard";
+  if (role === "artist") return "/artist";
+  if (role === "venue_manager") return "/venue";
+  return "/";
 }

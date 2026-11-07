@@ -40,7 +40,7 @@ export default function Applications() {
               <div>
                 <p className="font-bold">
                   <Link
-                    href={`/dashboard/artists/${a.artist.id}`}
+                    href={`/artists/${a.artist.id}`}
                     className="underline decoration-line hover:text-neon"
                     title="Full profile and booking history"
                   >

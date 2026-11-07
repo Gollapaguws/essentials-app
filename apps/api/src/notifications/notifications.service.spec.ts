@@ -81,7 +81,7 @@ describe("NotificationsService.sendTest", () => {
           userId: DJ.id,
           kind: "generic",
           title: "TEST NOTIFICATION",
-          link: "https://essentials.example/dashboard/dashboard/notifications",
+          link: "https://essentials.example/dashboard/notifications",
         }),
       ],
     });

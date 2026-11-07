@@ -9,6 +9,16 @@ const basePath = process.env.NEXT_BASE_PATH ?? "";
 const nextConfig = {
   reactStrictMode: true,
   basePath,
+
+  async redirects() {
+    // Dashboard pages used to live in `app/dashboard`, one segment below the base
+    // path, so their real URLs were /dashboard/dashboard/*. They now sit in a
+    // route group (`app/(dashboard)`), which adds no segment: /dashboard/*.
+    // basePath is prefixed to both sides of a redirect, so this rule turns
+    // /dashboard/dashboard/<page> into /dashboard/<page>, keeping bookmarks and
+    // notification links sent before the move working.
+    return [{ source: "/dashboard/:path*", destination: "/:path*", permanent: false }];
+  },
 };
 
 export default nextConfig;
