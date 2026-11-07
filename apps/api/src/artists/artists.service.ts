@@ -107,7 +107,7 @@ export class ArtistsService {
     const { bookings, ...artist } = profile;
     return {
       ...artist,
-      note: await this.artistNote(user, artistId),
+      note: await this.noteFor(user.sub, artistId),
       confirmedGigs: bookings.filter((b) => b.status === ArtistBookingStatus.confirmed).length,
       bookings: bookings.map((b) => ({
         id: b.id,
@@ -128,15 +128,13 @@ export class ArtistsService {
    * another promoter's judgement is theirs, and the DJ never sees either.
    */
   async artistNote(user: JwtUser, artistId: string) {
-    return prisma.artistNote.findUnique({
-      where: { promoterId_artistId: { promoterId: user.sub, artistId } },
-    });
+    await this.assertArtist(artistId);
+    return this.noteFor(user.sub, artistId);
   }
 
   /** Save (or clear, with an empty body) this promoter's note on a DJ. */
   async saveArtistNote(user: JwtUser, artistId: string, body: string) {
-    const artist = await prisma.artistProfile.findUnique({ where: { id: artistId }, select: { id: true } });
-    if (!artist) throw new NotFoundException("Artist not found");
+    await this.assertArtist(artistId);
 
     const text = body.trim();
     if (!text) {
@@ -149,6 +147,18 @@ export class ArtistsService {
       create: { promoterId: user.sub, artistId, body: text },
       update: { body: text },
     });
+  }
+
+  /** One row per promoter/DJ pair; callers validate the DJ first when they need a 404. */
+  private noteFor(promoterId: string, artistId: string) {
+    return prisma.artistNote.findUnique({
+      where: { promoterId_artistId: { promoterId, artistId } },
+    });
+  }
+
+  private async assertArtist(artistId: string) {
+    const artist = await prisma.artistProfile.findUnique({ where: { id: artistId }, select: { id: true } });
+    if (!artist) throw new NotFoundException("Artist not found");
   }
 
   /**

@@ -111,6 +111,26 @@ describe("ArtistsService.artistDetail", () => {
   });
 });
 
+describe("ArtistsService.artistNote", () => {
+  it("returns the caller's own note for a DJ that exists", async () => {
+    profiles.findUnique.mockResolvedValue({ id: "artist-1" });
+    const note = { id: "note-1", artistId: "artist-1", promoterId: "promoter-1", body: "Solid set." };
+    notes.findUnique.mockResolvedValue(note);
+
+    await expect(service().artistNote(promoter, "artist-1")).resolves.toEqual(note);
+    expect(notes.findUnique).toHaveBeenCalledWith({
+      where: { promoterId_artistId: { promoterId: "promoter-1", artistId: "artist-1" } },
+    });
+  });
+
+  it("404s for a DJ that does not exist instead of answering null-ish", async () => {
+    profiles.findUnique.mockResolvedValue(null);
+
+    await expect(service().artistNote(promoter, "nope")).rejects.toBeInstanceOf(NotFoundException);
+    expect(notes.findUnique).not.toHaveBeenCalled();
+  });
+});
+
 describe("ArtistsService.saveArtistNote", () => {
   it("trims and upserts this promoter's note, creating one row per pair", async () => {
     profiles.findUnique.mockResolvedValue({ id: "artist-1" });

@@ -111,18 +111,24 @@ export class ArtistsController {
     return this.artists.updateBooking(user, id, { status });
   }
 
-  /** Promoter: their own private note on a DJ (null when none). */
+  /**
+   * Promoter: their own private note on a DJ.
+   *
+   * Wrapped in an object on purpose: a bare `null` makes Nest answer with an
+   * empty body, which the web client's `res.json()` cannot parse — an unsaved
+   * note would surface as a failed request.
+   */
   @Get(":id/note")
   @Auth("promoter", "admin")
-  note(@CurrentUser() user: JwtUser, @Param("id") id: string) {
-    return this.artists.artistNote(user, id);
+  async note(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return { note: await this.artists.artistNote(user, id) };
   }
 
-  /** Promoter: save (or clear) their private note on a DJ. */
+  /** Promoter: save (or clear) their private note on a DJ. Same envelope as GET. */
   @Patch(":id/note")
   @Auth("promoter", "admin")
-  saveNote(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: NoteDto) {
-    return this.artists.saveArtistNote(user, id, dto.body ?? "");
+  async saveNote(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: NoteDto) {
+    return { note: await this.artists.saveArtistNote(user, id, dto.body ?? "") };
   }
 
   /** Promoter: one DJ's full profile and every booking they have had, for judging an application. */
