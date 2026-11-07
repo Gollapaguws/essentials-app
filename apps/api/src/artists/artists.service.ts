@@ -344,6 +344,60 @@ export class ArtistsService {
     });
   }
 
+  /**
+   * The DJ's money view: every gig the promoter has confirmed as played, what it
+   * pays, and how much of that has actually been billed to — and paid by — the
+   * venue. Only completed gigs count, because they are the only billable ones.
+   */
+  async earnings(user: JwtUser) {
+    const profile = await this.requireProfile(user);
+    const bookings = await prisma.artistBooking.findMany({
+      where: { artistId: profile.id, status: "completed" },
+      include: {
+        event: { select: { title: true, venue: { select: { name: true } } } },
+        invoice: { select: { id: true, number: true, status: true, total: true } },
+      },
+      orderBy: { startAt: "desc" },
+    });
+
+    const gigs = bookings.map((b) => ({
+      id: b.id,
+      eventTitle: b.event.title,
+      venue: b.event.venue.name,
+      startAt: b.startAt,
+      completedAt: b.completedAt,
+      fee: b.performanceFee,
+      invoice: b.invoice,
+    }));
+
+    const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+    const uninvoiced = gigs.filter((g) => !g.invoice);
+    const unpaid = gigs.filter((g) => g.invoice && g.invoice.status !== "paid");
+    const readyToInvoice = sum(uninvoiced.map((g) => g.fee));
+    const awaitingPayment = sum(unpaid.map((g) => g.invoice!.total));
+
+    return {
+      gigs,
+      totals: {
+        /** Agreed fees on every gig confirmed as played. */
+        earned: sum(gigs.map((g) => g.fee)),
+        /** Billed to venues so far. */
+        invoiced: sum(gigs.map((g) => g.invoice?.total ?? 0)),
+        /** Collected. */
+        paid: sum(gigs.filter((g) => g.invoice?.status === "paid").map((g) => g.invoice!.total)),
+        /** Played, not billed yet — the DJ still has to send these. */
+        readyToInvoice,
+        readyToInvoiceCount: uninvoiced.length,
+        /** Billed, not paid yet — the venue still owes it. */
+        awaitingPayment,
+        awaitingPaymentCount: unpaid.length,
+        /** Everything still to come in, whichever side is holding it up. */
+        outstanding: readyToInvoice + awaitingPayment,
+        gigs: gigs.length,
+      },
+    };
+  }
+
   /** Multi-gig routing for one calendar day: legs, buffers, collision alerts, fuel + billable travel. */
   async planDay(user: JwtUser, date: string) {
     const profile = await this.requireProfile(user);

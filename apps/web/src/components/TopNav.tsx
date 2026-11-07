@@ -97,6 +97,12 @@ const links: NavLink[] = [
     roles: ["artist", "admin"],
   },
   {
+    href: "/earnings",
+    label: "Earnings",
+    hint: "Played gigs: the fee agreed for each, what you have invoiced the venue, and what is still owed.",
+    roles: ["artist", "admin"],
+  },
+  {
     href: "/applications",
     label: "DJ Applications",
     hint: "Applications for your events — confirm or decline each slot.",

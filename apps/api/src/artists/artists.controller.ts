@@ -110,6 +110,13 @@ export class ArtistsController {
     return this.artists.openGigs(user);
   }
 
+  /** Artist: money view — played gigs, what is invoiced, what is still owed. */
+  @Get("earnings")
+  @Auth("artist", "admin")
+  earnings(@CurrentUser() user: JwtUser) {
+    return this.artists.earnings(user);
+  }
+
   /** Apply for a slot: day | evening | late-night. */
   @Post("gig-calendar/apply")
   @HttpCode(200)
