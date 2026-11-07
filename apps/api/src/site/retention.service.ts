@@ -29,7 +29,8 @@ export class RetentionService {
       include: { consentRecords: true },
     });
 
-    const appUrl = process.env.APP_URL ?? "https://essentialsedm.com";
+    // APP_URL is the promoter dashboard; guests get links to the public site.
+    const siteUrl = process.env.SITE_URL ?? process.env.APP_URL ?? "https://essentialsedm.com";
     let sent = 0;
     for (const guest of guests) {
       const consent = guest.consentRecords.find((c) => c.channel === "email");
@@ -41,10 +42,10 @@ export class RetentionService {
       });
       if (!matches.length) continue;
 
-      const unsub = `${appUrl}/api/email/unsubscribe?email=${encodeURIComponent(guest.email)}`;
+      const unsub = `${siteUrl}/api/email/unsubscribe?email=${encodeURIComponent(guest.email)}`;
       const html = `<h1 style="color:#00FF66;letter-spacing:2px;font-size:22px">FOR YOUR TASTE</h1>
         <p>${guest.name ?? "there"}, these upcoming rooms match what you actually listen to (${guest.musicTastes.join(", ")}):</p>
-        ${matches.map((e) => `<p style="font-size:16px"><strong>${e.title}</strong><br/>${e.venue.name} · ${e.date.toDateString()} · <a href="${appUrl}/events/${e.id}" style="color:#00FF66">RSVP →</a></p>`).join("")}`;
+        ${matches.map((e) => `<p style="font-size:16px"><strong>${e.title}</strong><br/>${e.venue.name} · ${e.date.toDateString()} · <a href="${siteUrl}/events/${e.id}" style="color:#00FF66">RSVP →</a></p>`).join("")}`;
       try {
         await this.mail.send({ to: guest.email, subject: "Events picked for your taste", html: wrapTemplate(html, unsub), unsubscribeUrl: unsub });
         sent++;
@@ -69,7 +70,8 @@ export class RetentionService {
       where: { status: { in: ["approved", "live"] }, date: { gt: now } },
       orderBy: { date: "asc" },
     });
-    const appUrl = process.env.APP_URL ?? "https://essentialsedm.com";
+    // APP_URL is the promoter dashboard; guests get links to the public site.
+    const siteUrl = process.env.SITE_URL ?? process.env.APP_URL ?? "https://essentialsedm.com";
     let sent = 0;
 
     for (const event of events) {
@@ -80,9 +82,9 @@ export class RetentionService {
       for (const gl of event.guestLists) {
         const consent = gl.user.consentRecords.find((c) => c.channel === "email");
         if (!consent || consent.status !== ConsentStatus.granted) continue;
-        const unsub = `${appUrl}/api/email/unsubscribe?email=${encodeURIComponent(gl.user.email)}`;
+        const unsub = `${siteUrl}/api/email/unsubscribe?email=${encodeURIComponent(gl.user.email)}`;
         const next = nextEvent
-          ? `<p>Next up: <strong>${nextEvent.title}</strong> — ${nextEvent.date.toDateString()} @ <a href="${appUrl}/events/${nextEvent.id}" style="color:#00FF66">RSVP →</a></p>`
+          ? `<p>Next up: <strong>${nextEvent.title}</strong> — ${nextEvent.date.toDateString()} @ <a href="${siteUrl}/events/${nextEvent.id}" style="color:#00FF66">RSVP →</a></p>`
           : `<p>Next dates drop soon — watch this space.</p>`;
         const html = `<h1 style="color:#00FF66;letter-spacing:2px;font-size:22px">SEE YOU IN THE ROOM</h1>
           <p>${gl.user.name ?? "there"}, thanks for being on the floor at <strong>${event.title}</strong>.</p>${next}`;

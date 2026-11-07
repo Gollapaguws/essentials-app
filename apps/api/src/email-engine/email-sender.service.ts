@@ -30,30 +30,32 @@ export class EmailSenderService {
       }
 
       const campaign = await prisma.campaign.findUniqueOrThrow({ where: { id: campaignId }, include: { event: true } });
-      const appUrl = this.config.get("APP_URL") ?? "http://localhost:3001";
-      const unsub = `${appUrl}/api/email/unsubscribe?email=${encodeURIComponent(user.email)}`;
+      // Guests are not dashboard users: APP_URL points at the promoter login, so
+      // every link in a guest email has to go to the public site instead.
+      const siteUrl = (this.config.get("SITE_URL") ?? this.config.get("APP_URL") ?? "http://localhost:3001").replace(/\/$/, "");
+      const unsub = `${siteUrl}/api/email/unsubscribe?email=${encodeURIComponent(user.email)}`;
       let html: string;
 
       switch (campaign.flow) {
         case "welcome_series":
-          html = emailTemplates.welcomeSeries(user.name ?? "there", `${appUrl}/profile`);
+          html = emailTemplates.welcomeSeries(user.name ?? "there", `${siteUrl}/register`);
           break;
         case "weekly_drop": {
           const events = await this.engine.upcomingEventsForDrop();
           html = emailTemplates.weeklyDrop(
             user.name ?? "there",
-            events.map((e) => ({ title: `${e.title} @ ${e.venue.name}`, date: e.date.toDateString(), url: `${appUrl}/events/${e.id}` })),
+            events.map((e) => ({ title: `${e.title} @ ${e.venue.name}`, date: e.date.toDateString(), url: `${siteUrl}/events/${e.id}` })),
           );
           break;
         }
         case "reminder_24h":
-          html = emailTemplates.eventReminder(user.name ?? "there", campaign.event?.title ?? "ESSENTIALS", 24, `${appUrl}/events/${campaign.eventId}`);
+          html = emailTemplates.eventReminder(user.name ?? "there", campaign.event?.title ?? "ESSENTIALS", 24, `${siteUrl}/events/${campaign.eventId}`);
           break;
         case "reminder_1h":
-          html = emailTemplates.eventReminder(user.name ?? "there", campaign.event?.title ?? "ESSENTIALS", 1, `${appUrl}/events/${campaign.eventId}`);
+          html = emailTemplates.eventReminder(user.name ?? "there", campaign.event?.title ?? "ESSENTIALS", 1, `${siteUrl}/events/${campaign.eventId}`);
           break;
         case "winback":
-          html = emailTemplates.winback(user.name ?? "there", campaign.event?.title ?? "the next one", `${appUrl}/events`);
+          html = emailTemplates.winback(user.name ?? "there", campaign.event?.title ?? "the next one", `${siteUrl}/events`);
           break;
         default:
           html = `<h1>${campaign.subject}</h1>`;

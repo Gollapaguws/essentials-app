@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Post, HttpCode, UseGuards, Res, UploadedFile, UseInterceptors, BadRequestException } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Post, HttpCode, Param, UseGuards, Res, UploadedFile, UseInterceptors, BadRequestException } from "@nestjs/common";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { ConfigService } from "@nestjs/config";
 import type { Response } from "express";
@@ -8,6 +8,7 @@ import { mkdirSync, writeFileSync } from "fs";
 import { join, extname } from "path";
 import { SiteContentService, FrontPageContent } from "./site-content.service";
 import { SiteStatsService } from "./site-stats.service";
+import { PublicEventsService } from "./public-events.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { IsString, MaxLength } from "class-validator";
@@ -23,11 +24,27 @@ class SiteVisitDto {
  */
 @Controller("site")
 export class SiteContentController {
-  constructor(private content: SiteContentService, private siteStats: SiteStatsService, private config: ConfigService) {}
+  constructor(
+    private content: SiteContentService,
+    private siteStats: SiteStatsService,
+    private config: ConfigService,
+    private publicEvents: PublicEventsService,
+  ) {}
 
   @Get("content")
   get() {
     return this.content.get();
+  }
+
+  /** Public event pages and the links inside guest emails. No session. */
+  @Get("events")
+  events() {
+    return this.publicEvents.list();
+  }
+
+  @Get("events/:id")
+  event(@Param("id") id: string) {
+    return this.publicEvents.detail(id);
   }
 
   @Post("content")

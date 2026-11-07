@@ -12,6 +12,8 @@ if (typeof window !== "undefined") {
   }).catch(() => {});
 }
 
+import Events from './pages/Events';
+import EventDetail from './pages/EventDetail';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import AuthCallback from './pages/AuthCallback';
@@ -29,6 +31,8 @@ const PublicSite = () => (
     <ScrollToTop />
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/events" element={<Events />} />
+      <Route path="/events/:id" element={<EventDetail />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
