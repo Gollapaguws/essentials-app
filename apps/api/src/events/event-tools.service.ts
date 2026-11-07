@@ -1,5 +1,5 @@
 import { Injectable, ForbiddenException, NotFoundException, ConflictException } from "@nestjs/common";
-import { prisma } from "@essentials/db";
+import { prisma, type Event } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 import type { Response } from "express";
 import { buildSlots } from "./slots";
@@ -12,8 +12,29 @@ export class EventToolsService {
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) throw new NotFoundException("Event not found");
     if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    return this.createCopy(event, new Date(event.date.getTime() + 7 * 86_400_000));
+  }
 
-    const date = new Date(event.date.getTime() + 7 * 86_400_000);
+  /**
+   * A weekly run from one night: N extra drafts at seven-day intervals, each
+   * carrying the same slot plan, venue and fee.
+   */
+  async repeat(user: JwtUser, eventId: string, weeks: number) {
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) throw new NotFoundException("Event not found");
+    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    if (!Number.isInteger(weeks) || weeks < 1 || weeks > 12) {
+      throw new ConflictException("Repeat between 1 and 12 weeks");
+    }
+
+    const created = [];
+    for (let week = 1; week <= weeks; week++) {
+      created.push(await this.createCopy(event, new Date(event.date.getTime() + week * 7 * 86_400_000)));
+    }
+    return { created: created.length, events: created };
+  }
+
+  private async createCopy(event: Event, date: Date) {
     // The slot plan and the budget are the expensive part of planning a night, so
     // a clone carries them instead of making the promoter retype the whole thing.
     const plan =

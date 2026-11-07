@@ -72,6 +72,8 @@ export default function EventManager() {
   });
   // Re-planning an existing night uses the same fields, prefilled from the event.
   const [slots, setSlots] = useState<SlotForm>(EMPTY_SLOTS);
+  // Per-slot fee overrides, keyed by slot id, for the expanded plan panel.
+  const [slotDrafts, setSlotDrafts] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const { me } = useAuth();
 
@@ -162,6 +164,31 @@ export default function EventManager() {
       const { eventId, ...plan } = slots;
       await api.patch(`/events/${eventId}/slots`, plan);
       setSlots(EMPTY_SLOTS);
+      load();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
+
+  const saveSlotFee = async (slotId: string, current: number) => {
+    if (!slots.eventId) return;
+    setError(null);
+    try {
+      await api.patch(`/events/${slots.eventId}/slots/${slotId}/fee`, { fee: slotDrafts[slotId] ?? current });
+      load();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
+
+  const repeatWeekly = async (event: EventRow) => {
+    const raw = window.prompt("Create how many weekly copies? (1–12)", "4");
+    if (!raw) return;
+    const weeks = Number(raw);
+    if (!Number.isInteger(weeks) || weeks < 1 || weeks > 12) return;
+    setError(null);
+    try {
+      await api.post(`/events/${event.id}/repeat`, { weeks });
       load();
     } catch (err) {
       setError(errorMessage(err));
@@ -301,6 +328,7 @@ export default function EventManager() {
                           {slots.eventId === e.id ? "Close" : "Slots & budget"}
                         </button>
                         <button onClick={async () => { await api.post(`/events/${e.id}/clone`); load(); }} className="text-neon underline text-xs">Clone</button>
+                        <button onClick={() => repeatWeekly(e)} className="text-neutral-300 underline text-xs">Repeat weekly</button>
                         <DownloadButton path={`/events/${e.id}/guest-list.csv`} filename={`guestlist-${e.id}.csv`} label="Guest CSV" />
                         <DownloadButton path={`/events/${e.id}/spend.csv`} filename={`dj-spend-${e.id}.csv`} label="Spend CSV" />
                         {e.status === "cancelled" ? (
@@ -343,6 +371,32 @@ export default function EventManager() {
                               <span className="text-yellow-400"> — plan over budget · you can only confirm DJs up to R{slots.budget.toLocaleString()}</span>
                             )}
                           </p>
+                          <div className="space-y-1">
+                            <p className="text-[10px] uppercase tracking-widest text-neutral-500">Slot fees — a headline set can pay differently</p>
+                            {e.slots.map((s) => {
+                              const draft = slotDrafts[s.id] ?? s.fee;
+                              return (
+                                <div key={s.id} className="flex flex-wrap items-center gap-2 text-xs">
+                                  <span className="text-neutral-400 w-32">{s.label}</span>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    aria-label={`Fee for ${s.label}`}
+                                    className={`${field} w-24`}
+                                    value={draft}
+                                    onChange={(ev) => setSlotDrafts({ ...slotDrafts, [s.id]: +ev.target.value })}
+                                  />
+                                  <span className="text-neutral-500">R{s.fee.toLocaleString()} now</span>
+                                  {s.confirmed ? (
+                                    <span className="text-neutral-600">confirmed — fee locked</span>
+                                  ) : (
+                                    <button onClick={() => saveSlotFee(s.id, s.fee)} className="text-neon underline">SET FEE</button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            {!e.slots.length && <p className="text-neutral-600 text-xs">No slots yet — save a plan above.</p>}
+                          </div>
                           <div className="flex items-center gap-3 text-xs">
                             <button onClick={saveSlots} className="bg-neon text-bg font-black rounded-lg px-3 py-1 tracking-widest">SAVE PLAN</button>
                             <button onClick={() => setSlots(EMPTY_SLOTS)} className="text-neutral-500 hover:text-neon">CANCEL</button>

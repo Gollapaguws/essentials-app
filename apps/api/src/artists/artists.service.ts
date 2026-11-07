@@ -547,6 +547,35 @@ export class ArtistsService {
     );
   }
 
+  /** Dates the DJ has blocked out from today onwards. */
+  async blackouts(user: JwtUser) {
+    const profile = await this.requireProfile(user);
+    return prisma.artistBlackout.findMany({
+      where: { artistId: profile.id, date: { gte: startOfDay(new Date()) } },
+      orderBy: { date: "asc" },
+    });
+  }
+
+  /** Block a day. Adding the same day again just replaces the reason. */
+  async addBlackout(user: JwtUser, date: string, reason?: string) {
+    const profile = await this.requireProfile(user);
+    const day = startOfDay(date);
+    if (Number.isNaN(day.getTime())) throw new BadRequestException("Pick a valid date");
+    const clean = reason?.trim().slice(0, 200) || null;
+    return prisma.artistBlackout.upsert({
+      where: { artistId_date: { artistId: profile.id, date: day } },
+      create: { artistId: profile.id, date: day, reason: clean },
+      update: { reason: clean },
+    });
+  }
+
+  async removeBlackout(user: JwtUser, id: string) {
+    const profile = await this.requireProfile(user);
+    const removed = await prisma.artistBlackout.deleteMany({ where: { id, artistId: profile.id } });
+    if (!removed.count) throw new NotFoundException("Blackout not found");
+    return { ok: true, id };
+  }
+
   /** Multi-gig routing for one calendar day: legs, buffers, collision alerts, fuel + billable travel. */
   async planDay(user: JwtUser, date: string) {
     const profile = await this.requireProfile(user);

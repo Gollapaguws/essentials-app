@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpCode, BadRequestException, Req, Res, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, HttpCode, BadRequestException, Req, Res, UploadedFile, UseInterceptors } from "@nestjs/common";
 import type { Response } from "express";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Request } from "express";
@@ -37,6 +37,12 @@ class ApplyDto {
 class NoteDto {
   /** The promoter's private note on a DJ. An empty string clears it. */
   @IsString() @MaxLength(2000) body!: string;
+}
+
+class BlackoutDto {
+  /** ISO date (or yyyy-mm-dd) of the day the DJ cannot play. */
+  @IsString() date!: string;
+  @IsOptional() @IsString() @MaxLength(200) reason?: string;
 }
 
 class DecideDto {
@@ -129,6 +135,27 @@ export class ArtistsController {
   @Auth("promoter", "admin")
   settlements(@CurrentUser() user: JwtUser) {
     return this.artists.settlements(user);
+  }
+
+  /** Artist: days blocked out, from today onwards. */
+  @Get("blackouts")
+  @Auth("artist", "admin")
+  blackouts(@CurrentUser() user: JwtUser) {
+    return this.artists.blackouts(user);
+  }
+
+  /** Artist: block a day so applications on it are refused. */
+  @Post("blackouts")
+  @Auth("artist", "admin")
+  addBlackout(@CurrentUser() user: JwtUser, @Body() dto: BlackoutDto) {
+    return this.artists.addBlackout(user, dto.date, dto.reason);
+  }
+
+  /** Artist: free a blocked day again. */
+  @Delete("blackouts/:id")
+  @Auth("artist", "admin")
+  removeBlackout(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.artists.removeBlackout(user, id);
   }
 
   /** Artist: confirmed and played gigs as an .ics file for any calendar app. */

@@ -406,6 +406,21 @@ model ArtistProfile {
   invoices                    Invoice[]
   // Private promoter notes about this DJ; never shown to the DJ or other promoters.
   notes                       ArtistNote[]
+  blackouts                   ArtistBlackout[]
+}
+
+/// A date the DJ cannot play. Applications on a blacked-out day are refused.
+model ArtistBlackout {
+  id        String         @id @default(cuid())
+  artistId  String
+  /// Midnight UTC at the start of the blocked day.
+  date      DateTime
+  reason    String?
+  createdAt DateTime       @default(now())
+  artist    ArtistProfile  @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@unique([artistId, date])
+  @@index([artistId, date])
 }
 
 /// A promoter's own running note on a DJ. One row per promoter/DJ pair.

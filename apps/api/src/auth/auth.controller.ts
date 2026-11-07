@@ -1,11 +1,11 @@
-import { BadRequestException, Controller, Get, HttpCode, Post, Req, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Controller, Get, HttpCode, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { MFA_REQUIRED_ROLES, SupabaseAuthGuard } from "./supabase-auth.guard";
 import { AuthUserService } from "./auth-user.service";
-import { CurrentUser } from "../common/auth.decorator";
+import { Auth, CurrentUser } from "../common/auth.decorator";
 import { MAX_PROFILE_IMAGE_BYTES, storeImage } from "../common/media-storage";
 import type { VerifiedSession } from "./supabase-token.service";
 import { SkipMfa } from "../common/skip-mfa.decorator";
@@ -44,6 +44,14 @@ export class AuthController {
       mfaRequired: Boolean(role && MFA_REQUIRED_ROLES.has(role) && session.aal !== "aal2"),
       mustResetPassword,
     };
+  }
+
+  /** Admin: the platform's security trail, newest first. */
+  @Get("audit")
+  @UseGuards(SupabaseAuthGuard)
+  @Auth("admin")
+  audit(@Query("limit") limit?: string) {
+    return this.authUsers.audit(Number(limit) || 100);
   }
 
   /** Profile photo for any signed-in account (jpg/png/webp/avif, max 5 MB). */

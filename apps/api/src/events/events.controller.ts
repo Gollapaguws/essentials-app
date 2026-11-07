@@ -33,6 +33,15 @@ class CreateEventDto {
   @IsOptional() @IsString() slotStart?: string;
 }
 
+class SlotFeeDto {
+  @IsInt() @Min(1) fee!: number;
+}
+
+class RepeatDto {
+  /** How many extra weekly copies to create. */
+  @IsInt() @Min(1) weeks!: number;
+}
+
 class SlotPlanDto {
   @IsInt() @Min(1) djFeePerHour!: number;
   @IsOptional() @IsInt() @Min(0) budget?: number;
@@ -82,6 +91,18 @@ export class EventsController {
     return this.events.create(user, dto);
   }
 
+  /** Price one slot differently — a headline set — while nobody holds it. */
+  @Patch(":id/slots/:slotId/fee")
+  @Auth("promoter", "admin")
+  setSlotFee(
+    @Param("id") id: string,
+    @Param("slotId") slotId: string,
+    @CurrentUser() user: JwtUser,
+    @Body() dto: SlotFeeDto,
+  ) {
+    return this.events.setSlotFee(user, id, slotId, dto.fee);
+  }
+
   /** Re-plan the night's slots and budget (refused once applications exist). */
   @Patch(":id/slots")
   @Auth("promoter", "admin")
@@ -99,6 +120,13 @@ export class EventsController {
   @Auth("promoter")
   clone(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.tools.clone(user, id);
+  }
+
+  /** Turn one night into a weekly run: N extra drafts, each carrying the plan. */
+  @Post(":id/repeat")
+  @Auth("promoter")
+  repeat(@Param("id") id: string, @CurrentUser() user: JwtUser, @Body() dto: RepeatDto) {
+    return this.tools.repeat(user, id, dto.weeks);
   }
 
   @Post(":id/cancel")

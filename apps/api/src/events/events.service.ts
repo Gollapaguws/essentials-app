@@ -286,6 +286,30 @@ export class EventsService {
     return prisma.event.findUnique({ where: { id: eventId }, include: { slots: { orderBy: { startsAt: "asc" } } } });
   }
 
+  /**
+   * Price one slot differently from the plan — a headline set, say. Allowed only
+   * while nobody holds it: the fee a confirmed DJ agreed to cannot move.
+   */
+  async setSlotFee(user: JwtUser, eventId: string, slotId: string, fee: number) {
+    const event = await prisma.event.findUnique({ where: { id: eventId }, include: { venue: true } });
+    if (!event) throw new NotFoundException("Event not found");
+    this.assertCanManage(event.promoterId, event.venue.managerId, user);
+    if (!Number.isInteger(fee) || fee <= 0) throw new BadRequestException("A slot fee must be a positive amount");
+
+    const slot = await prisma.eventSlot.findUnique({ where: { id: slotId } });
+    if (!slot || slot.eventId !== eventId) throw new NotFoundException("Slot not found on this event");
+
+    const holder = await prisma.artistBooking.findFirst({
+      where: { slotId, status: { in: ["confirmed", "completed"] } },
+      select: { id: true },
+    });
+    if (holder) {
+      throw new ConflictException("That slot is already confirmed — the agreed fee cannot change. Decline the DJ first.");
+    }
+
+    return prisma.eventSlot.update({ where: { id: slotId }, data: { fee } });
+  }
+
   async update(user: JwtUser, eventId: string, data: Record<string, unknown>) {
     const event = await prisma.event.findUnique({ where: { id: eventId }, include: { venue: true } });
     if (!event) throw new NotFoundException("Event not found");

@@ -27,6 +27,12 @@ interface OpenGig {
   slots: OpenSlot[];
 }
 
+interface Blackout {
+  id: string;
+  date: string;
+  reason: string | null;
+}
+
 interface Gig {
   id: string;
   slot?: string | null;
@@ -54,10 +60,15 @@ export default function GigCalendar() {
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [blackouts, setBlackouts] = useState<Blackout[]>([]);
+  const [blackoutDate, setBlackoutDate] = useState("");
+  const [blackoutReason, setBlackoutReason] = useState("");
+  const [blackoutError, setBlackoutError] = useState<string | null>(null);
 
   const load = () => {
     api.get<OpenGig[]>("/artists/gig-calendar").then(setOpen).catch(() => {});
     api.get<Gig[]>("/artists/gigs").then(setGigs).catch(() => {});
+    api.get<Blackout[]>("/artists/blackouts").then(setBlackouts).catch(() => {});
   };
   useEffect(() => { load(); }, []);
 
@@ -76,6 +87,29 @@ export default function GigCalendar() {
       load();
     } catch (err) {
       setError(errorMessage(err));
+    }
+  };
+
+  const addBlackout = async () => {
+    if (!blackoutDate) return;
+    setBlackoutError(null);
+    try {
+      await api.post("/artists/blackouts", { date: blackoutDate, reason: blackoutReason.trim() || undefined });
+      setBlackoutDate("");
+      setBlackoutReason("");
+      load();
+    } catch (err) {
+      setBlackoutError(errorMessage(err));
+    }
+  };
+
+  const removeBlackout = async (id: string) => {
+    setBlackoutError(null);
+    try {
+      await api.del(`/artists/blackouts/${id}`);
+      load();
+    } catch (err) {
+      setBlackoutError(errorMessage(err));
     }
   };
 
@@ -160,6 +194,54 @@ export default function GigCalendar() {
             </div>
           ))}
           {!open.length && <p className="text-neutral-500 text-sm">No open events right now — you'll get a DJ call when new dates drop.</p>}
+        </section>
+
+        <section className="border border-line bg-surface rounded-xl p-4 space-y-3">
+          <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Dates I can't play</h2>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="text-xs text-neutral-400 space-y-1">
+              <span>Date</span>
+              <input
+                type="date"
+                value={blackoutDate}
+                onChange={(e) => setBlackoutDate(e.target.value)}
+                className="bg-bg border border-line rounded-lg px-2 py-1 text-sm"
+              />
+            </label>
+            <label className="text-xs text-neutral-400 space-y-1">
+              <span>Reason (optional)</span>
+              <input
+                value={blackoutReason}
+                onChange={(e) => setBlackoutReason(e.target.value)}
+                maxLength={200}
+                placeholder="Already booked"
+                className="bg-bg border border-line rounded-lg px-2 py-1 text-sm"
+              />
+            </label>
+            <button
+              onClick={addBlackout}
+              disabled={!blackoutDate}
+              className="bg-neon text-bg font-black rounded-lg px-3 py-2 text-xs tracking-widest disabled:opacity-40"
+            >
+              BLOCK DAY
+            </button>
+          </div>
+          {blackoutError && <p className="text-red-400 text-xs">{blackoutError}</p>}
+          {blackouts.map((b) => (
+            <div key={b.id} className="flex items-center justify-between border-t border-line pt-2 text-sm">
+              <span>
+                {new Date(b.date).toDateString()}
+                {b.reason ? ` · ${b.reason}` : ""}
+              </span>
+              <button onClick={() => removeBlackout(b.id)} className="text-red-400 text-xs">REMOVE</button>
+            </div>
+          ))}
+          {!blackouts.length && (
+            <p className="text-neutral-500 text-sm">
+              No blocked days. Applications on a blocked day are refused, so you won't be offered a night you
+              can't play.
+            </p>
+          )}
         </section>
 
         <section className="border border-line bg-surface rounded-xl p-4">

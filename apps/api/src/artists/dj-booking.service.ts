@@ -80,6 +80,21 @@ export class DjBookingService {
       }
       if (slot.startsAt.getTime() <= Date.now()) throw new BadRequestException("That slot has already started");
 
+      // The DJ told us they cannot play this day: don't let them apply for it.
+      const dayStart = new Date(slot.startsAt);
+      dayStart.setHours(0, 0, 0, 0);
+      const blackout = await prisma.artistBlackout.findFirst({
+        where: {
+          artistId: profile.id,
+          date: { gte: dayStart, lt: new Date(dayStart.getTime() + 86_400_000) },
+        },
+      });
+      if (blackout) {
+        throw new BadRequestException(
+          `You marked ${slot.startsAt.toDateString()} as unavailable${blackout.reason ? ` (${blackout.reason})` : ""} — remove the blackout to apply.`,
+        );
+      }
+
       // Applications are a queue, not a claim: a slot takes as many applicants as
       // want it, and the promoter confirms one. Declining the holder re-opens it.
       event = slot.event;

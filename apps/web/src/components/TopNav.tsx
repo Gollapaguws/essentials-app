@@ -126,6 +126,12 @@ const links: NavLink[] = [
     roles: ["admin"],
   },
   {
+    href: "/audit",
+    label: "Audit",
+    hint: "Security trail: sign-ins, linked accounts, role changes and MFA activity.",
+    roles: ["admin"],
+  },
+  {
     href: "/settings",
     label: "Settings",
     hint: "Platform rates every DJ and invoice is priced from — the standard travel rate per kilometre.",

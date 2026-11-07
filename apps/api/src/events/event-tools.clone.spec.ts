@@ -60,6 +60,26 @@ describe("EventToolsService.clone", () => {
     expect(data.slots.create[0].startsAt.toISOString()).toBe("2027-03-20T20:00:00.000Z");
   });
 
+  it("turns one night into a weekly run", async () => {
+    const result = await new EventToolsService().repeat(promoter, "event-1", 3);
+
+    expect(result.created).toBe(3);
+    expect(db.event.create).toHaveBeenCalledTimes(3);
+    const dates = db.event.create.mock.calls.map((c) => c[0].data.date.toISOString());
+    expect(dates).toEqual([
+      "2027-03-20T00:00:00.000Z",
+      "2027-03-27T00:00:00.000Z",
+      "2027-04-03T00:00:00.000Z",
+    ]);
+    expect(db.event.create.mock.calls[0][0].data.slots.create).toHaveLength(3);
+  });
+
+  it("refuses a repeat outside 1–12 weeks", async () => {
+    await expect(new EventToolsService().repeat(promoter, "event-1", 0)).rejects.toThrow(/1 and 12/);
+    await expect(new EventToolsService().repeat(promoter, "event-1", 13)).rejects.toThrow(/1 and 12/);
+    expect(db.event.create).not.toHaveBeenCalled();
+  });
+
   it("leaves legacy events, which never had slots, alone", async () => {
     db.event.findUnique.mockResolvedValue(
       event({ slotCount: null, slotMinutes: null, slotStartMinute: null }),

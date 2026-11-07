@@ -21,6 +21,14 @@ export class AuthUserService {
   private readonly cache = new Map<string, CacheEntry>();
   private readonly TTL_MS = 60_000;
 
+  /** Admin audit trail: sign-ins, lazy links, role changes and MFA events. */
+  async audit(limit = 100) {
+    return prisma.authEvent.findMany({
+      orderBy: { createdAt: "desc" },
+      take: Math.min(Math.max(Number(limit) || 100, 1), 200),
+    });
+  }
+
   /** Find the local account for a Supabase identity, creating it on first sign-in. */
   async ensureUser(sub: string, email: string): Promise<User> {
     const byUid = await prisma.user.findUnique({ where: { authUid: sub } });
