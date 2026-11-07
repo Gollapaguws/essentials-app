@@ -5,6 +5,7 @@ import type { JwtUser } from "../common/roles.guard";
 import { ConfigService } from "@nestjs/config";
 import { LoyaltyService } from "../loyalty/loyalty.service";
 import { VenuesService } from "../venues/venues.service";
+import { buildSlots, normalizePlan } from "./slots";
 
 /** Every query is role-scoped: guests see own data, promoters their events, venue managers their venues, admin all. */
 @Injectable()
@@ -180,25 +181,80 @@ export class EventsService {
   async create(user: JwtUser, data: {
     venueId: string; title: string; description?: string; date: string | Date;
     lineup?: unknown; capacity: number; dressCode?: string; ticketUrl?: string; revenueSplitPromoterPct?: number;
+    djFeePerHour?: number; budget?: number; slotCount?: number; slotMinutes?: number; slotStart?: string;
   }) {
     const venue = await prisma.venue.findUnique({ where: { id: data.venueId } });
     if (!venue) throw new NotFoundException("Venue not found");
     if (data.capacity > venue.capacity) throw new BadRequestException(`Capacity exceeds venue max (${venue.capacity})`);
+
+    // Validate the promoter's slot plan before anything is written: a bad plan
+    // must not leave a half-created night behind.
+    const plan = normalizePlan(data);
+    const { djFeePerHour, budget, slotCount, slotMinutes, slotStart, ...eventData } = data;
+    const date = new Date(data.date);
+
     // A promoter who manages the venue *is* the venue: there is nobody left to
     // approve the night, so it goes live on creation — DJ call out, on the front page.
     const selfManaged = venue.managerId === user.sub;
     const created = await prisma.event.create({
       data: {
-        ...data,
-        date: new Date(data.date),
+        ...eventData,
+        date,
         promoterId: user.sub,
         lineup: (data.lineup ?? []) as object,
         status: selfManaged ? EventStatus.approved : EventStatus.pending_venue_approval,
+        djFeePerHour: plan?.djFeePerHour ?? 0,
+        budget: plan?.budget ?? 0,
+        slotCount: plan?.slotCount ?? null,
+        slotMinutes: plan?.slotMinutes ?? null,
+        slotStartMinute: plan?.slotStartMinute ?? null,
+        ...(plan ? { slots: { create: buildSlots(date, plan) } } : {}),
       },
+      include: { slots: { orderBy: { startsAt: "asc" } } },
     });
     await prisma.eventGroupChat.create({ data: { eventId: created.id } });
     if (selfManaged) this.venues.announceApproval(created);
     return created;
+  }
+
+  /**
+   * Replace an event's slot plan and budget. Refused once anyone has applied:
+   * the slots they are holding must be resolved (declined/cancelled) first.
+   */
+  async setSlots(user: JwtUser, eventId: string, data: {
+    djFeePerHour?: number; budget?: number; slotCount?: number; slotMinutes?: number; slotStart?: string;
+  }) {
+    const event = await prisma.event.findUnique({ where: { id: eventId }, include: { venue: true } });
+    if (!event) throw new NotFoundException("Event not found");
+    this.assertCanManage(event.promoterId, event.venue.managerId, user);
+
+    const plan = normalizePlan(data);
+    if (!plan) throw new BadRequestException("Slot count, slot length and start time are required");
+
+    const applications = await prisma.artistBooking.count({
+      where: { eventId, status: { not: "cancelled" } },
+    });
+    if (applications > 0) {
+      throw new ConflictException(
+        "Slots already have DJ applications. Decline or cancel them before re-planning the night.",
+      );
+    }
+
+    await prisma.$transaction([
+      prisma.eventSlot.deleteMany({ where: { eventId } }),
+      prisma.eventSlot.createMany({ data: buildSlots(event.date, plan).map((s) => ({ ...s, eventId })) }),
+      prisma.event.update({
+        where: { id: eventId },
+        data: {
+          djFeePerHour: plan.djFeePerHour,
+          budget: plan.budget,
+          slotCount: plan.slotCount,
+          slotMinutes: plan.slotMinutes,
+          slotStartMinute: plan.slotStartMinute,
+        },
+      }),
+    ]);
+    return prisma.event.findUnique({ where: { id: eventId }, include: { slots: { orderBy: { startsAt: "asc" } } } });
   }
 
   async update(user: JwtUser, eventId: string, data: Record<string, unknown>) {
@@ -210,13 +266,41 @@ export class EventsService {
 
   async listForPromoter(user: JwtUser) {
     if (user.role !== "promoter" && user.role !== "admin") throw new ForbiddenException("Promoters only");
-    return prisma.event.findMany({
+    const events = await prisma.event.findMany({
       where: user.role === "admin" ? {} : { promoterId: user.sub },
       include: {
         venue: { select: { name: true } },
         _count: { select: { guestLists: true, tableBookings: true } },
+        slots: {
+          orderBy: { startsAt: "asc" },
+          select: {
+            id: true,
+            label: true,
+            fee: true,
+            startsAt: true,
+            bookings: { where: { status: { not: "cancelled" } }, select: { status: true } },
+          },
+        },
       },
       orderBy: { date: "desc" },
+    });
+
+    // The budget view: what each slot pays, which are taken, and how much of the
+    // budget is already committed to confirmed DJs.
+    return events.map((e) => {
+      const slots = e.slots.map((s) => ({
+        id: s.id,
+        label: s.label,
+        fee: s.fee,
+        startsAt: s.startsAt,
+        taken: s.bookings.length > 0,
+        confirmed: s.bookings.some((b) => b.status === "confirmed"),
+      }));
+      return {
+        ...e,
+        slots,
+        committed: slots.filter((s) => s.confirmed).reduce((sum, s) => sum + s.fee, 0),
+      };
     });
   }
 

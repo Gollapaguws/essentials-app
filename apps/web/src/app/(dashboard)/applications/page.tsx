@@ -14,6 +14,7 @@ interface ArtistNote {
 
 interface Application {
   id: string; slot?: string | null; status: string; appliedAt?: string;
+  startAt: string; endAt: string; performanceFee: number;
   artist: { id: string; stageName: string; user: { name: string | null; email: string } };
   event: { title: string; date: string };
   /** The promoter's own note from last time, or null. */
@@ -36,6 +37,15 @@ export default function Applications() {
     setError(null);
     try {
       await api.post(`/artists/applications/${id}/decide`, { confirm });
+      load();
+    } catch (err) { setError(errorMessage(err)); }
+  };
+
+  // The second confirmation: the gig happened. This is what lets the DJ invoice the venue.
+  const complete = async (id: string) => {
+    setError(null);
+    try {
+      await api.post(`/artists/bookings/${id}/complete`);
       load();
     } catch (err) { setError(errorMessage(err)); }
   };
@@ -79,9 +89,10 @@ export default function Applications() {
                   >
                     {a.artist.stageName}
                   </Link>{" "}
-                  <span className="text-neutral-500 font-normal">· {a.slot ?? "slot TBA"}</span>
+                  <span className="text-neutral-500 font-normal">· {a.slot ?? "slot TBA"} · R{a.performanceFee.toLocaleString()}</span>
                 </p>
                 <p className="text-neutral-500 text-xs">{a.event.title} · {new Date(a.event.date).toLocaleDateString()} · {a.artist.user.email}</p>
+                <p className="text-neutral-500 text-xs">set {new Date(a.startAt).toLocaleString()} – {new Date(a.endAt).toLocaleTimeString()}</p>
 
                 {editing?.artistId === a.artist.id ? (
                   <div className="mt-2 max-w-md space-y-1">
@@ -125,12 +136,21 @@ export default function Applications() {
                 )}
               </div>
               <div className="flex items-center gap-3">
-                <span className={a.status === "confirmed" ? "text-neon" : a.status === "pending" ? "text-yellow-400" : "text-neutral-500"}>{a.status}</span>
+                <span className={a.status === "confirmed" || a.status === "completed" ? "text-neon" : a.status === "pending" ? "text-yellow-400" : "text-neutral-500"}>{a.status}</span>
                 {a.status === "pending" && (
                   <>
                     <button onClick={() => decide(a.id, true)} className="bg-neon text-bg font-black rounded-lg px-3 py-1 text-xs tracking-widest">CONFIRM</button>
                     <button onClick={() => decide(a.id, false)} className="border border-red-500 text-red-400 rounded-lg px-3 py-1 text-xs font-bold">DECLINE</button>
                   </>
+                )}
+                {a.status === "confirmed" && (
+                  new Date(a.endAt).getTime() <= Date.now() ? (
+                    <button onClick={() => complete(a.id)} className="border border-neon text-neon rounded-lg px-3 py-1 text-xs font-bold tracking-widest" title="Lets the DJ invoice the venue">
+                      GIG PLAYED
+                    </button>
+                  ) : (
+                    <span className="text-neutral-500 text-xs">confirm after the set</span>
+                  )
                 )}
               </div>
             </div>

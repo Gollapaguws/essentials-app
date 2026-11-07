@@ -31,7 +31,8 @@ export default function ArtistProfilePage() {
     bio: "",
     imageUrl: "",
     vehicleConsumptionLPer100km: 8,
-    travelRatePerKm: 2.5,
+    // Displayed only: the travel rate is the admin-set platform standard.
+    travelRatePerKm: 4.95,
   });
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -88,7 +89,6 @@ export default function ArtistProfilePage() {
         bio: form.bio ?? "",
         imageUrl: (form.imageUrl ?? "").trim(),
         vehicleConsumptionLPer100km: form.vehicleConsumptionLPer100km,
-        travelRatePerKm: form.travelRatePerKm,
       };
       await api.post<Profile>("/artists/me", body);
       setSaved("Profile saved.");
@@ -216,12 +216,12 @@ export default function ArtistProfilePage() {
                 <input
                   id="rate"
                   type="number"
-                  step="0.1"
-                  min={0}
-                  className={`${field} mt-1`}
-                  value={form.travelRatePerKm}
-                  onChange={(e) => setForm({ ...form, travelRatePerKm: +e.target.value })}
+                  disabled
+                  className={`${field} mt-1 opacity-60`}
+                  value={profile?.travelRatePerKm ?? form.travelRatePerKm}
+                  readOnly
                 />
+                <p className="text-[11px] text-neutral-500 mt-1">Standard rate set by ESSENTIALS — not editable.</p>
               </div>
             </div>
 

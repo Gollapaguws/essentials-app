@@ -65,6 +65,8 @@ enum ConsentStatus {
 enum ArtistBookingStatus {
   pending
   confirmed
+  /// The promoter confirmed the gig happened — the only state that may be invoiced.
+  completed
   cancelled
 }
 
@@ -136,6 +138,7 @@ model Venue {
   tables    VenueTable[]
   // Phase 2: staff/door ops via DoorLog
   doorLogs  DoorLog[]
+  invoices  Invoice[]
   createdAt DateTime     @default(now())
 
   @@index([managerId])
@@ -155,6 +158,14 @@ model Event {
   ticketUrl               String?
   status                  EventStatus     @default(draft)
   revenueSplitPromoterPct Int             @default(50)
+  /// What the promoter will pay a DJ per hour. Each slot pays rate × its length.
+  djFeePerHour            Int             @default(0)
+  /// Planning ceiling for the night's DJ spend; slots are priced off the rate.
+  budget                  Int             @default(0)
+  // The plan the slots were generated from, kept so the promoter can reopen and edit it.
+  slotCount               Int?
+  slotMinutes             Int?
+  slotStartMinute         Int?
   venue                   Venue           @relation(fields: [venueId], references: [id])
   promoter                User            @relation("EventPromoter", fields: [promoterId], references: [id])
   guestLists              GuestList[]
@@ -162,6 +173,7 @@ model Event {
   groupChat               EventGroupChat?
   campaigns               Campaign[]
   artistBookings          ArtistBooking[]
+  slots                   EventSlot[]
   matches                 Match[]
   promotions              Promotion[]
   createdAt               DateTime        @default(now())
@@ -387,7 +399,8 @@ model ArtistProfile {
   bio                         String?
   imageUrl                    String?
   vehicleConsumptionLPer100km Float           @default(8)
-  travelRatePerKm             Float           @default(2.5)
+  /// Platform-wide standard, set by admins only. DJs and promoters cannot edit it.
+  travelRatePerKm             Float           @default(4.95)
   user                        User            @relation(fields: [userId], references: [id])
   bookings                    ArtistBooking[]
   invoices                    Invoice[]
@@ -410,9 +423,30 @@ model ArtistNote {
   @@index([artistId])
 }
 
+/// A bookable slice of one event: promoter-defined start, length and fee.
+/// Created when the event is created (or re-planned), applied for by artists.
+model EventSlot {
+  id       String   @id @default(cuid())
+  eventId  String
+  startsAt DateTime
+  endsAt   DateTime
+  /// Display label, e.g. "20:00-21:00".
+  label    String
+  /// This slot's share of the event budget, in whole currency units.
+  fee      Int      @default(0)
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  bookings ArtistBooking[]
+
+  @@unique([eventId, startsAt])
+  @@index([eventId])
+}
+
 model ArtistBooking {
   id                String              @id @default(cuid())
+  /// Display label of the slot applied for (kept for bookings made before slots existed).
   slot              String?
+  /// The bookable slot applied for. Null on legacy bookings.
+  slotId            String?
   appliedAt         DateTime?
   eventId           String
   artistId          String
@@ -423,9 +457,15 @@ model ArtistBooking {
   performanceFee    Int                 @default(0)
   travelFee         Int                 @default(0)
   status            ArtistBookingStatus @default(pending)
+  /// Set when the promoter confirms the gig was played; invoices require it.
+  completedAt       DateTime?
   event             Event               @relation(fields: [eventId], references: [id])
+  slotRef           EventSlot?          @relation(fields: [slotId], references: [id], onDelete: SetNull)
   artist            ArtistProfile       @relation(fields: [artistId], references: [id])
   routeLegs         BookingRouteLeg[]
+  invoice           Invoice?
+
+  @@index([slotId])
 }
 
 model BookingRouteLeg {
@@ -441,10 +481,17 @@ model BookingRouteLeg {
 model Invoice {
   id       String        @id @default(cuid())
   artistId String
+  /// The completed gig this invoice bills for. One invoice per booking, so a
+  /// gig can never be billed to the venue twice.
+  bookingId String?      @unique
+  /// Who pays: the venue the gig happened at.
+  venueId   String?
   number   String        @unique
   status   InvoiceStatus @default(draft)
   total    Int           @default(0)
   artist   ArtistProfile @relation(fields: [artistId], references: [id])
+  booking  ArtistBooking? @relation(fields: [bookingId], references: [id])
+  venue    Venue?         @relation(fields: [venueId], references: [id])
   items    InvoiceItem[]
   payments Payment[]
 }

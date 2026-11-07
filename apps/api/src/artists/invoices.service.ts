@@ -24,45 +24,65 @@ export class InvoicesService {
     });
   }
 
-  /** Generate an invoice from one or more confirmed bookings (defaults: all confirmed, uninvoiced). */
+  /**
+   * Invoice the venue for a gig the promoter has confirmed as played.
+   *
+   * One completed booking per invoice, at the stipulated fee (the event's hourly
+   * DJ rate × the slot's length). A booking can only ever be billed once — the
+   * unique `bookingId` is what enforces that, not the UI.
+   */
   async generate(user: JwtUser, bookingIds?: string[]) {
     const profile = await prisma.artistProfile.findUnique({ where: { userId: user.sub } });
     if (!profile) throw new BadRequestException("Create your artist profile first");
+    if (bookingIds && bookingIds.length > 1) {
+      throw new BadRequestException("Invoice one completed gig at a time — each venue pays for its own night");
+    }
 
     const bookings = await prisma.artistBooking.findMany({
       where: {
         artistId: profile.id,
-        status: "confirmed",
+        // Only a gig the promoter confirmed was played may be billed.
+        status: "completed",
+        invoice: { is: null },
         ...(bookingIds?.length ? { id: { in: bookingIds } } : {}),
       },
-      include: { event: { include: { venue: true } }, routeLegs: true },
+      include: { event: { include: { venue: true } } },
+      orderBy: { startAt: "desc" },
+      ...(bookingIds?.length ? {} : { take: 1 }),
     });
-    if (!bookings.length) throw new BadRequestException("No confirmed bookings to invoice");
+    if (!bookings.length) {
+      throw new BadRequestException(
+        "No completed, uninvoiced gigs — the promoter confirms a gig was played before you can invoice it",
+      );
+    }
 
+    const booking = bookings[0];
+    if (booking.performanceFee <= 0) {
+      throw new BadRequestException("This gig has no agreed fee — the promoter sets the DJ fee per hour on the event");
+    }
+
+    const venueName = booking.event.venue.name;
+    const hours = Math.max(0.25, (booking.endAt.getTime() - booking.startAt.getTime()) / 3_600_000);
     const number = `ESS-${new Date().getFullYear()}-${randomBytes(3).toString("hex").toUpperCase()}`;
     const items = [
-      ...bookings.map((b) => ({
-        label: `${b.event.title} @ ${b.event.venue.name} — performance (${b.startAt.toISOString().slice(0, 10)})`,
-        amount: b.performanceFee,
-      })),
-      ...bookings.flatMap((b) =>
-        b.routeLegs.map((l) => ({
-          label: `${b.event.title} — travel ${l.distanceKm} km (${l.isConflict ? "conflict flagged" : "ok"})`,
-          amount: Math.round(l.distanceKm * profile.travelRatePerKm),
-        })),
-      ),
+      {
+        label: `${booking.event.title} @ ${venueName} — ${+hours.toFixed(2)}h performance (${booking.startAt.toISOString().slice(0, 10)})`,
+        amount: booking.performanceFee,
+      },
     ];
-    const total = items.reduce((s, i) => s + i.amount, 0);
+    const total = booking.performanceFee;
 
     return prisma.invoice.create({
       data: {
         artistId: profile.id,
+        bookingId: booking.id,
+        venueId: booking.event.venueId,
         number,
         status: InvoiceStatus.sent,
         total,
         items: { create: items },
       },
-      include: { items: true },
+      include: { items: true, venue: { select: { name: true } }, booking: { select: { id: true } } },
     });
   }
 

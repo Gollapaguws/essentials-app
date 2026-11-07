@@ -23,6 +23,22 @@ class CreateEventDto {
   @IsOptional() @IsString() dressCode?: string;
   @IsOptional() @IsString() ticketUrl?: string;
   @IsOptional() @IsInt() revenueSplitPromoterPct?: number;
+  /** What the promoter pays a DJ per hour — every slot is priced off this. */
+  @IsOptional() @IsInt() @Min(1) djFeePerHour?: number;
+  /** Planning ceiling for the night's DJ spend. */
+  @IsOptional() @IsInt() @Min(0) budget?: number;
+  @IsOptional() @IsInt() @Min(1) slotCount?: number;
+  @IsOptional() @IsInt() @Min(15) slotMinutes?: number;
+  /** "HH:MM" — when the first slot starts on the event date. */
+  @IsOptional() @IsString() slotStart?: string;
+}
+
+class SlotPlanDto {
+  @IsInt() @Min(1) djFeePerHour!: number;
+  @IsOptional() @IsInt() @Min(0) budget?: number;
+  @IsInt() @Min(1) slotCount!: number;
+  @IsInt() @Min(15) slotMinutes!: number;
+  @IsString() slotStart!: string;
 }
 
 @Controller("events")
@@ -64,6 +80,13 @@ export class EventsController {
   @Auth("promoter")
   create(@CurrentUser() user: JwtUser, @Body() dto: CreateEventDto) {
     return this.events.create(user, dto);
+  }
+
+  /** Re-plan the night's slots and budget (refused once applications exist). */
+  @Patch(":id/slots")
+  @Auth("promoter", "admin")
+  setSlots(@Param("id") id: string, @CurrentUser() user: JwtUser, @Body() dto: SlotPlanDto) {
+    return this.events.setSlots(user, id, dto);
   }
 
   @Patch(":id")

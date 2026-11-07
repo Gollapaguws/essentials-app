@@ -16,7 +16,20 @@ class ProfileDto {
   /** Absolute http(s) URL of the profile image. Empty string clears it. */
   @IsOptional() @IsString() @MaxLength(500) imageUrl?: string;
   @IsOptional() @IsNumber() @Min(1) vehicleConsumptionLPer100km?: number;
-  @IsOptional() @IsNumber() @Min(0) travelRatePerKm?: number;
+  // travelRatePerKm is deliberately absent: it is the platform standard, set by
+  // an admin (PATCH /artists/travel-rate), never by the DJ.
+}
+
+class StandardTravelRateDto {
+  @IsNumber() @Min(0) travelRatePerKm!: number;
+}
+
+class ApplyDto {
+  /** Preferred: the promoter-defined slot, with its own time and fee. */
+  @IsOptional() @IsString() slotId?: string;
+  /** Legacy path for events planned before slots existed. */
+  @IsOptional() @IsString() eventId?: string;
+  @IsOptional() @IsString() slot?: "day" | "evening" | "late-night";
 }
 
 class NoteDto {
@@ -46,6 +59,13 @@ export class ArtistsController {
   @Auth("artist", "admin")
   upsertProfile(@CurrentUser() user: JwtUser, @Body() dto: ProfileDto, @Req() req: Request) {
     return this.artists.upsertProfile(user, dto, this.requestOrigin(req));
+  }
+
+  /** Admin only: change the platform-wide travel rate every DJ's routing and invoices use. */
+  @Patch("travel-rate")
+  @Auth("admin")
+  setTravelRate(@Body() dto: StandardTravelRateDto) {
+    return this.artists.setStandardTravelRate(dto.travelRatePerKm);
   }
 
   /** Profile photo upload (jpg/png/webp/avif, max 5 MB). Returns the URL to save via POST /artists/me. */
@@ -86,8 +106,8 @@ export class ArtistsController {
   @Post("gig-calendar/apply")
   @HttpCode(200)
   @Auth("artist", "admin")
-  apply(@CurrentUser() user: JwtUser, @Body() dto: { eventId: string; slot: "day" | "evening" | "late-night" }) {
-    return this.djBooking.apply(user, dto.eventId, dto.slot);
+  apply(@CurrentUser() user: JwtUser, @Body() dto: ApplyDto) {
+    return this.djBooking.apply(user, dto);
   }
 
   /** Promoter: list DJ applications across their events. */
@@ -103,6 +123,13 @@ export class ArtistsController {
   @Auth("promoter", "admin")
   decide(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: { confirm: boolean }) {
     return this.djBooking.decide(user, id, dto.confirm ?? false);
+  }
+
+  /** Promoter/venue: the gig was played — the second confirmation that unlocks invoicing. */
+  @Post("bookings/:id/complete")
+  @Auth("promoter", "venue_manager", "admin")
+  confirmCompleted(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.djBooking.confirmCompleted(user, id);
   }
 
   @Post("bookings/:id/status")

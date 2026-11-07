@@ -196,7 +196,16 @@ export class ArtistsService {
     }));
   }
 
-  async upsertProfile(user: JwtUser, data: { stageName: string; bio?: string; imageUrl?: string; vehicleConsumptionLPer100km?: number; travelRatePerKm?: number }, origin: string) {
+  /**
+   * Admin only: the standard rate every DJ travels at. Applied to every profile,
+   * because it is a platform rate — not a per-DJ negotiation.
+   */
+  async setStandardTravelRate(rate: number) {
+    const updated = await prisma.artistProfile.updateMany({ data: { travelRatePerKm: rate } });
+    return { travelRatePerKm: rate, artists: updated.count };
+  }
+
+  async upsertProfile(user: JwtUser, data: { stageName: string; bio?: string; imageUrl?: string; vehicleConsumptionLPer100km?: number }, origin: string) {
     // An empty text field is a clear, not a missing one: store null so the UI hides it.
     const patch = {
       ...data,
@@ -267,16 +276,42 @@ export class ArtistsService {
     const applied = profile
       ? (await prisma.artistBooking.findMany({ where: { artistId: profile.id }, select: { eventId: true } })).map((b) => b.eventId)
       : [];
-    return prisma.event.findMany({
+    const events = await prisma.event.findMany({
       where: {
         status: { in: ["approved", "live"] },
         date: { gte: new Date() },
         id: { notIn: applied },
       },
-      include: { venue: { select: { name: true } } },
+      include: {
+        venue: { select: { name: true } },
+        slots: {
+          orderBy: { startsAt: "asc" },
+          select: {
+            id: true,
+            label: true,
+            startsAt: true,
+            endsAt: true,
+            fee: true,
+            bookings: { where: { status: { not: "cancelled" } }, select: { id: true } },
+          },
+        },
+      },
       orderBy: { date: "asc" },
       take: 50,
     });
+
+    // `taken` is what the DJ needs to know to pick a slot, not who holds it.
+    return events.map((e) => ({
+      ...e,
+      slots: e.slots.map((s) => ({
+        id: s.id,
+        label: s.label,
+        startsAt: s.startsAt,
+        endsAt: s.endsAt,
+        fee: s.fee,
+        taken: s.bookings.length > 0,
+      })),
+    }));
   }
 
   /** Upcoming confirmed/pending gigs for the signed-in artist. */
@@ -287,6 +322,8 @@ export class ArtistsService {
       include: {
         event: { include: { venue: { select: { name: true, lat: true, lng: true, address: true } } } },
         routeLegs: true,
+        // The DJ needs to know whether a completed gig has already been billed.
+        invoice: { select: { id: true, number: true, status: true } },
       },
       orderBy: { startAt: "asc" },
     });
@@ -341,6 +378,11 @@ export class ArtistsService {
     const booking = await prisma.artistBooking.findUnique({ where: { id: bookingId } });
     if (!booking) throw new NotFoundException("Booking not found");
     if (booking.artistId !== profile.id && user.role !== "admin") throw new ForbiddenException();
+    // A DJ can pull out, but cannot confirm or complete their own gig: completion
+    // is the promoter's second confirmation, and it is what unlocks invoicing.
+    if (user.role !== "admin" && data.status !== "cancelled") {
+      throw new ForbiddenException("The promoter confirms gigs and marks them complete");
+    }
     return prisma.artistBooking.update({ where: { id: bookingId }, data });
   }
 

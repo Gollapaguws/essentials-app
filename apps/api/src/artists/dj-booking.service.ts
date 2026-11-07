@@ -42,7 +42,11 @@ export class DjBookingService {
       {
         kind: "dj_call",
         title: `DJ CALL: ${event.title}`,
-        body: `${event.venue.name} · ${event.date.toDateString()} — slots open (day / evening / late-night). Apply now.`,
+        body: `${event.venue.name} · ${event.date.toDateString()} — ${
+          event.slotCount && event.slotMinutes
+            ? `${event.slotCount} × ${event.slotMinutes} min slots, fees set by the promoter`
+            : "slots open (day / evening / late-night)"
+        }. Apply now.`,
         link: `${this.appUrl()}/artist`,
         channels: ["inapp", "email", "telegram"],
       },
@@ -50,32 +54,73 @@ export class DjBookingService {
     return { notified: artists.length };
   }
 
-  /** Step 2 — artist applies for a slot. */
-  async apply(user: JwtUser, eventId: string, slot: Slot) {
-    if (!SLOTS.includes(slot)) throw new BadRequestException(`Slot must be one of: ${SLOTS.join(", ")}`);
+  /**
+   * Step 2 — artist applies for a slot.
+   *
+   * A slot id is the real contract: the promoter's own slot carries its time and
+   * fee. `eventId` + `slot` stays for events planned before slots existed, whose
+   * rows have none.
+   */
+  async apply(user: JwtUser, input: { eventId?: string; slot?: string; slotId?: string }) {
     const profile = await prisma.artistProfile.findUnique({ where: { userId: user.sub } });
     if (!profile) throw new BadRequestException("Create your artist profile first");
 
-    const event = await prisma.event.findUnique({ where: { id: eventId } });
-    if (!event) throw new NotFoundException("Event not found");
+    let event: { id: string; title: string; promoterId: string; date: Date };
+    let slotLabel: string;
+    let slotId: string | null = null;
+    let startAt: Date;
+    let endAt: Date;
+    let fee = 0;
+
+    if (input.slotId) {
+      const slot = await prisma.eventSlot.findUnique({ where: { id: input.slotId }, include: { event: true } });
+      if (!slot) throw new NotFoundException("Slot not found");
+      if (slot.event.status !== "approved" && slot.event.status !== "live") {
+        throw new BadRequestException("This event is not taking applications");
+      }
+      if (slot.startsAt.getTime() <= Date.now()) throw new BadRequestException("That slot has already started");
+
+      const held = await prisma.artistBooking.findFirst({
+        where: { slotId: slot.id, status: { not: "cancelled" } },
+      });
+      if (held) throw new ConflictException("Another DJ already holds that slot");
+
+      event = slot.event;
+      slotLabel = slot.label;
+      slotId = slot.id;
+      startAt = slot.startsAt;
+      endAt = slot.endsAt;
+      fee = slot.fee;
+    } else {
+      if (!input.eventId) throw new BadRequestException("slotId or eventId is required");
+      const legacySlot = input.slot as Slot;
+      if (!SLOTS.includes(legacySlot)) throw new BadRequestException(`Slot must be one of: ${SLOTS.join(", ")}`);
+
+      const found = await prisma.event.findUnique({ where: { id: input.eventId } });
+      if (!found) throw new NotFoundException("Event not found");
+
+      event = found;
+      slotLabel = legacySlot;
+      const [y, m, d] = [found.date.getUTCFullYear(), found.date.getUTCMonth(), found.date.getUTCDate()];
+      const { start, end } = SLOT_HOURS[legacySlot];
+      startAt = new Date(Date.UTC(y, m, d, start));
+      endAt = end > start ? new Date(Date.UTC(y, m, d, end)) : new Date(Date.UTC(y, m + 1, d, end));
+    }
 
     const existing = await prisma.artistBooking.findFirst({
-      where: { eventId, artistId: profile.id, status: { not: "cancelled" } },
+      where: { eventId: event.id, artistId: profile.id, status: { not: "cancelled" } },
     });
     if (existing) throw new ConflictException("You already applied for this event");
 
-    const [y, m, d] = [event.date.getUTCFullYear(), event.date.getUTCMonth(), event.date.getUTCDate()];
-    const { start, end } = SLOT_HOURS[slot];
-    const startAt = end > start ? new Date(Date.UTC(y, m, d, start)) : new Date(Date.UTC(y, m, d, start));
-    const endAt = end > start ? new Date(Date.UTC(y, m, d, end)) : new Date(Date.UTC(y, m + 1, d, end));
-
     const booking = await prisma.artistBooking.create({
       data: {
-        eventId,
+        eventId: event.id,
         artistId: profile.id,
-        slot,
+        slot: slotLabel,
+        slotId,
         startAt,
         endAt,
+        performanceFee: fee,
         appliedAt: new Date(),
         status: "pending",
       },
@@ -86,7 +131,7 @@ export class DjBookingService {
     await this.notifications.deliver([event.promoterId], {
       kind: "application",
       title: `DJ application: ${booking.artist.stageName}`,
-      body: `${booking.artist.stageName} applied for ${slot} at ${event.title}. Confirm in your dashboard.`,
+      body: `${booking.artist.stageName} applied for ${slotLabel} at ${event.title}. Confirm in your dashboard.`,
       link: `${this.appUrl()}/applications`,
       channels: ["inapp", "email", "telegram"],
     });
@@ -118,6 +163,48 @@ export class DjBookingService {
       channels: confirm ? ["inapp", "email", "telegram"] : ["inapp"],
     });
     return prisma.artistBooking.findUnique({ where: { id: bookingId } });
+  }
+
+  /**
+   * Promoter's second confirmation: the gig was actually played.
+   *
+   * This is the invoice gate — a booking only becomes `completed` here, and only
+   * `completed` bookings can be billed to the venue. It also has to be after the
+   * set, so nobody confirms a night that has not happened.
+   */
+  async confirmCompleted(user: JwtUser, bookingId: string) {
+    const booking = await prisma.artistBooking.findUnique({
+      where: { id: bookingId },
+      include: {
+        event: { include: { venue: { select: { name: true, managerId: true } } } },
+        artist: { select: { userId: true } },
+      },
+    });
+    if (!booking) throw new NotFoundException("Booking not found");
+
+    const isOwner = booking.event.promoterId === user.sub;
+    const isVenueManager = user.role === "venue_manager" && booking.event.venue.managerId === user.sub;
+    if (user.role !== "admin" && !isOwner && !isVenueManager) throw new ForbiddenException("Not your event");
+
+    if (booking.status === "completed") return booking;
+    if (booking.status !== "confirmed") throw new BadRequestException("Only a confirmed gig can be marked complete");
+    if (booking.endAt.getTime() > Date.now()) {
+      throw new BadRequestException("That gig has not finished yet — confirm it after the set");
+    }
+
+    const completed = await prisma.artistBooking.update({
+      where: { id: bookingId },
+      data: { status: "completed", completedAt: new Date() },
+    });
+
+    await this.notifications.deliver([booking.artist.userId], {
+      kind: "generic",
+      title: `Gig confirmed: ${booking.event.title}`,
+      body: `${booking.event.venue.name} confirmed your ${booking.slot ?? "set"}. You can invoice the venue for ${booking.performanceFee} now.`,
+      link: `${this.appUrl()}/gig-calendar`,
+      channels: ["inapp", "email"],
+    });
+    return completed;
   }
 
   /** Promoter: applications for their events, with their own note on each DJ. */
