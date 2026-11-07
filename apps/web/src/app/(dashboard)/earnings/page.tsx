@@ -52,6 +52,7 @@ function invoiceState(gig: PlayedGig) {
 export default function Earnings() {
   const [data, setData] = useState<Earnings | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [noProfile, setNoProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -59,8 +60,12 @@ export default function Earnings() {
     setError(null);
     try {
       setData(await api.get<Earnings>("/artists/earnings"));
+      setNoProfile(false);
     } catch (e) {
-      setError(errorMessage(e) ?? "Could not load your earnings.");
+      const message = errorMessage(e) ?? "Could not load your earnings.";
+      // An admin opening the page has no DJ profile yet — that is not an error.
+      if (/artist profile/i.test(message)) setNoProfile(true);
+      else setError(message);
     }
   }, []);
 
@@ -99,6 +104,16 @@ export default function Earnings() {
 
         {notice && <p className="text-neon text-sm">{notice}</p>}
         {error && <p className="text-red-400 text-sm">{error}</p>}
+
+        {noProfile && (
+          <p className="border border-line bg-surface rounded-xl p-4 text-neutral-400 text-sm">
+            Earnings belong to a DJ profile. Create one on{" "}
+            <a href="/artist/profile" className="text-neon hover:underline">
+              My Profile
+            </a>{" "}
+            to see your played gigs here.
+          </p>
+        )}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Stat label="Earned" value={rand(totals?.earned ?? 0)} />
