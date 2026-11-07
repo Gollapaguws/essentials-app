@@ -294,7 +294,9 @@ export class EventsService {
         fee: s.fee,
         startsAt: s.startsAt,
         taken: s.bookings.length > 0,
-        confirmed: s.bookings.some((b) => b.status === "confirmed"),
+        // Committed spend is anything the promoter has agreed to pay: confirmed
+        // gigs and completed ones (completed is the stricter state).
+        confirmed: s.bookings.some((b) => b.status === "confirmed" || b.status === "completed"),
       }));
       return {
         ...e,
