@@ -2,6 +2,7 @@ import { BadRequestException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { prisma } from "@essentials/db";
 import { InvoicesService } from "./invoices.service";
+import type { NotificationsService } from "../notifications/notifications.service";
 import type { JwtUser } from "../common/roles.guard";
 
 jest.mock("@essentials/db", () => ({
@@ -21,7 +22,10 @@ const invoices = (prisma as unknown as { invoice: { create: jest.Mock } }).invoi
 const artist: JwtUser = { sub: "user-1", email: "dj@example.com", role: "artist" };
 
 function service() {
-  return new InvoicesService({ get: () => undefined } as unknown as ConfigService);
+  return new InvoicesService(
+    { get: () => undefined } as unknown as ConfigService,
+    { deliver: jest.fn() } as unknown as NotificationsService,
+  );
 }
 
 function completed(over: Record<string, unknown> = {}) {

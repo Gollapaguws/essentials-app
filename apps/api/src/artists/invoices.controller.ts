@@ -35,4 +35,11 @@ export class InvoicesController {
   paymentLink(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body("provider") provider: "payfast" | "stripe") {
     return this.invoices.createPaymentLink(user, id, provider ?? "payfast");
   }
+
+  /** Remind the venue manager that this invoice is still unpaid. */
+  @Post(":id/remind")
+  @Auth("artist", "admin")
+  remind(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.invoices.remind(user, id);
+  }
 }

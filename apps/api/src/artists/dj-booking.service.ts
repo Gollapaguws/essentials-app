@@ -80,11 +80,8 @@ export class DjBookingService {
       }
       if (slot.startsAt.getTime() <= Date.now()) throw new BadRequestException("That slot has already started");
 
-      const held = await prisma.artistBooking.findFirst({
-        where: { slotId: slot.id, status: { not: "cancelled" } },
-      });
-      if (held) throw new ConflictException("Another DJ already holds that slot");
-
+      // Applications are a queue, not a claim: a slot takes as many applicants as
+      // want it, and the promoter confirms one. Declining the holder re-opens it.
       event = slot.event;
       slotLabel = slot.label;
       slotId = slot.id;
@@ -171,7 +168,7 @@ export class DjBookingService {
   }
 
   /** Step 4 — promoter confirms (or declines) an application. */
-  async decide(user: JwtUser, bookingId: string, confirm: boolean) {
+  async decide(user: JwtUser, bookingId: string, confirm: boolean, reason?: string) {
     const booking = await prisma.artistBooking.findUnique({
       where: { id: bookingId },
       include: { event: true, artist: { include: { user: { select: { id: true, email: true } } } } },
@@ -179,16 +176,54 @@ export class DjBookingService {
     if (!booking) throw new NotFoundException("Application not found");
     if (user.role !== "admin" && booking.event.promoterId !== user.sub) throw new ForbiddenException("Not your event");
 
+    // Only one DJ can hold a slot, even though many may apply for it.
+    if (confirm && booking.slotId) {
+      const holder = await prisma.artistBooking.findFirst({
+        where: {
+          slotId: booking.slotId,
+          id: { not: booking.id },
+          status: { in: ["confirmed", "completed"] },
+        },
+        select: { id: true },
+      });
+      if (holder) {
+        throw new ConflictException("Another DJ already holds that slot — decline them before confirming someone else.");
+      }
+    }
+
     // A decline costs nothing, so only a confirmation has to fit the budget.
     if (confirm) await this.assertBudgetRoom(booking);
 
     const status = confirm ? "confirmed" : "cancelled";
-    await prisma.artistBooking.update({ where: { id: bookingId }, data: { status } });
+    const note = reason?.trim().slice(0, 500) || null;
+    await prisma.artistBooking.update({
+      where: { id: bookingId },
+      data: { status, ...(confirm ? {} : { declineReason: note }) },
+    });
+
+    // Declining the only applicant leaves the slot unfilled; everyone else who
+    // applied for it should know they are back in the running.
+    if (!confirm && booking.slotId) {
+      const waiting = await prisma.artistBooking.findMany({
+        where: { slotId: booking.slotId, id: { not: booking.id }, status: "pending" },
+        select: { artist: { select: { userId: true } } },
+      });
+      const waitingUserIds = waiting.map((w) => w.artist.userId).filter(Boolean);
+      if (waitingUserIds.length) {
+        await this.notifications.deliver(waitingUserIds, {
+          kind: "application",
+          title: `Slot open again — ${booking.event.title}`,
+          body: `${booking.slot ?? "Your slot"} at ${booking.event.title} is open again. The promoter is reviewing the other applications.`,
+          link: `${this.appUrl()}/gig-calendar`,
+          channels: ["inapp", "email"],
+        });
+      }
+    }
 
     const title = confirm ? `CONFIRMED — ${booking.event.title}` : `Application declined`;
     const body = confirm
       ? `You're playing ${booking.event.title} (${booking.slot} slot). ${booking.event.date.toDateString()} — see your gig calendar. Fee: ${booking.performanceFee}.`
-      : `The promoter declined your application for ${booking.event.title}.`;
+      : `The promoter declined your application for ${booking.event.title}.${note ? ` Reason: ${note}` : ""}`;
     await this.notifications.deliver([booking.artist.userId], {
       kind: confirm ? "confirmed" : "declined",
       title,

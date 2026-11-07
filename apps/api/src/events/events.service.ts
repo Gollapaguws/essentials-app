@@ -231,6 +231,21 @@ export class EventsService {
     const plan = normalizePlan(data);
     if (!plan) throw new BadRequestException("Slot count, slot length and start time are required");
 
+    // A ceiling under money already promised can never be honoured, and would
+    // strand the night permanently over budget with no confirmation possible.
+    if (plan.budget > 0) {
+      const committed = await prisma.artistBooking.aggregate({
+        where: { eventId, status: { in: ["confirmed", "completed"] } },
+        _sum: { performanceFee: true },
+      });
+      const spent = committed._sum.performanceFee ?? 0;
+      if (plan.budget < spent) {
+        throw new ConflictException(
+          `Budget can't go below the R${spent.toLocaleString()} already committed to confirmed DJs. Raise it, or decline a DJ first.`,
+        );
+      }
+    }
+
     const applications = await prisma.artistBooking.count({
       where: { eventId, status: { not: "cancelled" } },
     });

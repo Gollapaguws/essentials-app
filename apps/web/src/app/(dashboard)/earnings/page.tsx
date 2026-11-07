@@ -52,6 +52,7 @@ function invoiceState(gig: PlayedGig) {
 export default function Earnings() {
   const [data, setData] = useState<Earnings | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [remindingId, setRemindingId] = useState<string | null>(null);
   const [noProfile, setNoProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -85,6 +86,22 @@ export default function Earnings() {
       setError(errorMessage(e) ?? "Could not invoice this gig.");
     } finally {
       setBusyId(null);
+    }
+  };
+
+  // The DJ owns the invoice, but the venue is the account that pays it.
+  const remind = async (gig: PlayedGig) => {
+    if (!gig.invoice) return;
+    setRemindingId(gig.invoice.id);
+    setError(null);
+    setNotice(null);
+    try {
+      await api.post(`/invoices/${gig.invoice.id}/remind`);
+      setNotice(`Reminder sent to ${gig.venue} for ${gig.invoice.number}.`);
+    } catch (e) {
+      setError(errorMessage(e) ?? "Could not send the reminder.");
+    } finally {
+      setRemindingId(null);
     }
   };
 
@@ -155,6 +172,16 @@ export default function Earnings() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`text-xs ${state.className}`}>{state.label}</span>
                         {gig.invoice && <span className="text-neutral-600 text-xs">{gig.invoice.number}</span>}
+                        {gig.invoice && gig.invoice.status !== "paid" && (
+                          <button
+                            onClick={() => remind(gig)}
+                            disabled={remindingId === gig.invoice.id}
+                            title="Tell the venue manager this invoice is still unpaid"
+                            className="border border-line text-neutral-300 rounded-lg px-2 py-0.5 text-[10px] tracking-widest disabled:opacity-40"
+                          >
+                            {remindingId === gig.invoice.id ? "SENDING…" : "REMIND VENUE"}
+                          </button>
+                        )}
                         {!gig.invoice && (
                           <button
                             disabled={busyId === gig.id || gig.fee <= 0}

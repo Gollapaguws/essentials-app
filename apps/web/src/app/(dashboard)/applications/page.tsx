@@ -15,6 +15,8 @@ interface ArtistNote {
 interface Application {
   id: string; slot?: string | null; status: string; appliedAt?: string;
   startAt: string; endAt: string; performanceFee: number;
+  /** Present on a decline: the reason the DJ was given. */
+  declineReason?: string | null;
   artist: { id: string; stageName: string; user: { name: string | null; email: string } };
   event: { title: string; date: string; budget: number; committed: number };
   /** The promoter's own note from last time, or null. */
@@ -29,6 +31,8 @@ export default function Applications() {
   const [editing, setEditing] = useState<{ artistId: string; body: string } | null>(null);
   const [noteBusy, setNoteBusy] = useState(false);
   const [noteError, setNoteError] = useState<string | null>(null);
+  // Optional reason per application, sent to the DJ with the decline.
+  const [reasons, setReasons] = useState<Record<string, string>>({});
 
   const load = () => api.get<Application[]>("/artists/applications").then(setApps).catch((e) => setError(errorMessage(e)));
   useEffect(() => { load(); }, []);
@@ -36,7 +40,8 @@ export default function Applications() {
   const decide = async (id: string, confirm: boolean) => {
     setError(null);
     try {
-      await api.post(`/artists/applications/${id}/decide`, { confirm });
+      await api.post(`/artists/applications/${id}/decide`, { confirm, reason: reasons[id]?.trim() || undefined });
+      setReasons((prev) => ({ ...prev, [id]: "" }));
       load();
     } catch (err) { setError(errorMessage(err)); }
   };
@@ -96,6 +101,9 @@ export default function Applications() {
                 </p>
                 <p className="text-neutral-500 text-xs">{a.event.title} · {new Date(a.event.date).toLocaleDateString()} · {a.artist.user.email}</p>
                 <p className="text-neutral-500 text-xs">set {new Date(a.startAt).toLocaleString()} – {new Date(a.endAt).toLocaleTimeString()}</p>
+                {a.status === "cancelled" && a.declineReason && (
+                  <p className="text-xs text-neutral-500">declined — told the DJ: {a.declineReason}</p>
+                )}
                 {a.event.budget > 0 && (
                   <p className={`text-xs ${overBudget && a.status === "pending" ? "text-red-400" : "text-neutral-500"}`}>
                     budget: R{a.event.committed.toLocaleString()} committed of R{a.event.budget.toLocaleString()}
@@ -158,6 +166,14 @@ export default function Applications() {
                     >
                       CONFIRM
                     </button>
+                    <input
+                      value={reasons[a.id] ?? ""}
+                      onChange={(e) => setReasons({ ...reasons, [a.id]: e.target.value })}
+                      maxLength={500}
+                      placeholder="Reason (optional)"
+                      aria-label="Reason for declining this DJ"
+                      className="bg-bg border border-line rounded-lg px-2 py-1 text-xs w-36"
+                    />
                     <button onClick={() => decide(a.id, false)} className="border border-red-500 text-red-400 rounded-lg px-3 py-1 text-xs font-bold">DECLINE</button>
                   </>
                 )}

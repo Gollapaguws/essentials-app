@@ -459,6 +459,8 @@ model ArtistBooking {
   status            ArtistBookingStatus @default(pending)
   /// Set when the promoter confirms the gig was played; invoices require it.
   completedAt       DateTime?
+  /// Why the promoter declined, sent to the DJ. Only set on a decline.
+  declineReason     String?
   event             Event               @relation(fields: [eventId], references: [id])
   slotRef           EventSlot?          @relation(fields: [slotId], references: [id], onDelete: SetNull)
   artist            ArtistProfile       @relation(fields: [artistId], references: [id])

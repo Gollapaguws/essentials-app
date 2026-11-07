@@ -5,6 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 import { useAuth } from "@/components/AuthProvider";
+import { DownloadButton } from "@/components/DownloadButton";
 
 interface EventSlotRow {
   id: string;
@@ -300,7 +301,8 @@ export default function EventManager() {
                           {slots.eventId === e.id ? "Close" : "Slots & budget"}
                         </button>
                         <button onClick={async () => { await api.post(`/events/${e.id}/clone`); load(); }} className="text-neon underline text-xs">Clone</button>
-                        <a href={`${process.env.NEXT_PUBLIC_API_URL}/events/${e.id}/guest-list.csv`} className="text-neutral-300 underline text-xs">CSV</a>
+                        <DownloadButton path={`/events/${e.id}/guest-list.csv`} filename={`guestlist-${e.id}.csv`} label="Guest CSV" />
+                        <DownloadButton path={`/events/${e.id}/spend.csv`} filename={`dj-spend-${e.id}.csv`} label="Spend CSV" />
                         {e.status === "cancelled" ? (
                           <button onClick={() => reopen(e)} className="text-neutral-300 underline text-xs">Reopen</button>
                         ) : (

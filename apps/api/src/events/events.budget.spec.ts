@@ -9,7 +9,7 @@ import type { JwtUser } from "../common/roles.guard";
 jest.mock("@essentials/db", () => ({
   prisma: {
     event: { findUnique: jest.fn(), update: jest.fn() },
-    artistBooking: { count: jest.fn() },
+    artistBooking: { count: jest.fn(), aggregate: jest.fn() },
     eventSlot: { deleteMany: jest.fn(), createMany: jest.fn() },
     $transaction: jest.fn(),
   },
@@ -26,7 +26,7 @@ jest.mock("@essentials/db", () => ({
 
 const db = prisma as unknown as {
   event: { findUnique: jest.Mock; update: jest.Mock };
-  artistBooking: { count: jest.Mock };
+  artistBooking: { count: jest.Mock; aggregate: jest.Mock };
   eventSlot: { deleteMany: jest.Mock; createMany: jest.Mock };
   $transaction: jest.Mock;
 };
@@ -68,6 +68,7 @@ beforeEach(() => {
   db.event.findUnique.mockReset().mockResolvedValue(event());
   db.event.update.mockReset().mockResolvedValue(event());
   db.artistBooking.count.mockReset().mockResolvedValue(0);
+  db.artistBooking.aggregate.mockReset().mockResolvedValue({ _sum: { performanceFee: 0 } });
   db.eventSlot.deleteMany.mockReset();
   db.eventSlot.createMany.mockReset();
   db.$transaction.mockReset().mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops));
@@ -86,6 +87,26 @@ describe("EventsService.setSlots — budget with DJs already applied", () => {
     expect(db.eventSlot.deleteMany).not.toHaveBeenCalled();
     expect(db.eventSlot.createMany).not.toHaveBeenCalled();
     expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("refuses a ceiling under the money already promised", async () => {
+    db.artistBooking.aggregate.mockResolvedValue({ _sum: { performanceFee: 900 } });
+
+    await expect(
+      service().setSlots(promoter, "event-1", { ...plan, budget: 500 }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      service().setSlots(promoter, "event-1", { ...plan, budget: 500 }),
+    ).rejects.toThrow(/below the R900/);
+    expect(db.event.update).not.toHaveBeenCalled();
+  });
+
+  it("allows a ceiling equal to what is committed", async () => {
+    db.artistBooking.aggregate.mockResolvedValue({ _sum: { performanceFee: 900 } });
+
+    await service().setSlots(promoter, "event-1", { ...plan, budget: 900 });
+
+    expect(db.event.update).toHaveBeenCalled();
   });
 
   it("still refuses a fee or slot change once DJs have applied", async () => {

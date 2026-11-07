@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { ConfigService } from "@nestjs/config";
 import { prisma, InvoiceStatus, PaymentStatus } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
+import { NotificationsService } from "../notifications/notifications.service";
 import { randomBytes } from "crypto";
 
 /**
@@ -12,7 +13,10 @@ import { randomBytes } from "crypto";
  */
 @Injectable()
 export class InvoicesService {
-  constructor(private config: ConfigService) {}
+  constructor(
+    private config: ConfigService,
+    private notifications: NotificationsService,
+  ) {}
 
   async list(user: JwtUser) {
     const profile = await prisma.artistProfile.findUnique({ where: { userId: user.sub } });
@@ -114,6 +118,35 @@ export class InvoicesService {
       <tr><td class="total">Total</td><td class="total" style="text-align:right">${invoice.total.toLocaleString()}</td></tr></table>
       <p style="font-size:12px;color:#666;margin-top:32px">Payment: via the payment link sent by ESSENTIALS. Thank you for playing.</p>
     </body></html>`;
+  }
+
+  /**
+   * Nudge the venue that a completed gig's invoice is still unpaid. The DJ owns
+   * the invoice; the venue's manager is the account that actually pays it.
+   */
+  async remind(user: JwtUser, invoiceId: string) {
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      include: {
+        artist: { select: { stageName: true, user: { select: { email: true } } } },
+        venue: { select: { name: true, managerId: true } },
+      },
+    });
+    if (!invoice) throw new NotFoundException("Invoice not found");
+    if (user.role !== "admin" && invoice.artist.user.email !== user.email) throw new ForbiddenException();
+    if (invoice.status === "paid") throw new BadRequestException("That invoice is already paid");
+    if (!invoice.venue?.managerId) {
+      throw new BadRequestException("The venue on this invoice has no manager account to remind");
+    }
+
+    const result = await this.notifications.deliver([invoice.venue.managerId], {
+      kind: "invoice",
+      title: `Invoice ${invoice.number} is due`,
+      body: `${invoice.artist.stageName} is waiting on ${invoice.venue.name} for invoice ${invoice.number} — R${invoice.total.toLocaleString()}.`,
+      link: `${(this.config.get<string>("APP_URL") ?? "https://essentialsedm.com").replace(/\/$/, "")}/venue`,
+      channels: ["inapp", "email"],
+    });
+    return { ...result, invoice: { id: invoice.id, number: invoice.number, total: invoice.total } };
   }
 
   /** Create a payment link record (PayFast/Stripe hosted link). */

@@ -2,6 +2,7 @@ import { Injectable, ForbiddenException, NotFoundException, ConflictException } 
 import { prisma } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 import type { Response } from "express";
+import { buildSlots } from "./slots";
 
 /** Phase 4.5 promoter QoL: event cloning, guest-list export, capacity pacing. */
 @Injectable()
@@ -12,13 +13,27 @@ export class EventToolsService {
     if (!event) throw new NotFoundException("Event not found");
     if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
 
+    const date = new Date(event.date.getTime() + 7 * 86_400_000);
+    // The slot plan and the budget are the expensive part of planning a night, so
+    // a clone carries them instead of making the promoter retype the whole thing.
+    const plan =
+      event.slotCount && event.slotMinutes
+        ? {
+            djFeePerHour: event.djFeePerHour,
+            budget: event.budget,
+            slotCount: event.slotCount,
+            slotMinutes: event.slotMinutes,
+            slotStartMinute: event.slotStartMinute ?? 20 * 60,
+          }
+        : null;
+
     const cloned = await prisma.event.create({
       data: {
         venueId: event.venueId,
         promoterId: event.promoterId,
         title: `${event.title} (copy)`,
         description: event.description,
-        date: new Date(event.date.getTime() + 7 * 86_400_000),
+        date,
         lineup: event.lineup ?? [],
         capacity: event.capacity,
         dressCode: event.dressCode,
@@ -26,6 +41,12 @@ export class EventToolsService {
         status: "draft",
         revenueSplitPromoterPct: event.revenueSplitPromoterPct,
         genres: event.genres,
+        djFeePerHour: event.djFeePerHour,
+        budget: event.budget,
+        slotCount: event.slotCount,
+        slotMinutes: event.slotMinutes,
+        slotStartMinute: event.slotStartMinute,
+        ...(plan ? { slots: { create: buildSlots(date, plan) } } : {}),
       },
     });
     if (await prisma.eventGroupChat.findUnique({ where: { eventId: cloned.id } }).then((c) => !c)) {
@@ -103,6 +124,47 @@ export class EventToolsService {
     ];
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="guestlist-${eventId}.csv"`);
+    res.send(lines.join("\n"));
+  }
+
+  /**
+   * Per-event DJ spend for the promoter's books: every slot, who holds it, the fee
+   * agreed and where each invoice stands. Cancelled applications are left out.
+   */
+  async exportSpendCsv(user: JwtUser, eventId: string, res: Response) {
+    const event = await prisma.event.findUnique({ where: { id: eventId }, include: { venue: { select: { name: true } } } });
+    if (!event) throw new NotFoundException("Event not found");
+    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+
+    const bookings = await prisma.artistBooking.findMany({
+      where: { eventId, status: { not: "cancelled" } },
+      include: {
+        artist: { include: { user: { select: { email: true } } } },
+        invoice: { select: { number: true, status: true, total: true } },
+      },
+      orderBy: { startAt: "asc" },
+    });
+
+    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = [
+      "slot,starts_at,dj,email,fee,status,completed_at,invoice_number,invoice_status,invoice_total",
+      ...bookings.map((b) =>
+        [
+          esc(b.slot),
+          esc(b.startAt.toISOString()),
+          esc(b.artist.stageName),
+          esc(b.artist.user.email),
+          b.performanceFee,
+          b.status,
+          esc(b.completedAt?.toISOString() ?? ""),
+          esc(b.invoice?.number ?? ""),
+          esc(b.invoice?.status ?? ""),
+          b.invoice?.total ?? "",
+        ].join(","),
+      ),
+    ];
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="dj-spend-${eventId}.csv"`);
     res.send(lines.join("\n"));
   }
 

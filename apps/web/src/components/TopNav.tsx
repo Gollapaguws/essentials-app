@@ -109,6 +109,12 @@ const links: NavLink[] = [
     roles: ["promoter", "admin"],
   },
   {
+    href: "/settlements",
+    label: "Settlements",
+    hint: "Per night: DJ fees agreed, invoiced, paid by the venue, and still outstanding.",
+    roles: ["promoter", "admin"],
+  },
+  {
     href: "/notifications",
     label: "Notifications",
     hint: "Your bell feed: DJ calls, applications, confirmations and invoice notices, with unread counts.",

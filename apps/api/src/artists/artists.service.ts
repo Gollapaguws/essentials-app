@@ -51,6 +51,38 @@ export interface DayPlan {
   conflicts: number;
 }
 
+/**
+ * iCalendar text for a DJ's confirmed and played gigs. Times go out in UTC, which
+ * every calendar app accepts without needing a timezone definition.
+ */
+export function icsCalendar(
+  items: { uid: string; start: Date; end: Date; summary: string; location?: string; description?: string }[],
+  now = new Date(),
+) {
+  const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const text = (v: string) =>
+    v.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//ESSENTIALS//Gig Calendar//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    ...items.flatMap((i) => [
+      "BEGIN:VEVENT",
+      `UID:${i.uid}@essentialsedm.com`,
+      `DTSTAMP:${stamp(now)}`,
+      `DTSTART:${stamp(i.start)}`,
+      `DTEND:${stamp(i.end)}`,
+      `SUMMARY:${text(i.summary)}`,
+      ...(i.location ? [`LOCATION:${text(i.location)}`] : []),
+      ...(i.description ? [`DESCRIPTION:${text(i.description)}`] : []),
+      "END:VEVENT",
+    ]),
+    "END:VCALENDAR",
+  ].join("\r\n");
+}
+
 /** Midnight at the start of the booking's local day. */
 function startOfDay(value: string | Date): Date {
   const day = new Date(value);
@@ -307,7 +339,7 @@ export class ArtistsService {
             startsAt: true,
             endsAt: true,
             fee: true,
-            bookings: { where: { status: { not: "cancelled" } }, select: { id: true } },
+            bookings: { where: { status: { not: "cancelled" } }, select: { status: true } },
           },
         },
       },
@@ -324,7 +356,9 @@ export class ArtistsService {
         startsAt: s.startsAt,
         endsAt: s.endsAt,
         fee: s.fee,
-        taken: s.bookings.length > 0,
+        // A slot with applicants is still open to more: the promoter picks one.
+        taken: s.bookings.some((b) => b.status === "confirmed" || b.status === "completed"),
+        applicants: s.bookings.length,
       })),
     }));
   }
@@ -396,6 +430,121 @@ export class ArtistsService {
         gigs: gigs.length,
       },
     };
+  }
+
+  /**
+   * Promoter's settlement view: per night, the DJ fees agreed, what has been
+   * invoiced, what the venues have actually paid, and what is still out.
+   */
+  async settlements(user: JwtUser) {
+    if (user.role !== "promoter" && user.role !== "admin") throw new ForbiddenException("Promoters only");
+    const events = await prisma.event.findMany({
+      where: user.role === "admin" ? {} : { promoterId: user.sub },
+      select: {
+        id: true,
+        title: true,
+        date: true,
+        budget: true,
+        venue: { select: { name: true } },
+        artistBookings: {
+          where: { status: { in: ["confirmed", "completed"] } },
+          orderBy: { startAt: "asc" },
+          select: {
+            id: true,
+            slot: true,
+            startAt: true,
+            status: true,
+            performanceFee: true,
+            completedAt: true,
+            artist: { select: { stageName: true } },
+            invoice: {
+              select: {
+                id: true,
+                number: true,
+                status: true,
+                total: true,
+                payments: { select: { status: true, amount: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { date: "desc" },
+    });
+
+    const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+
+    const rows = events.map((e) => {
+      const gigs = e.artistBookings.map((b) => {
+        const invoice = b.invoice;
+        const paid = invoice
+          ? invoice.status === "paid"
+            ? invoice.total
+            : sum(invoice.payments.filter((p) => p.status === "paid").map((p) => p.amount))
+          : 0;
+        return {
+          id: b.id,
+          slot: b.slot,
+          startAt: b.startAt,
+          status: b.status,
+          completedAt: b.completedAt,
+          fee: b.performanceFee,
+          artist: b.artist.stageName,
+          invoice: invoice
+            ? { id: invoice.id, number: invoice.number, status: invoice.status, total: invoice.total }
+            : null,
+          paid,
+        };
+      });
+      const committed = sum(gigs.map((g) => g.fee));
+      const invoiced = sum(gigs.map((g) => g.invoice?.total ?? 0));
+      const paid = sum(gigs.map((g) => g.paid));
+      return {
+        id: e.id,
+        title: e.title,
+        date: e.date,
+        venue: e.venue.name,
+        budget: e.budget,
+        committed,
+        invoiced,
+        paid,
+        /** Agreed fees the venues have not paid yet. */
+        outstanding: committed - paid,
+        overBudget: e.budget > 0 && committed > e.budget,
+        gigs,
+      };
+    });
+
+    return {
+      events: rows,
+      totals: {
+        committed: sum(rows.map((r) => r.committed)),
+        invoiced: sum(rows.map((r) => r.invoiced)),
+        paid: sum(rows.map((r) => r.paid)),
+        outstanding: sum(rows.map((r) => r.outstanding)),
+        nights: rows.length,
+      },
+    };
+  }
+
+  /** The DJ's confirmed and played gigs as an .ics file any calendar app can read. */
+  async gigsIcs(user: JwtUser) {
+    const profile = await this.requireProfile(user);
+    const bookings = await prisma.artistBooking.findMany({
+      where: { artistId: profile.id, status: { in: ["confirmed", "completed"] } },
+      include: { event: { include: { venue: { select: { name: true, address: true } } } } },
+      orderBy: { startAt: "asc" },
+    });
+    return icsCalendar(
+      bookings.map((b) => ({
+        uid: b.id,
+        start: b.startAt,
+        end: b.endAt,
+        summary: `${b.event.title} — ${profile.stageName}`,
+        location: b.event.venue.address ? `${b.event.venue.name}, ${b.event.venue.address}` : b.event.venue.name,
+        description: `${b.slot ?? "set"} · fee R${b.performanceFee.toLocaleString()} · ${b.status}`,
+      })),
+    );
   }
 
   /** Multi-gig routing for one calendar day: legs, buffers, collision alerts, fuel + billable travel. */

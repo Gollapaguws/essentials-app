@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
+import { DownloadButton } from "@/components/DownloadButton";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 
@@ -12,6 +13,8 @@ interface OpenSlot {
   endsAt: string;
   fee: number;
   taken: boolean;
+  /** How many DJs have applied; the promoter still only confirms one. */
+  applicants: number;
 }
 
 interface OpenGig {
@@ -93,7 +96,15 @@ export default function GigCalendar() {
     <>
       <TopNav />
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
-        <h1 className="text-2xl font-black tracking-wide">DJ GIG CALENDAR</h1>
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <h1 className="text-2xl font-black tracking-wide">DJ GIG CALENDAR</h1>
+          <DownloadButton
+            path="/artists/gigs.ics"
+            filename="essentials-gigs.ics"
+            label="Download calendar (.ics)"
+            className="text-neon underline text-xs"
+          />
+        </div>
         {msg && <p className="text-neon text-sm">{msg}</p>}
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
@@ -113,9 +124,14 @@ export default function GigCalendar() {
                         disabled={s.taken}
                         onClick={() => setPicked({ ...picked, [g.id]: value })}
                         className={`text-xs rounded-lg px-3 py-2 border ${s.taken ? "border-line text-neutral-600 line-through" : selected ? "border-neon text-neon" : "border-line text-neutral-400"}`}
-                        title={s.taken ? "Another DJ holds this slot" : `Pays R${s.fee.toLocaleString()}`}
+                        title={
+                          s.taken
+                            ? "Another DJ holds this slot"
+                            : `Pays R${s.fee.toLocaleString()}${s.applicants ? ` · ${s.applicants} applied` : ""}`
+                        }
                       >
                         {s.label} · R{s.fee.toLocaleString()}
+                        {s.applicants > 0 && !s.taken ? ` · ${s.applicants} applied` : ""}
                       </button>
                     );
                   })

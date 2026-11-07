@@ -10,6 +10,7 @@ jest.mock("@essentials/db", () => ({
     artistBooking: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
+      findFirst: jest.fn(),
       update: jest.fn(),
       aggregate: jest.fn(),
       groupBy: jest.fn(),
@@ -22,6 +23,7 @@ const db = prisma as unknown as {
   artistBooking: {
     findUnique: jest.Mock;
     findMany: jest.Mock;
+    findFirst: jest.Mock;
     update: jest.Mock;
     aggregate: jest.Mock;
     groupBy: jest.Mock;
@@ -42,6 +44,7 @@ function application(fee = 495, budget = 1200) {
   return {
     id: "booking-1",
     eventId: "event-1",
+    slotId: "slot-1",
     status: "pending",
     slot: "20:00–21:00",
     performanceFee: fee,
@@ -61,6 +64,7 @@ function application(fee = 495, budget = 1200) {
 beforeEach(() => {
   db.artistBooking.findUnique.mockReset();
   db.artistBooking.findMany.mockReset().mockResolvedValue([]);
+  db.artistBooking.findFirst.mockReset().mockResolvedValue(null);
   db.artistBooking.update.mockReset().mockResolvedValue({ id: "booking-1", status: "confirmed" });
   db.artistBooking.aggregate.mockReset().mockResolvedValue({ _sum: { performanceFee: 0 } });
   db.artistBooking.groupBy.mockReset().mockResolvedValue([]);
@@ -127,6 +131,14 @@ describe("DjBookingService.decide — budget is a hard ceiling", () => {
     expect(db.artistBooking.update).toHaveBeenCalled();
   });
 
+  it("won't let two DJs hold the same slot", async () => {
+    db.artistBooking.findUnique.mockResolvedValue(application(495, 1200));
+    db.artistBooking.findFirst.mockResolvedValue({ id: "other-booking" });
+
+    await expect(service().decide(promoter, "booking-1", true)).rejects.toThrow(/already holds that slot/);
+    expect(db.artistBooking.update).not.toHaveBeenCalled();
+  });
+
   it("never blocks a decline, even on an over-budget night", async () => {
     db.artistBooking.findUnique.mockResolvedValue(application(495, 100));
     db.artistBooking.aggregate.mockResolvedValue({ _sum: { performanceFee: 990 } });
@@ -136,8 +148,28 @@ describe("DjBookingService.decide — budget is a hard ceiling", () => {
     expect(db.artistBooking.aggregate).not.toHaveBeenCalled();
     expect(db.artistBooking.update).toHaveBeenCalledWith({
       where: { id: "booking-1" },
-      data: { status: "cancelled" },
+      data: { status: "cancelled", declineReason: null },
     });
+  });
+
+  it("tells the DJ why, and re-opens the slot for the others who applied", async () => {
+    db.artistBooking.findUnique.mockResolvedValue(application(495, 1200));
+    db.artistBooking.findMany.mockResolvedValue([{ artist: { userId: "artist-user-2" } }]);
+
+    await service().decide(promoter, "booking-1", false, "  Going a different direction  ");
+
+    expect(db.artistBooking.update).toHaveBeenCalledWith({
+      where: { id: "booking-1" },
+      data: { status: "cancelled", declineReason: "Going a different direction" },
+    });
+    expect(deliver).toHaveBeenCalledWith(
+      ["artist-user-1"],
+      expect.objectContaining({ body: expect.stringContaining("Reason: Going a different direction") }),
+    );
+    expect(deliver).toHaveBeenCalledWith(
+      ["artist-user-2"],
+      expect.objectContaining({ title: expect.stringContaining("Slot open again") }),
+    );
   });
 });
 

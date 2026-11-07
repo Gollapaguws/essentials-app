@@ -125,6 +125,13 @@ export class EventsController {
     return this.tools.exportCsv(user, id, res);
   }
 
+  /** The promoter's DJ spend for one night, with each invoice's state. */
+  @Get(":id/spend.csv")
+  @Auth("promoter", "admin")
+  exportSpend(@Param("id") id: string, @CurrentUser() user: JwtUser, @Res() res: Response) {
+    return this.tools.exportSpendCsv(user, id, res);
+  }
+
   @Get("manage/list")
   @Auth("promoter")
   listForPromoter(@CurrentUser() user: JwtUser) {

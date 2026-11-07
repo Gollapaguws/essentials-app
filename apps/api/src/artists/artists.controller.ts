@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpCode, BadRequestException, Req, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpCode, BadRequestException, Req, Res, UploadedFile, UseInterceptors } from "@nestjs/common";
+import type { Response } from "express";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Request } from "express";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
@@ -7,7 +8,7 @@ import { DjBookingService } from "./dj-booking.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { MAX_PROFILE_IMAGE_BYTES } from "../common/media-storage";
-import { IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { IsBoolean, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
 
 class ProfileDto {
   @IsString() stageName!: string;
@@ -36,6 +37,12 @@ class ApplyDto {
 class NoteDto {
   /** The promoter's private note on a DJ. An empty string clears it. */
   @IsString() @MaxLength(2000) body!: string;
+}
+
+class DecideDto {
+  @IsBoolean() confirm!: boolean;
+  /** Optional on a decline: the DJ is told why. */
+  @IsOptional() @IsString() @MaxLength(500) reason?: string;
 }
 
 @Controller("artists")
@@ -117,6 +124,23 @@ export class ArtistsController {
     return this.artists.earnings(user);
   }
 
+  /** Promoter: every night's DJ spend — committed, invoiced, paid, still out. */
+  @Get("settlements")
+  @Auth("promoter", "admin")
+  settlements(@CurrentUser() user: JwtUser) {
+    return this.artists.settlements(user);
+  }
+
+  /** Artist: confirmed and played gigs as an .ics file for any calendar app. */
+  @Get("gigs.ics")
+  @Auth("artist", "admin")
+  async gigsIcs(@CurrentUser() user: JwtUser, @Res() res: Response) {
+    const ics = await this.artists.gigsIcs(user);
+    res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="essentials-gigs.ics"');
+    res.send(ics);
+  }
+
   /** Apply for a slot: day | evening | late-night. */
   @Post("gig-calendar/apply")
   @HttpCode(200)
@@ -136,8 +160,8 @@ export class ArtistsController {
   @Post("applications/:id/decide")
   @HttpCode(200)
   @Auth("promoter", "admin")
-  decide(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: { confirm: boolean }) {
-    return this.djBooking.decide(user, id, dto.confirm ?? false);
+  decide(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: DecideDto) {
+    return this.djBooking.decide(user, id, dto.confirm ?? false, dto.reason);
   }
 
   /** Promoter/venue: the gig was played — the second confirmation that unlocks invoicing. */
