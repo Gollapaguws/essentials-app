@@ -5,10 +5,15 @@ import type { NotificationsService } from "../notifications/notifications.servic
 import type { JwtUser } from "../common/roles.guard";
 
 jest.mock("@essentials/db", () => ({
-  prisma: { artistBooking: { findMany: jest.fn() }, artistNote: { findMany: jest.fn() } },
+  prisma: {
+    artistBooking: { findMany: jest.fn(), groupBy: jest.fn() },
+    artistNote: { findMany: jest.fn() },
+  },
 }));
 
-const bookings = (prisma as unknown as { artistBooking: { findMany: jest.Mock } }).artistBooking;
+const bookings = (prisma as unknown as {
+  artistBooking: { findMany: jest.Mock; groupBy: jest.Mock };
+}).artistBooking;
 const notes = (prisma as unknown as { artistNote: { findMany: jest.Mock } }).artistNote;
 
 const promoter: JwtUser = { sub: "promoter-1", email: "promoter@example.com", role: "promoter" };
@@ -24,6 +29,7 @@ function application(id: string, artistId: string) {
   return {
     id,
     artistId,
+    eventId: "event-1",
     status: "pending",
     slot: "evening",
     appliedAt: new Date("2026-11-01T10:00:00.000Z"),
@@ -34,6 +40,7 @@ function application(id: string, artistId: string) {
 
 beforeEach(() => {
   bookings.findMany.mockReset();
+  bookings.groupBy.mockReset().mockResolvedValue([]);
   notes.findMany.mockReset();
 });
 

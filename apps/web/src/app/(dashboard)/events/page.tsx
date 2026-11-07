@@ -222,7 +222,7 @@ export default function EventManager() {
             {form.slotCount} × {form.slotMinutes} min from {form.slotStart} ·{" "}
             <span className="text-neutral-300">R{planFee.toLocaleString()} per slot</span> · R{planTotal.toLocaleString()} total
             {form.budget > 0 && (planTotal > form.budget
-              ? <span className="text-yellow-400"> — R{(planTotal - form.budget).toLocaleString()} over the R{form.budget.toLocaleString()} budget</span>
+              ? <span className="text-yellow-400"> — plan is R{(planTotal - form.budget).toLocaleString()} above the R{form.budget.toLocaleString()} budget; you can only confirm DJs up to the budget</span>
               : <span> of R{form.budget.toLocaleString()} budget</span>)}
           </p>
 
@@ -284,7 +284,7 @@ export default function EventManager() {
                             <span className="text-neutral-300">R{fee.toLocaleString()}/slot</span> · R{e.committed.toLocaleString()} committed
                             {e.budget > 0 ? ` of R${e.budget.toLocaleString()}` : ""}
                             {e.budget > 0 && allocated > e.budget && (
-                              <span className="text-yellow-400"> · R{(allocated - e.budget).toLocaleString()} over budget</span>
+                              <span className="text-yellow-400"> · plan R{(allocated - e.budget).toLocaleString()} over budget · confirmations stop at R{e.budget.toLocaleString()}</span>
                             )}
                           </p>
                         ) : (
@@ -338,14 +338,15 @@ export default function EventManager() {
                             {slots.slotCount} × {slots.slotMinutes} min from {slots.slotStart} ·{" "}
                             <span className="text-neutral-300">R{editFee.toLocaleString()} per slot</span> · R{editTotal.toLocaleString()} total
                             {slots.budget > 0 && editTotal > slots.budget && (
-                              <span className="text-yellow-400"> — over budget</span>
+                              <span className="text-yellow-400"> — plan over budget · you can only confirm DJs up to R{slots.budget.toLocaleString()}</span>
                             )}
                           </p>
                           <div className="flex items-center gap-3 text-xs">
                             <button onClick={saveSlots} className="bg-neon text-bg font-black rounded-lg px-3 py-1 tracking-widest">SAVE PLAN</button>
                             <button onClick={() => setSlots(EMPTY_SLOTS)} className="text-neutral-500 hover:text-neon">CANCEL</button>
                             <span className="text-neutral-500">
-                              Re-planning replaces all slots; it is refused once DJs have applied.
+                              Re-planning replaces all slots and is refused once DJs have applied — the budget
+                              alone can still be changed then.
                             </span>
                           </div>
                         </td>

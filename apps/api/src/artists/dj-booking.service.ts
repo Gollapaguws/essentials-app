@@ -138,6 +138,38 @@ export class DjBookingService {
     return booking;
   }
 
+  /**
+   * Confirming a slot promises money, so the promoter's budget is a hard ceiling:
+   * once a night's confirmed fees would pass it, further confirmations are refused.
+   * A budget of 0 means the promoter set no ceiling.
+   */
+  private async assertBudgetRoom(booking: {
+    id: string;
+    eventId: string;
+    performanceFee: number;
+    event: { budget: number };
+  }) {
+    const budget = booking.event.budget;
+    if (budget <= 0) return;
+
+    const committed = await prisma.artistBooking.aggregate({
+      where: {
+        eventId: booking.eventId,
+        id: { not: booking.id },
+        // Agreed money: a confirmed gig and a played one both count.
+        status: { in: ["confirmed", "completed"] },
+      },
+      _sum: { performanceFee: true },
+    });
+    const before = committed._sum.performanceFee ?? 0;
+    const after = before + booking.performanceFee;
+    if (after > budget) {
+      throw new ConflictException(
+        `Over budget — this slot pays R${booking.performanceFee.toLocaleString()} and the night is already committed to R${before.toLocaleString()} of its R${budget.toLocaleString()} budget. Raise the budget on the event, or decline this DJ.`,
+      );
+    }
+  }
+
   /** Step 4 — promoter confirms (or declines) an application. */
   async decide(user: JwtUser, bookingId: string, confirm: boolean) {
     const booking = await prisma.artistBooking.findUnique({
@@ -146,6 +178,9 @@ export class DjBookingService {
     });
     if (!booking) throw new NotFoundException("Application not found");
     if (user.role !== "admin" && booking.event.promoterId !== user.sub) throw new ForbiddenException("Not your event");
+
+    // A decline costs nothing, so only a confirmation has to fit the budget.
+    if (confirm) await this.assertBudgetRoom(booking);
 
     const status = confirm ? "confirmed" : "cancelled";
     await prisma.artistBooking.update({ where: { id: bookingId }, data: { status } });
@@ -216,7 +251,7 @@ export class DjBookingService {
       },
       include: {
         artist: { include: { user: { select: { name: true, email: true } } } },
-        event: { select: { title: true, date: true } },
+        event: { select: { title: true, date: true, budget: true } },
       },
       orderBy: { appliedAt: "desc" },
       take: 100,
@@ -229,6 +264,23 @@ export class DjBookingService {
       ? await prisma.artistNote.findMany({ where: { promoterId: user.sub, artistId: { in: artistIds } } })
       : [];
     const byArtist = new Map(notes.map((n) => [n.artistId, n]));
-    return bookings.map((b) => ({ ...b, note: byArtist.get(b.artistId) ?? null }));
+
+    // How much of each night's budget is already promised, so the row can say
+    // whether confirming this DJ would overspend before they try.
+    const eventIds = [...new Set(bookings.map((b) => b.eventId))];
+    const committed = eventIds.length
+      ? await prisma.artistBooking.groupBy({
+          by: ["eventId"],
+          where: { eventId: { in: eventIds }, status: { in: ["confirmed", "completed"] } },
+          _sum: { performanceFee: true },
+        })
+      : [];
+    const committedByEvent = new Map(committed.map((c) => [c.eventId, c._sum.performanceFee ?? 0]));
+
+    return bookings.map((b) => ({
+      ...b,
+      event: { ...b.event, committed: committedByEvent.get(b.eventId) ?? 0 },
+      note: byArtist.get(b.artistId) ?? null,
+    }));
   }
 }

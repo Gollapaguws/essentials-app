@@ -235,9 +235,23 @@ export class EventsService {
       where: { eventId, status: { not: "cancelled" } },
     });
     if (applications > 0) {
-      throw new ConflictException(
-        "Slots already have DJ applications. Decline or cancel them before re-planning the night.",
-      );
+      // DJs holding slots pin the plan, but not the ceiling: the budget is a
+      // spending limit, and raising it is the way out of a refused confirmation.
+      const samePlan =
+        plan.slotCount === event.slotCount &&
+        plan.slotMinutes === event.slotMinutes &&
+        plan.slotStartMinute === event.slotStartMinute &&
+        plan.djFeePerHour === event.djFeePerHour;
+      if (!samePlan) {
+        throw new ConflictException(
+          "Slots already have DJ applications. Decline or cancel them before re-planning the night.",
+        );
+      }
+      await prisma.event.update({ where: { id: eventId }, data: { budget: plan.budget } });
+      return prisma.event.findUnique({
+        where: { id: eventId },
+        include: { slots: { orderBy: { startsAt: "asc" } } },
+      });
     }
 
     await prisma.$transaction([

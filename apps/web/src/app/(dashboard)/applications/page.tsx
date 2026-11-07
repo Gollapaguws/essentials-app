@@ -16,7 +16,7 @@ interface Application {
   id: string; slot?: string | null; status: string; appliedAt?: string;
   startAt: string; endAt: string; performanceFee: number;
   artist: { id: string; stageName: string; user: { name: string | null; email: string } };
-  event: { title: string; date: string };
+  event: { title: string; date: string; budget: number; committed: number };
   /** The promoter's own note from last time, or null. */
   note: ArtistNote | null;
 }
@@ -78,7 +78,10 @@ export default function Applications() {
         <h1 className="text-2xl font-black tracking-wide">DJ APPLICATIONS</h1>
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <div className="border border-line rounded-xl">
-          {apps.map((a) => (
+          {apps.map((a) => {
+            // Confirming promises money: the budget is a ceiling, not a warning.
+            const overBudget = a.event.budget > 0 && a.event.committed + a.performanceFee > a.event.budget;
+            return (
             <div key={a.id} className="border-t border-line px-4 py-3 text-sm flex flex-wrap justify-between gap-2">
               <div className="flex-1 min-w-64">
                 <p className="font-bold">
@@ -93,6 +96,14 @@ export default function Applications() {
                 </p>
                 <p className="text-neutral-500 text-xs">{a.event.title} · {new Date(a.event.date).toLocaleDateString()} · {a.artist.user.email}</p>
                 <p className="text-neutral-500 text-xs">set {new Date(a.startAt).toLocaleString()} – {new Date(a.endAt).toLocaleTimeString()}</p>
+                {a.event.budget > 0 && (
+                  <p className={`text-xs ${overBudget && a.status === "pending" ? "text-red-400" : "text-neutral-500"}`}>
+                    budget: R{a.event.committed.toLocaleString()} committed of R{a.event.budget.toLocaleString()}
+                    {overBudget && a.status === "pending" && (
+                      <> — confirming this would go R{(a.event.committed + a.performanceFee - a.event.budget).toLocaleString()} over; raise the budget on Events</>
+                    )}
+                  </p>
+                )}
 
                 {editing?.artistId === a.artist.id ? (
                   <div className="mt-2 max-w-md space-y-1">
@@ -139,7 +150,14 @@ export default function Applications() {
                 <span className={a.status === "confirmed" || a.status === "completed" ? "text-neon" : a.status === "pending" ? "text-yellow-400" : "text-neutral-500"}>{a.status}</span>
                 {a.status === "pending" && (
                   <>
-                    <button onClick={() => decide(a.id, true)} className="bg-neon text-bg font-black rounded-lg px-3 py-1 text-xs tracking-widest">CONFIRM</button>
+                    <button
+                      onClick={() => decide(a.id, true)}
+                      disabled={overBudget}
+                      title={overBudget ? "This confirmation would put the night over its budget" : undefined}
+                      className="bg-neon text-bg font-black rounded-lg px-3 py-1 text-xs tracking-widest disabled:opacity-40"
+                    >
+                      CONFIRM
+                    </button>
                     <button onClick={() => decide(a.id, false)} className="border border-red-500 text-red-400 rounded-lg px-3 py-1 text-xs font-bold">DECLINE</button>
                   </>
                 )}
@@ -154,7 +172,8 @@ export default function Applications() {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
           {!apps.length && <p className="px-4 py-6 text-center text-neutral-500 text-sm">No applications yet.</p>}
         </div>
       </main>
