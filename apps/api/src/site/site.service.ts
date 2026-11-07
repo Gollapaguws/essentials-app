@@ -31,7 +31,7 @@ export class SiteService {
       await this.mail.send({
         to: email,
         subject: "Welcome to ESSENTIALS",
-        html: emailTemplates.welcomeSeries("you", `${process.env.APP_URL ?? "https://essentialsedm.com"}/profile`),
+        html: emailTemplates.welcomeSeries("you", `${process.env.SITE_URL ?? "https://essentialsedm.com"}/profile`),
       });
     } catch (e) {
       this.logger.warn(`welcome mail failed for ${email}: ${(e as Error).message}`);
