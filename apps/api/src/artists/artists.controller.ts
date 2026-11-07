@@ -20,8 +20,9 @@ class ProfileDto {
   // an admin (PATCH /artists/travel-rate), never by the DJ.
 }
 
-class StandardTravelRateDto {
-  @IsNumber() @Min(0) travelRatePerKm!: number;
+export class StandardTravelRateDto {
+  // A zero rate would silently zero every DJ's travel pay, so the floor is a cent.
+  @IsNumber() @Min(0.01) travelRatePerKm!: number;
 }
 
 class ApplyDto {

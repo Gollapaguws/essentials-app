@@ -1,6 +1,8 @@
 import { prisma } from "@essentials/db";
+import { plainToInstance } from "class-transformer";
+import { validate } from "class-validator";
 import { ROLES_KEY } from "../common/roles.decorator";
-import { ArtistsController } from "./artists.controller";
+import { ArtistsController, StandardTravelRateDto } from "./artists.controller";
 import { ArtistsService } from "./artists.service";
 import { ConfigService } from "@nestjs/config";
 
@@ -25,6 +27,16 @@ describe("standard travel rate", () => {
   it("is admin-only, for reading and for writing", () => {
     expect(Reflect.getMetadata(ROLES_KEY, ArtistsController.prototype.setTravelRate)).toEqual(["admin"]);
     expect(Reflect.getMetadata(ROLES_KEY, ArtistsController.prototype.travelRate)).toEqual(["admin"]);
+  });
+
+  it("refuses a rate that would zero or reverse a DJ's travel pay", async () => {
+    const rejected = async (value: number) =>
+      (await validate(plainToInstance(StandardTravelRateDto, { travelRatePerKm: value }))).length > 0;
+
+    await expect(rejected(0)).resolves.toBe(true);
+    await expect(rejected(-4.95)).resolves.toBe(true);
+    await expect(rejected(0.01)).resolves.toBe(false);
+    await expect(rejected(4.95)).resolves.toBe(false);
   });
 
   it("updates every DJ's profile and reports how many were touched", async () => {
