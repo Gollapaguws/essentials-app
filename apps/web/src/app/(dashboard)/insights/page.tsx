@@ -7,7 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 
-interface Ltv { averageLtv: number; topGuests: { userId: string; name: string | null; email: string; visits: number; tableSpend: number; doorSpend: number; ltv: number }[] }
+interface Ltv { averageLtv: number; topGuests: { userId: string; name: string | null; email: string; visits: number; doorSpend: number; ltv: number }[] }
 interface Cohort { cohort: string; size: number; retention: { month: number; pct: number }[] }
 
 const axis = { stroke: "#555", fontSize: 12 };
@@ -45,14 +45,13 @@ export default function Insights() {
             <div className="border border-line rounded-xl overflow-x-auto">
               <table className="w-full text-sm min-w-[640px]">
                 <thead className="bg-surface text-neutral-400 uppercase text-xs">
-                  <tr><th className="text-left px-4 py-3">Guest</th><th className="text-left px-4 py-3">Visits</th><th className="text-left px-4 py-3">Table spend</th><th className="text-left px-4 py-3">Door est.</th><th className="text-left px-4 py-3">LTV</th></tr>
+                  <tr><th className="text-left px-4 py-3">Guest</th><th className="text-left px-4 py-3">Visits</th><th className="text-left px-4 py-3">Door est.</th><th className="text-left px-4 py-3">LTV</th></tr>
                 </thead>
                 <tbody>
                   {ltv.topGuests.map((g) => (
                     <tr key={g.userId} className="border-t border-line">
                       <td className="px-4 py-3 font-bold">{g.name ?? g.email}</td>
                       <td className="px-4 py-3">{g.visits}</td>
-                      <td className="px-4 py-3">R{g.tableSpend.toLocaleString()}</td>
                       <td className="px-4 py-3">R{g.doorSpend.toLocaleString()}</td>
                       <td className="px-4 py-3 text-neon font-bold">R{g.ltv.toLocaleString()}</td>
                     </tr>

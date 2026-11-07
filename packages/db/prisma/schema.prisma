@@ -39,13 +39,6 @@ enum GuestListStatus {
   checked_in
 }
 
-enum TableBookingStatus {
-  pending
-  confirmed
-  seated
-  cancelled
-}
-
 enum CampaignStatus {
   draft
   scheduled
@@ -109,8 +102,6 @@ model User {
   managedVenues   Venue[]        @relation("VenueManagers")
   promotedEvents  Event[]        @relation("EventPromoter")
   guestLists      GuestList[]
-  tableBookings   TableBooking[] @relation("Booker")
-  tablesBookedFor TableBooking[] @relation("PromoterOfBooking")
   matches1        Match[]        @relation("MatchUser1")
   matches2        Match[]        @relation("MatchUser2")
   groupMessages   GroupMessage[]
@@ -135,7 +126,6 @@ model Venue {
   managerId String?
   manager   User?        @relation("VenueManagers", fields: [managerId], references: [id])
   events    Event[]
-  tables    VenueTable[]
   // Phase 2: staff/door ops via DoorLog
   doorLogs  DoorLog[]
   invoices  Invoice[]
@@ -169,7 +159,6 @@ model Event {
   venue                   Venue           @relation(fields: [venueId], references: [id])
   promoter                User            @relation("EventPromoter", fields: [promoterId], references: [id])
   guestLists              GuestList[]
-  tableBookings           TableBooking[]
   groupChat               EventGroupChat?
   campaigns               Campaign[]
   artistBookings          ArtistBooking[]
@@ -200,41 +189,6 @@ model GuestList {
 
   @@unique([eventId, userId])
   @@index([eventId, status])
-}
-
-model VenueTable {
-  id          String         @id @default(cuid())
-  venueId     String
-  tableNumber String
-  capacity    Int
-  minSpend    Int            @default(0)
-  venue       Venue          @relation(fields: [venueId], references: [id])
-  bookings    TableBooking[]
-
-  @@unique([venueId, tableNumber])
-}
-
-model TableBooking {
-  id                 String             @id @default(cuid())
-  eventId            String
-  userId             String
-  promoterId         String
-  venueTableId       String
-  tableNumber        String
-  bottleServiceNotes String?
-  status             TableBookingStatus @default(pending)
-  value              Int                @default(0) // minor units / currency per config
-  venueRevenuePct    Int                @default(30)
-  sourceCampaignId   String?
-  sourceCampaign     Campaign?          @relation(fields: [sourceCampaignId], references: [id])
-  event              Event              @relation(fields: [eventId], references: [id])
-  user               User               @relation("Booker", fields: [userId], references: [id])
-  promoter           User               @relation("PromoterOfBooking", fields: [promoterId], references: [id])
-  venueTable         VenueTable         @relation(fields: [venueTableId], references: [id])
-  createdAt          DateTime           @default(now())
-
-  @@index([eventId])
-  @@index([promoterId])
 }
 
 model Match {
@@ -311,7 +265,6 @@ model Campaign {
   createdAt     DateTime       @default(now())
   emailJobs     EmailJob[]
   guestLists    GuestList[]
-  tableBookings TableBooking[]
 
   @@index([flow, status])
 }

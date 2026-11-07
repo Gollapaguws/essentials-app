@@ -1,15 +1,9 @@
-import { Controller, Get, Post, Patch, Body, Param, Delete, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from "@nestjs/common";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { VenuesService } from "./venues.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
-
-class TableDto {
-  @IsString() tableNumber!: string;
-  @IsInt() @Min(1) capacity!: number;
-  @IsInt() @Min(0) minSpend!: number;
-}
 
 /** Promoters create the venues they run nights at; they become its manager. */
 class CreateVenueDto {
@@ -69,24 +63,6 @@ export class VenuesController {
   @Auth("venue_manager", "promoter", "admin")
   update(@CurrentUser() user: JwtUser, @Param("venueId") venueId: string, @Body() dto: VenueDetailsDto) {
     return this.venues.updateVenue(user, venueId, dto);
-  }
-
-  @Get(":venueId/tables")
-  @Auth("venue_manager", "admin")
-  tables(@CurrentUser() user: JwtUser, @Param("venueId") venueId: string) {
-    return this.venues.listTables(user, venueId);
-  }
-
-  @Post(":venueId/tables")
-  @Auth("venue_manager", "admin")
-  upsertTable(@CurrentUser() user: JwtUser, @Param("venueId") venueId: string, @Body() dto: TableDto) {
-    return this.venues.upsertTable(user, venueId, dto);
-  }
-
-  @Delete(":venueId/tables/:tableNumber")
-  @Auth("venue_manager", "admin")
-  deleteTable(@CurrentUser() user: JwtUser, @Param("venueId") venueId: string, @Param("tableNumber") tableNumber: string) {
-    return this.venues.deleteTable(user, venueId, tableNumber);
   }
 
   @Get(":venueId/door-logs")

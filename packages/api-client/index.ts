@@ -108,4 +108,3 @@ export interface RsvpResult { status: "attending" | "waitlisted"; going: number;
 export interface DoorPass { eventId: string; qrToken: string; headcount: number }
 export interface LoyaltyStatus { label: string; cycleVisits: number; target: number; remaining: number; freeEntries: number }
 export interface ReferralInfo { code: string; link: string; invited: number; rewarded: number }
-export interface VenueTableDto { id: string; tableNumber: string; capacity: number; minSpend: number; available: boolean }

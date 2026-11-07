@@ -115,24 +115,15 @@ export class EmailEngineService {
     });
   }
 
-  /** Campaign attribution: guest-list joins and table bookings it generated. */
+  /** Campaign attribution: guest-list joins it generated. */
   async attribution(user: JwtUser, campaignId: string) {
     const campaign = await prisma.campaign.findUniqueOrThrow({ where: { id: campaignId }, include: { event: true, segment: true } });
     if (!campaign) throw new NotFoundException("Campaign not found");
     if (user.role !== "admin" && campaign.event && campaign.event.promoterId !== user.sub) throw new ForbiddenException();
-    const [joins, bookings] = await Promise.all([
-      prisma.guestList.count({ where: { sourceCampaignId: campaignId } }),
-      prisma.tableBooking.aggregate({
-        where: { sourceCampaignId: campaignId },
-        _count: true,
-        _sum: { value: true },
-      }),
-    ]);
+    const joins = await prisma.guestList.count({ where: { sourceCampaignId: campaignId } });
     return {
       campaign: { id: campaign.id, name: campaign.name, flow: campaign.flow, status: campaign.status, sentCount: campaign.sentCount },
       guestListJoins: joins,
-      tableBookings: bookings._count,
-      tableRevenue: bookings._sum.value ?? 0,
     };
   }
 

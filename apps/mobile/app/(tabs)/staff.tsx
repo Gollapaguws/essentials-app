@@ -10,7 +10,7 @@ interface StaffEvent {
   status: string;
   capacity: number;
   venue: { name: string };
-  _count: { guestLists: number; tableBookings: number };
+  _count: { guestLists: number };
 }
 
 /**
@@ -119,9 +119,6 @@ export default function Staff() {
               ]}
             />
           </View>
-          <Text style={{ color: colors.muted, marginTop: 8 }}>
-            {item._count.tableBookings} table bookings
-          </Text>
         </View>
       )}
     />

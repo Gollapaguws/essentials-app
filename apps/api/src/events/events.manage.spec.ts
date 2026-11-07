@@ -43,7 +43,7 @@ describe("EventsService.listForPromoter", () => {
           slot("slot-4", 495, []),
         ],
         venue: { name: "The Vault" },
-        _count: { guestLists: 0, tableBookings: 0 },
+        _count: { guestLists: 0 },
       },
     ]);
 

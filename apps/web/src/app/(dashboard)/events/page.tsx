@@ -23,7 +23,7 @@ interface EventRow {
   slots: EventSlotRow[];
   committed: number;
   venue: { name: string };
-  _count: { guestLists: number; tableBookings: number };
+  _count: { guestLists: number };
 }
 
 interface VenueOption {
@@ -101,7 +101,7 @@ export default function EventManager() {
 
   const cancel = async (event: EventRow) => {
     const label = `${event.title} (${new Date(event.date).toLocaleDateString()})`;
-    if (!window.confirm(`Cancel ${label}?\n\nGuest lists, door scans and table bookings stay; the night just drops off the guest feed and reminders.`)) return;
+    if (!window.confirm(`Cancel ${label}?\n\nGuest lists and door scans stay; the night just drops off the guest feed and reminders.`)) return;
     setError(null);
     try {
       await api.post(`/events/${event.id}/cancel`);
@@ -123,7 +123,7 @@ export default function EventManager() {
 
   const remove = async (event: EventRow) => {
     const label = `${event.title} (${new Date(event.date).toLocaleDateString()})`;
-    if (!window.confirm(`Delete ${label}?\n\nIts guest list, table bookings, chat and promotions go with it. This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${label}?\n\nIts guest list, chat and promotions go with it. This cannot be undone.`)) return;
     setError(null);
     try {
       await api.del(`/events/${event.id}`);

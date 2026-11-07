@@ -12,8 +12,6 @@ interface Campaign {
 }
 interface Attribution {
   guestListJoins: number;
-  tableBookings: number;
-  tableRevenue: number;
   campaign: { name: string; sentCount: number };
 }
 
@@ -75,8 +73,7 @@ export default function EmailEngine() {
           <div className="border border-neon/40 bg-surface rounded-xl p-4">
             <h2 className="font-bold text-neon">Attribution · {attr.campaign.name}</h2>
             <p className="mt-2 text-sm">
-              Guest-list joins: <strong>{attr.guestListJoins}</strong> · Table bookings: <strong>{attr.tableBookings}</strong> ·
-              Table revenue: <strong>R{attr.tableRevenue.toLocaleString()}</strong> · Sent: {attr.campaign.sentCount}
+              Guest-list joins: <strong>{attr.guestListJoins}</strong> · Sent: {attr.campaign.sentCount}
             </p>
           </div>
         )}

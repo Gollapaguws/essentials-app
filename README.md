@@ -7,7 +7,7 @@ schema hooks already in place — see `packages/db/prisma/schema.prisma`.
 
 ## Stack
 - `apps/mobile` — Expo guest app: onboarding (email link or Google → invite code → profile), events
-  feed with live headcount, RSVP/waitlist, QR door pass, VIP table booking, loyalty counter
+  feed with live headcount, RSVP/waitlist, QR door pass, loyalty counter
   ("3/5 events — 2 to free entry") + referral link.
 - `apps/web` — Next.js 14 promoter dashboard: Recharts analytics (RSVPs, door vs list,
   no-show rate, table revenue per event, revenue per venue), event manager, email engine

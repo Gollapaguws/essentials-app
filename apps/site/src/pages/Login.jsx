@@ -38,7 +38,7 @@ export default function Login() {
   return (
     <AuthLayout
       title="SIGN IN"
-      subtitle="Your guest list, door pass and table bookings are behind this door."
+      subtitle="Your guest list and door pass are behind this door."
       footer={
         <div className="noir-auth-foot noir-auth-foot--split">
           <Link to="/forgot-password" className="noir-quiet-link">

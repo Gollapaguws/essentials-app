@@ -37,7 +37,6 @@ describe("ArtistsService.settlements", () => {
         date: new Date("2027-03-13T00:00:00.000Z"),
         budget: 900,
         venue: { name: "The Vault" },
-        tableBookings: [{ value: 3000 }],
         artistBookings: [
           {
             id: "b1",
@@ -76,8 +75,6 @@ describe("ArtistsService.settlements", () => {
       invoiced: 495,
       paid: 200,
       outstanding: 790,
-      revenue: 3000,
-      margin: 2010,
       overBudget: true,
     });
     expect(result.totals).toMatchObject({
@@ -85,8 +82,6 @@ describe("ArtistsService.settlements", () => {
       invoiced: 495,
       paid: 200,
       outstanding: 790,
-      revenue: 3000,
-      margin: 2010,
       nights: 1,
     });
     // Only agreed money is a settlement: pending and cancelled applications are not queried.
@@ -103,7 +98,6 @@ describe("ArtistsService.settlements", () => {
         date: new Date(),
         budget: 0,
         venue: { name: "The Vault" },
-        tableBookings: [],
         artistBookings: [
           {
             id: "b1",
@@ -121,7 +115,7 @@ describe("ArtistsService.settlements", () => {
 
     const result = await service().settlements(promoter);
 
-    expect(result.events[0]).toMatchObject({ paid: 300, outstanding: 0, revenue: 0, margin: -300, overBudget: false });
+    expect(result.events[0]).toMatchObject({ paid: 300, outstanding: 0, overBudget: false });
   });
 });
 

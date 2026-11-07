@@ -4,7 +4,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
   title: "ESSENTIALS · Promoter Dashboard",
-  description: "Nightlife promoter platform — events, guest lists, tables, email engine.",
+  description: "Nightlife promoter platform — events, guest lists and email engine.",
 };
 
 export default function RootLayout({ children }: { children: import("react").ReactNode }) {

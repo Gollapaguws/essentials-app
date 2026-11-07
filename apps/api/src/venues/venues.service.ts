@@ -41,7 +41,7 @@ export class VenuesService {
   async myVenues(user: JwtUser) {
     return prisma.venue.findMany({
       where: user.role === "admin" ? {} : { managerId: user.sub },
-      include: { _count: { select: { events: true, tables: true } } },
+      include: { _count: { select: { events: true } } },
     });
   }
 
@@ -187,32 +187,6 @@ export class VenuesService {
     });
   }
 
-  async listTables(user: JwtUser, venueId: string) {
-    await this.assertManager(venueId, user);
-    return prisma.venueTable.findMany({ where: { venueId }, orderBy: { tableNumber: "asc" } });
-  }
-
-  async upsertTable(user: JwtUser, venueId: string, data: { tableNumber: string; capacity: number; minSpend: number }) {
-    await this.assertManager(venueId, user);
-    return prisma.venueTable.upsert({
-      where: { venueId_tableNumber: { venueId, tableNumber: data.tableNumber } },
-      update: { capacity: data.capacity, minSpend: data.minSpend },
-      create: { venueId, ...data },
-    });
-  }
-
-  async deleteTable(user: JwtUser, venueId: string, tableNumber: string) {
-    await this.assertManager(venueId, user);
-    const table = await prisma.venueTable.findUnique({ where: { venueId_tableNumber: { venueId, tableNumber } } });
-    if (!table) throw new NotFoundException("Table not found");
-    const booked = await prisma.tableBooking.findFirst({
-      where: { venueTableId: table.id, status: { in: ["pending", "confirmed", "seated"] } },
-    });
-    if (booked) throw new BadRequestException("Table has active bookings");
-    await prisma.venueTable.delete({ where: { id: table.id } });
-    return { ok: true };
-  }
-
   /** Staff/door ops monitor: recent scans for the venue's events. */
   async doorLogs(user: JwtUser, venueId: string) {
     await this.assertManager(venueId, user);
@@ -223,37 +197,28 @@ export class VenuesService {
     });
   }
 
-  /** Venue analytics incl. revenue splits (venue vs promoter on tables). */
+  /** Venue analytics: how each night at this room filled and turned up. */
   async analytics(user: JwtUser, venueId: string) {
     await this.assertManager(venueId, user);
     const events = await prisma.event.findMany({
       where: { venueId },
-      include: { guestLists: true, tableBookings: true },
+      include: { guestLists: true },
       orderBy: { date: "desc" },
     });
 
-    const perEvent = events.map((e) => {
-      const tableRevenue = e.tableBookings.reduce((s, b) => s + b.value, 0);
-      const venueTake = e.tableBookings.reduce((s, b) => s + Math.round((b.value * b.venueRevenuePct) / 100), 0);
-      return {
-        name: e.title,
-        date: e.date,
-        status: e.status,
-        rsvps: e.guestLists.length,
-        checkedIn: e.guestLists.filter((g) => g.status === "checked_in").length,
-        tableRevenue,
-        venueRevenue: venueTake,
-        promoterRevenue: tableRevenue - venueTake,
-      };
-    });
+    const perEvent = events.map((e) => ({
+      name: e.title,
+      date: e.date,
+      status: e.status,
+      rsvps: e.guestLists.length,
+      checkedIn: e.guestLists.filter((g) => g.status === "checked_in").length,
+    }));
 
     return {
       totals: {
         events: events.length,
         rsvps: perEvent.reduce((s, e) => s + e.rsvps, 0),
         checkedIn: perEvent.reduce((s, e) => s + e.checkedIn, 0),
-        tableRevenue: perEvent.reduce((s, e) => s + e.tableRevenue, 0),
-        venueRevenue: perEvent.reduce((s, e) => s + e.venueRevenue, 0),
       },
       perEvent,
     };

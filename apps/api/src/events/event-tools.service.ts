@@ -115,7 +115,6 @@ export class EventToolsService {
       await tx.bookingRouteLeg.deleteMany({ where: { bookingId: { in: bookings.map((b) => b.id) } } });
       await tx.artistBooking.deleteMany({ where: { eventId } });
       await tx.guestList.deleteMany({ where: { eventId } });
-      await tx.tableBooking.deleteMany({ where: { eventId } });
       await tx.match.deleteMany({ where: { eventId } });
       await tx.doorLog.deleteMany({ where: { eventId } });
       // Campaigns may already have been sent, so keep them and just drop the link.

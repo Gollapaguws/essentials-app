@@ -11,9 +11,9 @@ import { errorMessage } from "@/lib/errors";
 
 interface PacingRow { eventId: string; title: string; rsvps: number; previousRsvps: number | null; ratio: number | null; alert: boolean }
 interface Overview {
-  totals: { events: number; rsvps: number; checkedIn: number; waitlisted: number; noShowRate: number; listToDoorConversion: number; tableRevenue: number };
-  perEvent: { name: string; rsvps: number; door: number; noShows: number; tableRevenue: number; conversion: number }[];
-  perVenue: { venue: string; events: number; tableRevenue: number; rsvps: number }[];
+  totals: { events: number; rsvps: number; checkedIn: number; waitlisted: number; noShowRate: number; listToDoorConversion: number };
+  perEvent: { name: string; rsvps: number; door: number; noShows: number; conversion: number }[];
+  perVenue: { venue: string; events: number; rsvps: number }[];
 }
 
 export default function Dashboard() {

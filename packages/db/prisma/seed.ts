@@ -53,18 +53,6 @@ async function main() {
     },
   });
 
-  for (const t of [
-    { tableNumber: "T1", capacity: 6, minSpend: 5000 },
-    { tableNumber: "T2", capacity: 8, minSpend: 8000 },
-    { tableNumber: "T3", capacity: 4, minSpend: 3500 },
-  ]) {
-    await prisma.venueTable.upsert({
-      where: { venueId_tableNumber: { venueId: venue.id, tableNumber: t.tableNumber } },
-      update: {},
-      create: { venueId: venue.id, ...t },
-    });
-  }
-
   const demoEvent = await prisma.event.upsert({
     where: { id: "demo-event" },
     update: {},

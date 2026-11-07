@@ -15,7 +15,7 @@ const links: NavLink[] = [
   {
     href: "/",
     label: "Analytics",
-    hint: "Tonight at a glance: RSVPs, check-ins, table revenue, venue and promoter splits, plus events pacing off target.",
+    hint: "Tonight at a glance: RSVPs, check-ins and how each event is pacing against the last one.",
     roles: ["promoter", "admin"],
   },
   {

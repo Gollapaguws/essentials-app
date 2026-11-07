@@ -35,15 +35,12 @@ export class SiteStatsService {
       where: { id: user.sub },
       include: {
         guestLists: { include: { event: { select: { title: true, date: true } } } },
-        tableBookings: false,
         loyaltyVisits: true,
-        referrals: { select: { refereeEmail: true, rewardIssued: true, createdAt: true } },
+        referralsGiven: { select: { refereeEmail: true, rewardIssued: true, createdAt: true } },
         consentRecords: true,
       },
-    } as never);
+    });
     if (!u) throw new BadRequestException("No account");
-    // strip non-public relations and table bookings (feature retired)
-    const { tableBookings: _t, ...data } = u as never as Record<string, unknown>;
-    return data;
+    return u;
   }
 }
