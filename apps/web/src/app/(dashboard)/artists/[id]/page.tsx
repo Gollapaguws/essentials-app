@@ -41,12 +41,27 @@ interface ArtistDetail {
 const statusClass = (status: string) =>
   status === "confirmed" ? "text-neon" : status === "pending" ? "text-yellow-400" : "text-neutral-500";
 
+/** A note is a judgement made at a moment: its age is part of the information. */
+function noteAge(iso: string) {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) return "Updated today";
+  if (days === 1) return "Updated yesterday";
+  if (days < 30) return `Updated ${days} days ago`;
+  const months = Math.round(days / 30);
+  return `Updated ${months} month${months === 1 ? "" : "s"} ago`;
+}
+
+/** Past this, the note is old enough that the DJ may have changed. */
+const NOTE_STALE_DAYS = 90;
+const isStale = (iso: string) => Date.now() - new Date(iso).getTime() > NOTE_STALE_DAYS * 86_400_000;
+
 /** Promoter: one DJ in full, with the booking history an application is judged against. */
 export default function ArtistDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [artist, setArtist] = useState<ArtistDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [noteUpdatedAt, setNoteUpdatedAt] = useState<string | null>(null);
   const [noteState, setNoteState] = useState<"idle" | "saving" | "saved">("idle");
   const [noteError, setNoteError] = useState<string | null>(null);
 
@@ -57,6 +72,7 @@ export default function ArtistDetailPage() {
       .then((a) => {
         setArtist(a);
         setNote(a.note?.body ?? "");
+        setNoteUpdatedAt(a.note?.updatedAt ?? null);
       })
       .catch((e) => setError(errorMessage(e)));
   }, [id]);
@@ -66,7 +82,10 @@ export default function ArtistDetailPage() {
     setNoteState("saving");
     setNoteError(null);
     try {
-      await api.patch(`/artists/${id}/note`, { body: note });
+      const saved = await api.patch<{ note: ArtistNote | null }>(`/artists/${id}/note`, { body: note });
+      // Server trims, and clearing returns null: mirror both so the age is honest.
+      setNote(saved.note?.body ?? "");
+      setNoteUpdatedAt(saved.note?.updatedAt ?? null);
       setNoteState("saved");
     } catch (e) {
       setNoteError(errorMessage(e));
@@ -115,6 +134,12 @@ export default function ArtistDetailPage() {
                   Only you can see this — it appears when this DJ applies again.
                 </span>
               </div>
+              {noteUpdatedAt && (
+                <p className={isStale(noteUpdatedAt) ? "text-yellow-400 text-xs" : "text-neutral-500 text-xs"}>
+                  {noteAge(noteUpdatedAt)}
+                  {isStale(noteUpdatedAt) ? " — this judgement may be out of date." : ""}
+                </p>
+              )}
               <textarea
                 value={note}
                 onChange={(e) => {
