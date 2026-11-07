@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Patch, UseGuards } from "@nestjs/common";
+import { Controller, Get, Post, Body, Param, Delete, Patch, Query, HttpCode, UseGuards } from "@nestjs/common";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { EventsService } from "./events.service";
 import { EventToolsService } from "./event-tools.service";
@@ -31,6 +31,10 @@ class CreateEventDto {
   @IsOptional() @IsInt() @Min(15) slotMinutes?: number;
   /** "HH:MM" — when the first slot starts on the event date. */
   @IsOptional() @IsString() slotStart?: string;
+}
+
+class DoorCheckInDto {
+  @IsString() guestListId!: string;
 }
 
 class SlotFeeDto {
@@ -83,6 +87,21 @@ export class EventsController {
   @Post("check-in")
   checkIn(@CurrentUser() user: JwtUser, @Body("qrToken") qrToken: string) {
     return this.events.checkIn(qrToken, user);
+  }
+
+  /** Promoter/venue: the door list, searchable by guest name or email. */
+  @Get(":id/guest-list")
+  @Auth("promoter", "venue_manager", "admin")
+  guestList(@Param("id") id: string, @CurrentUser() user: JwtUser, @Query("q") q?: string) {
+    return this.events.guestList(user, id, q?.trim() || undefined);
+  }
+
+  /** Promoter/venue: check a guest in by list entry, no QR scanner needed. */
+  @Post(":id/check-in-guest")
+  @HttpCode(200)
+  @Auth("promoter", "venue_manager", "admin")
+  checkInGuest(@Param("id") id: string, @CurrentUser() user: JwtUser, @Body() dto: DoorCheckInDto) {
+    return this.events.checkInGuest(user, id, dto.guestListId);
   }
 
   @Post()

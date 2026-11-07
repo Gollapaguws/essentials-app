@@ -28,13 +28,23 @@ interface EventSettlement {
   invoiced: number;
   paid: number;
   outstanding: number;
+  revenue: number;
+  margin: number;
   overBudget: boolean;
   gigs: Gig[];
 }
 
 interface Settlements {
   events: EventSettlement[];
-  totals: { committed: number; invoiced: number; paid: number; outstanding: number; nights: number };
+  totals: {
+    committed: number;
+    invoiced: number;
+    paid: number;
+    outstanding: number;
+    revenue: number;
+    margin: number;
+    nights: number;
+  };
 }
 
 const rand = (v: number) => `R${v.toLocaleString()}`;
@@ -61,7 +71,7 @@ export default function Settlements() {
           <h1 className="text-2xl font-black tracking-wide">SETTLEMENTS</h1>
           <p className="text-neutral-500 text-xs mt-1">
             DJ fees you have agreed per night, what the DJs have invoiced the venue, what has been
-            paid, and what is still outstanding.
+            paid, what is still outstanding, and the margin left after table revenue.
           </p>
         </div>
 
@@ -72,6 +82,8 @@ export default function Settlements() {
           <Stat label="Invoiced" value={rand(totals?.invoiced ?? 0)} />
           <Stat label="Paid" value={rand(totals?.paid ?? 0)} />
           <Stat label="Outstanding" value={rand(totals?.outstanding ?? 0)} />
+          <Stat label="Table revenue" value={rand(totals?.revenue ?? 0)} />
+          <Stat label="Margin" value={rand(totals?.margin ?? 0)} />
         </div>
 
         <div className="border border-line rounded-xl overflow-x-auto">
@@ -83,6 +95,8 @@ export default function Settlements() {
                 <th className="text-right px-4 py-3">Invoiced</th>
                 <th className="text-right px-4 py-3">Paid</th>
                 <th className="text-right px-4 py-3">Outstanding</th>
+                <th className="text-right px-4 py-3">Revenue</th>
+                <th className="text-right px-4 py-3">Margin</th>
               </tr>
             </thead>
             <tbody>
@@ -114,11 +128,15 @@ export default function Settlements() {
                   <td className="px-4 py-3 text-right">{rand(e.invoiced)}</td>
                   <td className="px-4 py-3 text-right text-neon">{rand(e.paid)}</td>
                   <td className="px-4 py-3 text-right">{rand(e.outstanding)}</td>
+                  <td className="px-4 py-3 text-right">{rand(e.revenue)}</td>
+                  <td className={`px-4 py-3 text-right ${e.margin < 0 ? "text-red-400" : "text-neon"}`}>
+                    {rand(e.margin)}
+                  </td>
                 </tr>
               ))}
               {data && !data.events.length && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-neutral-500">
+                  <td colSpan={7} className="px-4 py-6 text-center text-neutral-500">
                     No confirmed DJ fees yet.
                   </td>
                 </tr>

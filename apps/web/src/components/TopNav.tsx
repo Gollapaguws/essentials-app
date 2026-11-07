@@ -109,6 +109,12 @@ const links: NavLink[] = [
     roles: ["promoter", "admin"],
   },
   {
+    href: "/door",
+    label: "Door",
+    hint: "Search the guest list by name or email and check people in without a scanner.",
+    roles: ["promoter", "venue_manager", "admin"],
+  },
+  {
     href: "/settlements",
     label: "Settlements",
     hint: "Per night: DJ fees agreed, invoiced, paid by the venue, and still outstanding.",

@@ -446,6 +446,7 @@ export class ArtistsService {
         date: true,
         budget: true,
         venue: { select: { name: true } },
+        tableBookings: { where: { status: { not: "cancelled" } }, select: { value: true } },
         artistBookings: {
           where: { status: { in: ["confirmed", "completed"] } },
           orderBy: { startAt: "asc" },
@@ -499,6 +500,9 @@ export class ArtistsService {
       const committed = sum(gigs.map((g) => g.fee));
       const invoiced = sum(gigs.map((g) => g.invoice?.total ?? 0));
       const paid = sum(gigs.map((g) => g.paid));
+      // Table bookings are the money the night brings in, so margin is what the
+      // promoter actually keeps after the DJ fees they agreed.
+      const revenue = sum(e.tableBookings.map((t) => t.value));
       return {
         id: e.id,
         title: e.title,
@@ -510,6 +514,10 @@ export class ArtistsService {
         paid,
         /** Agreed fees the venues have not paid yet. */
         outstanding: committed - paid,
+        /** Table booking value for the night. */
+        revenue,
+        /** Revenue left after the agreed DJ fees. */
+        margin: revenue - committed,
         overBudget: e.budget > 0 && committed > e.budget,
         gigs,
       };
@@ -522,6 +530,8 @@ export class ArtistsService {
         invoiced: sum(rows.map((r) => r.invoiced)),
         paid: sum(rows.map((r) => r.paid)),
         outstanding: sum(rows.map((r) => r.outstanding)),
+        revenue: sum(rows.map((r) => r.revenue)),
+        margin: sum(rows.map((r) => r.margin)),
         nights: rows.length,
       },
     };

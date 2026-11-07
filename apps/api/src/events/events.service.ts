@@ -177,6 +177,79 @@ export class EventsService {
     return { result: "ok" as const, guest: entry.user.name, headcount: entry.headcount };
   }
 
+  /**
+   * Door list for one night: who is coming, what they are on, and whether they
+   * are already inside. Searching is name or email, so a door host can find a
+   * guest without their phone or QR.
+   */
+  async guestList(user: JwtUser, eventId: string, query?: string) {
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: { venue: { select: { managerId: true } } },
+    });
+    if (!event) throw new NotFoundException("Event not found");
+    this.assertCanManage(event.promoterId, event.venue.managerId, user);
+
+    const rows = await prisma.guestList.findMany({
+      where: {
+        eventId,
+        ...(query
+          ? {
+              user: {
+                OR: [
+                  { name: { contains: query, mode: "insensitive" as const } },
+                  { email: { contains: query, mode: "insensitive" as const } },
+                ],
+              },
+            }
+          : {}),
+      },
+      include: { user: { select: { name: true, email: true, avatar: true } } },
+      orderBy: [{ status: "asc" }, { createdAt: "asc" }],
+      take: 200,
+    });
+
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.user.name,
+      email: r.user.email,
+      avatar: r.user.avatar,
+      headcount: r.headcount,
+      status: r.status,
+      checkedInAt: r.checkedInAt,
+    }));
+  }
+
+  /** Door host confirms a guest by name, without scanning their QR. */
+  async checkInGuest(user: JwtUser, eventId: string, guestListId: string) {
+    const entry = await prisma.guestList.findFirst({
+      where: { id: guestListId, eventId },
+      include: {
+        event: { include: { venue: { select: { managerId: true } } } },
+        user: { select: { name: true } },
+      },
+    });
+    if (!entry) throw new NotFoundException("Guest not on this list");
+    this.assertCanManage(entry.event.promoterId, entry.event.venue.managerId, user);
+
+    if (entry.status === "checked_in") return { result: "duplicate" as const, guest: entry.user.name };
+    await prisma.guestList.update({
+      where: { id: entry.id },
+      data: { status: "checked_in", checkedInAt: new Date() },
+    });
+    await prisma.doorLog.create({
+      data: {
+        venueId: entry.event.venueId,
+        eventId,
+        scannedBy: user.sub,
+        qrToken: entry.qrCode ?? entry.id,
+        result: "ok",
+      },
+    });
+    void this.loyalty.recordVisit(entry.userId, eventId);
+    return { result: "ok" as const, guest: entry.user.name, headcount: entry.headcount };
+  }
+
   /** CRUD for promoters. */
   async create(user: JwtUser, data: {
     venueId: string; title: string; description?: string; date: string | Date;
