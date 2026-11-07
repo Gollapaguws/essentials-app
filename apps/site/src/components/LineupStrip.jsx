@@ -1,15 +1,12 @@
-const ticketHref = (event) =>
-  `mailto:bookings@essentials.co.za?subject=${encodeURIComponent(
-    `Tickets — ${event.title} (${event.displayDate}, ${event.city})`
-  )}`;
-
 export default function LineupStrip({ events = [] }) {
   const hasEvents = events.length > 0;
 
   return (
     <section id="lineup" className="noir-sec">
       <div className="noir-sec-head">
-        <span className="noir-micro">{hasEvents ? "SEASON 07" : "DATES TBA"}</span>
+        <span className="noir-micro">
+          {hasEvents ? "SEASON 07" : "DATES TBA"}
+        </span>
         <h2 className="noir-h2">THE LINEUP</h2>
       </div>
 
@@ -27,8 +24,21 @@ export default function LineupStrip({ events = [] }) {
                   <span className="noir-micro">Doors {event.doors}</span>
                   <span className="noir-micro">{event.status}</span>
                 </span>
-                <a href={ticketHref(event)} className="noir-ticket">
-                  TICKETS — {event.price}
+                <a
+                  href={`/events/${event.id}`}
+                  className="noir-ticket"
+                >
+                  VIEW THE NIGHT
+                </a>
+                <a
+                  href={
+                    `mailto:bookings@essentials.co.za?subject=${encodeURIComponent(
+                      `Tickets — ${event.title} (${event.displayDate}, ${event.city})`
+                    )}`
+                  }
+                  className="noir-ticket-link"
+                >
+                  TICKETS →
                 </a>
               </article>
             ))
