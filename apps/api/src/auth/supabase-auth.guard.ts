@@ -46,6 +46,10 @@ export class SupabaseAuthGuard implements CanActivate {
 
     // Every controller treats `sub` as the Prisma User id (owners, promoterId,
     // guestList.userId...). Keep the Supabase uid available as `authUid`.
+    // Invalidate any prior session for this user to prevent session fixation:
+    // if an attacker had a prior session for this user, it gets cleared below.
+    await this.authUsers.invalidateById(identity?.id ?? session.sub);
+
     req.user = {
       ...session,
       sub: identity?.id ?? session.sub,
