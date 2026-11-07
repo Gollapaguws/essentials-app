@@ -106,6 +106,13 @@ export class ArtistsController {
     return this.artists.updateBooking(user, id, { status });
   }
 
+  /** Promoter: one DJ's full profile and every booking they have had, for judging an application. */
+  @Get(":id")
+  @Auth("promoter", "admin")
+  detail(@Param("id") id: string) {
+    return this.artists.artistDetail(id);
+  }
+
   private requestOrigin(req: Request) {
     return `${req.protocol}://${req.get("host")}`;
   }

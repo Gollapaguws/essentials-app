@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
@@ -66,7 +67,9 @@ export default function ArtistRoster() {
                         )}
                       </div>
                       <div>
-                        <p className="font-bold">{a.stageName}</p>
+                        <Link href={`/dashboard/artists/${a.id}`} className="font-bold hover:text-neon">
+                          {a.stageName}
+                        </Link>
                         {a.bio && <p className="text-neutral-500 text-xs max-w-xs line-clamp-2">{a.bio}</p>}
                       </div>
                     </div>

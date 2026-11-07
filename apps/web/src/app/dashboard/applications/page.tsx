@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 
 interface Application {
   id: string; slot?: string | null; status: string; appliedAt?: string;
-  artist: { stageName: string; user: { name: string | null; email: string } };
+  artist: { id: string; stageName: string; user: { name: string | null; email: string } };
   event: { title: string; date: string };
 }
 
@@ -37,7 +38,16 @@ export default function Applications() {
           {apps.map((a) => (
             <div key={a.id} className="border-t border-line px-4 py-3 text-sm flex flex-wrap justify-between gap-2">
               <div>
-                <p className="font-bold">{a.artist.stageName} <span className="text-neutral-500 font-normal">· {a.slot ?? "slot TBA"}</span></p>
+                <p className="font-bold">
+                  <Link
+                    href={`/dashboard/artists/${a.artist.id}`}
+                    className="underline decoration-line hover:text-neon"
+                    title="Full profile and booking history"
+                  >
+                    {a.artist.stageName}
+                  </Link>{" "}
+                  <span className="text-neutral-500 font-normal">· {a.slot ?? "slot TBA"}</span>
+                </p>
                 <p className="text-neutral-500 text-xs">{a.event.title} · {new Date(a.event.date).toLocaleDateString()} · {a.artist.user.email}</p>
               </div>
               <div className="flex items-center gap-3">

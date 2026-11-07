@@ -78,6 +78,51 @@ export class ArtistsService {
   }
 
   /**
+   * Promoter: one DJ in full — profile, travel terms and their whole booking
+   * history (pending, confirmed and cancelled), newest first.
+   */
+  async artistDetail(artistId: string) {
+    const profile = await prisma.artistProfile.findUnique({
+      where: { id: artistId },
+      include: {
+        user: { select: { name: true, email: true } },
+        bookings: {
+          orderBy: { startAt: "desc" },
+          include: {
+            event: {
+              select: {
+                id: true,
+                title: true,
+                date: true,
+                status: true,
+                venue: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!profile) throw new NotFoundException("Artist not found");
+
+    const { bookings, ...artist } = profile;
+    return {
+      ...artist,
+      confirmedGigs: bookings.filter((b) => b.status === ArtistBookingStatus.confirmed).length,
+      bookings: bookings.map((b) => ({
+        id: b.id,
+        slot: b.slot,
+        status: b.status,
+        startAt: b.startAt,
+        endAt: b.endAt,
+        appliedAt: b.appliedAt,
+        performanceFee: b.performanceFee,
+        travelFee: b.travelFee,
+        event: b.event,
+      })),
+    };
+  }
+
+  /**
    * Promoter roster: every DJ with the terms they book on (travel rate) and the
    * gigs they are already confirmed for, so an application can be judged in context.
    */
