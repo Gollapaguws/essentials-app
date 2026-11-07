@@ -77,6 +77,41 @@ export class ArtistsService {
     return prisma.artistProfile.findUnique({ where: { userId: user.sub } });
   }
 
+  /**
+   * Promoter roster: every DJ with the terms they book on (travel rate) and the
+   * gigs they are already confirmed for, so an application can be judged in context.
+   */
+  async roster() {
+    const profiles = await prisma.artistProfile.findMany({
+      include: {
+        user: { select: { name: true, email: true } },
+        bookings: {
+          where: { status: ArtistBookingStatus.confirmed },
+          orderBy: { startAt: "asc" },
+          include: {
+            event: { select: { title: true, date: true, venue: { select: { name: true } } } },
+          },
+        },
+      },
+      orderBy: { stageName: "asc" },
+    });
+
+    const now = Date.now();
+    return profiles.map((p) => ({
+      id: p.id,
+      stageName: p.stageName,
+      bio: p.bio,
+      imageUrl: p.imageUrl,
+      travelRatePerKm: p.travelRatePerKm,
+      user: p.user,
+      confirmedGigs: p.bookings.length,
+      upcomingGigs: p.bookings
+        .filter((b) => b.startAt.getTime() >= now)
+        .slice(0, 3)
+        .map((b) => ({ id: b.id, slot: b.slot, startAt: b.startAt, event: b.event })),
+    }));
+  }
+
   async upsertProfile(user: JwtUser, data: { stageName: string; bio?: string; imageUrl?: string; vehicleConsumptionLPer100km?: number; travelRatePerKm?: number }, origin: string) {
     // An empty text field is a clear, not a missing one: store null so the UI hides it.
     const patch = {

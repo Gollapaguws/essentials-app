@@ -8,5 +8,8 @@ import { ArtistsModule } from "../artists/artists.module";
   imports: [NotificationsModule, ArtistsModule],
   controllers: [VenuesController],
   providers: [VenuesService],
+  // Events reuse the venue's approval effects when a promoter creates an event in
+  // a venue they manage: there, creation is the approval.
+  exports: [VenuesService],
 })
 export class VenuesModule {}

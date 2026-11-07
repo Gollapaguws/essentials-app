@@ -5,6 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useAuth } from "@/components/AuthProvider";
 
 interface Venue {
   id: string;
@@ -33,11 +34,18 @@ export default function VenuePortal() {
   const [tables, setTables] = useState<VenueTable[]>([]);
   const [logs, setLogs] = useState<DoorLog[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [tableForm, setTableForm] = useState({ tableNumber: "", capacity: 6, minSpend: 5000 });
   const [details, setDetails] = useState({ name: "", address: "", lat: "", lng: "" });
+  const [tableForm, setTableForm] = useState({ tableNumber: "", capacity: 6, minSpend: 5000 });
   const [busyDetails, setBusyDetails] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [busyCreate, setBusyCreate] = useState(false);
+  const [newVenue, setNewVenue] = useState({ name: "", address: "", capacity: "200", lat: "", lng: "" });
+  const { me } = useAuth();
+  // A promoter owns the venue's details and its event approvals; door scans and
+  // revenue splits stay the venue manager's view.
+  const showOps = me?.user.role !== "promoter";
 
   const selected = venues.find((v) => v.id === venueId) ?? null;
   const hasLocation = Boolean(selected && (selected.lat !== 0 || selected.lng !== 0));
@@ -128,6 +136,59 @@ export default function VenuePortal() {
     }
   };
 
+  const createVenue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setNotice(null);
+
+    const name = newVenue.name.trim();
+    if (!name) {
+      setError("Give the venue a name.");
+      return;
+    }
+    const capacity = Number(newVenue.capacity);
+    if (!Number.isInteger(capacity) || capacity < 1) {
+      setError("Capacity must be a whole number of at least 1.");
+      return;
+    }
+    const lat = newVenue.lat.trim();
+    const lng = newVenue.lng.trim();
+    if ((lat === "") !== (lng === "")) {
+      setError("Enter latitude and longitude together, or leave both blank until you have them.");
+      return;
+    }
+
+    const payload: { name: string; capacity: number; address?: string; lat?: number; lng?: number } = {
+      name,
+      capacity,
+    };
+    if (newVenue.address.trim()) payload.address = newVenue.address.trim();
+    if (lat !== "") {
+      const latNum = Number(lat);
+      const lngNum = Number(lng);
+      if (!Number.isFinite(latNum) || !Number.isFinite(lngNum) || Math.abs(latNum) > 90 || Math.abs(lngNum) > 180) {
+        setError("Latitude must be between -90 and 90, longitude between -180 and 180.");
+        return;
+      }
+      payload.lat = latNum;
+      payload.lng = lngNum;
+    }
+
+    setBusyCreate(true);
+    try {
+      const created = await api.post<Venue>("/venues", payload);
+      await refreshVenues(created.id);
+      loadVenue(created.id);
+      setCreating(false);
+      setNewVenue({ name: "", address: "", capacity: "200", lat: "", lng: "" });
+      setNotice(`${created.name} added. It is yours to manage from here.`);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusyCreate(false);
+    }
+  };
+
   const useMyLocation = () => {
     setError(null);
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -149,9 +210,99 @@ export default function VenuePortal() {
     <>
       <TopNav />
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
-        <h1 className="text-2xl font-black tracking-wide">VENUE PORTAL</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-black tracking-wide">VENUE PORTAL</h1>
+          {selected && !creating && (
+            <button
+              onClick={() => { setCreating(true); setError(null); setNotice(null); }}
+              className="border border-line rounded-lg px-4 py-2 text-sm font-bold text-neutral-300 hover:border-neon hover:text-neon"
+            >
+              ADD VENUE
+            </button>
+          )}
+        </div>
         {notice && <p className="text-neon text-sm">{notice}</p>}
         {error && <p className="text-red-400 text-sm">{error}</p>}
+
+        {/* A promoter books nights into rooms that may not exist in the app yet. */}
+        {(creating || !selected) && (
+          <section className="border border-line bg-surface rounded-xl p-4">
+            <h2 className="font-bold text-neon uppercase text-sm tracking-wider mb-3">Add a venue</h2>
+            <form onSubmit={createVenue} className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+              <label className="text-xs text-neutral-500 col-span-2 md:col-span-1">
+                Venue name
+                <input
+                  required
+                  className={`${field} w-full mt-1`}
+                  placeholder="The Vault"
+                  value={newVenue.name}
+                  onChange={(e) => setNewVenue({ ...newVenue, name: e.target.value })}
+                />
+              </label>
+              <label className="text-xs text-neutral-500 col-span-2">
+                Address
+                <input
+                  className={`${field} w-full mt-1`}
+                  placeholder="24 Fox Street, Johannesburg"
+                  value={newVenue.address}
+                  onChange={(e) => setNewVenue({ ...newVenue, address: e.target.value })}
+                />
+              </label>
+              <label className="text-xs text-neutral-500 col-span-2 md:col-span-1">
+                Capacity
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  className={`${field} w-full mt-1`}
+                  value={newVenue.capacity}
+                  onChange={(e) => setNewVenue({ ...newVenue, capacity: e.target.value })}
+                />
+              </label>
+              <label className="text-xs text-neutral-500">
+                Latitude
+                <input
+                  className={`${field} w-full mt-1`}
+                  inputMode="decimal"
+                  placeholder="-26.20410"
+                  value={newVenue.lat}
+                  onChange={(e) => setNewVenue({ ...newVenue, lat: e.target.value })}
+                />
+              </label>
+              <label className="text-xs text-neutral-500">
+                Longitude
+                <input
+                  className={`${field} w-full mt-1`}
+                  inputMode="decimal"
+                  placeholder="28.04730"
+                  value={newVenue.lng}
+                  onChange={(e) => setNewVenue({ ...newVenue, lng: e.target.value })}
+                />
+              </label>
+              <div className="col-span-2 md:col-span-4 flex flex-wrap items-center gap-3">
+                <button
+                  disabled={busyCreate}
+                  className="bg-neon text-bg font-black rounded-lg px-4 py-2 tracking-widest text-sm disabled:opacity-50"
+                >
+                  {busyCreate ? "CREATING…" : "CREATE VENUE"}
+                </button>
+                {selected && (
+                  <button
+                    type="button"
+                    onClick={() => { setCreating(false); setError(null); }}
+                    className="text-xs text-neutral-500 underline hover:text-neon"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <span className="text-xs text-neutral-500">
+                  Add coordinates now if you have them — DJ route planning measures between venues.
+                </span>
+              </div>
+            </form>
+          </section>
+        )}
+
         {venues.length > 1 && (
           <select className={field} value={venueId} onChange={(e) => loadVenue(e.target.value)}>
             {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
@@ -162,7 +313,7 @@ export default function VenuePortal() {
         <section className="border border-line bg-surface rounded-xl p-4">
           <h2 className="font-bold text-neon uppercase text-sm tracking-wider mb-3">Venue details &amp; location</h2>
           {!selected ? (
-            <p className="text-neutral-500 text-sm">No venue assigned to this account yet.</p>
+            <p className="text-neutral-500 text-sm">You have no venues yet. Add the first one above and you can run events there.</p>
           ) : (
             <>
               {!hasLocation && (
@@ -258,7 +409,7 @@ export default function VenuePortal() {
         </section>
 
         {/* Analytics + revenue splits */}
-        {analytics && (
+        {showOps && analytics && (
           <section className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <Stat label="Events" value={analytics.totals.events} />
@@ -295,6 +446,7 @@ export default function VenuePortal() {
         )}
 
         {/* Table inventory */}
+        {showOps && (
         <section className="border border-line bg-surface rounded-xl p-4">
           <h2 className="font-bold text-neon uppercase text-sm tracking-wider mb-3">Table inventory</h2>
           <form onSubmit={saveTable} className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
@@ -313,8 +465,10 @@ export default function VenuePortal() {
             {!tables.length && <p className="text-neutral-500 text-sm">No tables yet.</p>}
           </div>
         </section>
+        )}
 
         {/* Door ops */}
+        {showOps && (
         <section className="border border-line bg-surface rounded-xl p-4">
           <h2 className="font-bold text-neon uppercase text-sm tracking-wider mb-3">Door scan monitor (last 100)</h2>
           <div className="max-h-64 overflow-y-auto">
@@ -328,6 +482,7 @@ export default function VenuePortal() {
             {!logs.length && <p className="text-neutral-500 text-sm">No scans yet.</p>}
           </div>
         </section>
+        )}
       </main>
     </>
   );

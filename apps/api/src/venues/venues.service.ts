@@ -12,7 +12,18 @@ export interface VenueDetailsInput {
   lng?: number;
 }
 
-/** Phase 2 venue portal backend. All queries scoped: managers see only their venues; admin all. */
+export interface VenueCreateInput {
+  name: string;
+  address?: string;
+  capacity: number;
+  lat?: number;
+  lng?: number;
+}
+
+/**
+ * Phase 2 venue portal backend. All queries scoped: a venue is reachable only by
+ * the manager recorded on it (which includes a promoter who created it); admin all.
+ */
 @Injectable()
 export class VenuesService {
   constructor(
@@ -35,13 +46,44 @@ export class VenuesService {
   }
 
   /**
+   * Promoters create the rooms they run nights at. The creator becomes the
+   * venue's manager, so the event-approval workflow still has an owner and the
+   * venue portal can edit it later.
+   */
+  async create(user: JwtUser, input: VenueCreateInput) {
+    const name = input.name.trim();
+    if (!name) throw new BadRequestException("Venue name cannot be empty.");
+    if (!Number.isInteger(input.capacity) || input.capacity < 1) {
+      throw new BadRequestException("Capacity must be a whole number of at least 1.");
+    }
+    // One axis alone would put the venue on a meaningless line for routing.
+    if ((input.lat === undefined) !== (input.lng === undefined)) {
+      throw new BadRequestException(
+        "Send latitude and longitude together so DJ route planning stays correct.",
+      );
+    }
+
+    return prisma.venue.create({
+      data: {
+        name,
+        address: input.address?.trim() || null,
+        capacity: input.capacity,
+        // 0/0 is the existing "coordinates not set yet" sentinel (listForPicker).
+        lat: input.lat ?? 0,
+        lng: input.lng ?? 0,
+        managerId: user.sub,
+      },
+    });
+  }
+
+  /**
    * Picker for promoters creating an event. Venues without coordinates are
    * returned too (they still exist), flagged so the UI can warn: DJ routing
    * measures between venue locations.
    */
   async listForPicker() {
     const venues = await prisma.venue.findMany({
-      select: { id: true, name: true, address: true, lat: true, lng: true, capacity: true },
+      select: { id: true, name: true, address: true, lat: true, lng: true, capacity: true, managerId: true },
       orderBy: { name: "asc" },
     });
     return venues.map((v) => ({ ...v, hasLocation: v.lat !== 0 || v.lng !== 0 }));
@@ -109,12 +151,18 @@ export class VenuesService {
       where: { id: eventId },
       data: { status: approve ? EventStatus.approved : EventStatus.draft },
     });
-    if (approve) {
-      // notify all artists (DJ call) + post the event to the front-page lineup
-      void this.djBooking.announceToArtists(eventId).catch(() => null);
-      void this.postToLineup(updated).catch(() => null);
-    }
+    if (approve) this.announceApproval(updated);
     return updated;
+  }
+
+  /**
+   * What "approved" means: every DJ hears the call and the night is posted to the
+   * front-page lineup. Shared with a promoter's own venue, where creating the event
+   * is the approval (nobody else could grant it).
+   */
+  announceApproval(event: { id: string; title: string; date: Date; venueId: string }) {
+    void this.djBooking.announceToArtists(event.id).catch(() => null);
+    void this.postToLineup(event).catch(() => null);
   }
 
   /** Table inventory management. */

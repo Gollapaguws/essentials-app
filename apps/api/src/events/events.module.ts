@@ -3,10 +3,11 @@ import { EventsController } from "./events.controller";
 import { EventsService } from "./events.service";
 import { EventToolsService } from "./event-tools.service";
 import { LoyaltyModule } from "../loyalty/loyalty.module";
+import { VenuesModule } from "../venues/venues.module";
 
 @Module({
   controllers: [EventsController],
-  imports: [LoyaltyModule],
+  imports: [LoyaltyModule, VenuesModule],
   providers: [EventsService, EventToolsService],
   exports: [EventToolsService],
 })

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useAuth } from "@/components/AuthProvider";
 
 interface EventRow {
   id: string; title: string; date: string; status: string; capacity: number;
@@ -19,6 +20,7 @@ interface VenueOption {
   lng: number;
   capacity: number;
   hasLocation: boolean;
+  managerId: string | null;
 }
 
 const field = "bg-bg border border-line rounded-lg px-3 py-2";
@@ -29,8 +31,12 @@ export default function EventManager() {
   const [venues, setVenues] = useState<VenueOption[]>([]);
   const [form, setForm] = useState({ title: "", venueId: "", date: "", capacity: 100 });
   const [error, setError] = useState<string | null>(null);
+  const { me } = useAuth();
 
   const selectedVenue = venues.find((v) => v.id === form.venueId) ?? null;
+  // Managing the venue means there is nobody else to approve the night: the API
+  // approves it on creation and calls the DJ roster straight away.
+  const venueIsMine = !!selectedVenue?.managerId && selectedVenue.managerId === me?.user.sub;
 
   const load = () => api.get<EventRow[]>("/events/manage/list").then(setEvents).catch((e) => setError(errorMessage(e)));
   useEffect(() => {
@@ -133,12 +139,19 @@ export default function EventManager() {
           )}
           {!venues.length && (
             <p className="text-yellow-400 text-xs">
-              No venues exist yet. An admin has to assign a venue manager before an event can be created.
+              No venues exist yet. Add one in the Venue Portal first, then pick it here.
+            </p>
+          )}
+
+          {venueIsMine && (
+            <p className="text-neon text-xs">
+              {selectedVenue.name} is yours, so the event is approved immediately: it goes on the front page and
+              every DJ gets the call.
             </p>
           )}
 
           <button className="bg-neon text-bg font-black rounded-lg px-4 py-2 tracking-widest">
-            CREATE (pending approval)
+            {venueIsMine ? "CREATE & GO LIVE" : "CREATE (pending approval)"}
           </button>
         </form>
 

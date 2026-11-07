@@ -33,8 +33,14 @@ const links: NavLink[] = [
   {
     href: "/dashboard/venue",
     label: "Venue Portal",
-    hint: "Venue address and coordinates, pending event approvals, table inventory, door scans and revenue splits.",
-    roles: ["venue_manager", "admin"],
+    hint: "Add the rooms you run nights at, set their address and coordinates, then approve the events booked there.",
+    roles: ["promoter", "venue_manager", "admin"],
+  },
+  {
+    href: "/dashboard/artists",
+    label: "Artists",
+    hint: "The DJ roster: stage name, bio, travel rate and the gigs each one is already confirmed for.",
+    roles: ["promoter", "admin"],
   },
   {
     href: "/dashboard/promotions",

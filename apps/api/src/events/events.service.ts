@@ -4,11 +4,16 @@ import { prisma, GuestListStatus, EventStatus } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 import { ConfigService } from "@nestjs/config";
 import { LoyaltyService } from "../loyalty/loyalty.service";
+import { VenuesService } from "../venues/venues.service";
 
 /** Every query is role-scoped: guests see own data, promoters their events, venue managers their venues, admin all. */
 @Injectable()
 export class EventsService {
-  constructor(private config: ConfigService, private loyalty: LoyaltyService) {}
+  constructor(
+    private config: ConfigService,
+    private loyalty: LoyaltyService,
+    private venues: VenuesService,
+  ) {}
 
   /** Door-pass HMAC key — independent of the (removed) session JWT secret. */
   private qrSecret() {
@@ -179,17 +184,21 @@ export class EventsService {
     const venue = await prisma.venue.findUnique({ where: { id: data.venueId } });
     if (!venue) throw new NotFoundException("Venue not found");
     if (data.capacity > venue.capacity) throw new BadRequestException(`Capacity exceeds venue max (${venue.capacity})`);
-    const chat = await prisma.event.create({
+    // A promoter who manages the venue *is* the venue: there is nobody left to
+    // approve the night, so it goes live on creation — DJ call out, on the front page.
+    const selfManaged = venue.managerId === user.sub;
+    const created = await prisma.event.create({
       data: {
         ...data,
         date: new Date(data.date),
         promoterId: user.sub,
         lineup: (data.lineup ?? []) as object,
-        status: EventStatus.pending_venue_approval,
+        status: selfManaged ? EventStatus.approved : EventStatus.pending_venue_approval,
       },
     });
-    await prisma.eventGroupChat.create({ data: { eventId: chat.id } });
-    return chat;
+    await prisma.eventGroupChat.create({ data: { eventId: created.id } });
+    if (selfManaged) this.venues.announceApproval(created);
+    return created;
   }
 
   async update(user: JwtUser, eventId: string, data: Record<string, unknown>) {

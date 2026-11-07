@@ -30,6 +30,13 @@ export class ArtistsController {
     return this.artists.getProfile(user);
   }
 
+  /** Promoter: the whole DJ roster — profile, travel terms and upcoming gigs. */
+  @Get()
+  @Auth("promoter", "admin")
+  roster() {
+    return this.artists.roster();
+  }
+
   @Post("me")
   @Auth("artist", "admin")
   upsertProfile(@CurrentUser() user: JwtUser, @Body() dto: ProfileDto, @Req() req: Request) {
