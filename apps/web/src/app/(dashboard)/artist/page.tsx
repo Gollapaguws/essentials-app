@@ -20,7 +20,7 @@ export default function ArtistPortal() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [planDate, setPlanDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [form, setForm] = useState<Profile>({ stageName: "", bio: "", imageUrl: "", vehicleConsumptionLPer100km: 8, travelRatePerKm: 2.5 });
+  const [form, setForm] = useState<Profile>({ stageName: "", bio: "", imageUrl: "", vehicleConsumptionLPer100km: 8, travelRatePerKm: 4.95 });
   const [telegram, setTelegram] = useState<TelegramStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,7 +108,17 @@ export default function ArtistPortal() {
         <form onSubmit={saveProfile} className="grid md:grid-cols-4 gap-3 items-end border border-line bg-surface rounded-xl p-4">
           <input required className="bg-bg border border-line rounded-lg px-3 py-2" placeholder="Stage name" value={form.stageName} onChange={(e) => setForm({ ...form, stageName: e.target.value })} />
           <label className="text-xs text-neutral-400">Vehicle L/100km<input type="number" step="0.1" min={1} className="w-full bg-bg border border-line rounded-lg px-3 py-2 mt-1" value={form.vehicleConsumptionLPer100km} onChange={(e) => setForm({ ...form, vehicleConsumptionLPer100km: +e.target.value })} /></label>
-          <label className="text-xs text-neutral-400">Travel rate /km<input type="number" step="0.1" min={0} className="w-full bg-bg border border-line rounded-lg px-3 py-2 mt-1" value={form.travelRatePerKm} onChange={(e) => setForm({ ...form, travelRatePerKm: +e.target.value })} /></label>
+          <div className="text-xs text-neutral-400">
+            Travel rate /km
+            <input
+              type="number"
+              disabled
+              readOnly
+              className="w-full bg-bg border border-line rounded-lg px-3 py-2 mt-1 opacity-60"
+              value={form.travelRatePerKm}
+            />
+            <span className="text-[11px] text-neutral-600">Standard rate set by ESSENTIALS</span>
+          </div>
           <button className="bg-neon text-bg font-black rounded-lg py-2 tracking-widest">SAVE PROFILE</button>
         </form>
 

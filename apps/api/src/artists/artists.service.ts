@@ -197,12 +197,27 @@ export class ArtistsService {
   }
 
   /**
+   * Admin only: the rate every DJ's routing and invoices use. Read from the
+   * profiles themselves, so the screen shows what is actually being charged
+   * rather than a setting that could drift away from it.
+   */
+  async standardTravelRate() {
+    const rows = await prisma.artistProfile.findMany({ select: { travelRatePerKm: true } });
+    const counts = new Map<number, number>();
+    for (const r of rows) counts.set(r.travelRatePerKm, (counts.get(r.travelRatePerKm) ?? 0) + 1);
+    // The rate most DJs are on is the standard; `mixed` flags profiles left
+    // behind by a rate change that never reached all of them.
+    const [rate] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [4.95];
+    return { travelRatePerKm: rate, artists: rows.length, mixed: counts.size > 1 };
+  }
+
+  /**
    * Admin only: the standard rate every DJ travels at. Applied to every profile,
    * because it is a platform rate — not a per-DJ negotiation.
    */
   async setStandardTravelRate(rate: number) {
     const updated = await prisma.artistProfile.updateMany({ data: { travelRatePerKm: rate } });
-    return { travelRatePerKm: rate, artists: updated.count };
+    return { travelRatePerKm: rate, artists: updated.count, mixed: false };
   }
 
   async upsertProfile(user: JwtUser, data: { stageName: string; bio?: string; imageUrl?: string; vehicleConsumptionLPer100km?: number }, origin: string) {

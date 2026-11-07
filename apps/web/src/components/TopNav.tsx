@@ -113,6 +113,12 @@ const links: NavLink[] = [
     hint: "Every registered account: make someone a DJ, venue manager or promoter.",
     roles: ["admin"],
   },
+  {
+    href: "/settings",
+    label: "Settings",
+    hint: "Platform rates every DJ and invoice is priced from — the standard travel rate per kilometre.",
+    roles: ["admin"],
+  },
 ];
 
 export function TopNav() {

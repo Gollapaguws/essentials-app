@@ -61,6 +61,13 @@ export class ArtistsController {
     return this.artists.upsertProfile(user, dto, this.requestOrigin(req));
   }
 
+  /** Admin only: the platform-wide travel rate every DJ's routing and invoices use. */
+  @Get("travel-rate")
+  @Auth("admin")
+  travelRate() {
+    return this.artists.standardTravelRate();
+  }
+
   /** Admin only: change the platform-wide travel rate every DJ's routing and invoices use. */
   @Patch("travel-rate")
   @Auth("admin")
