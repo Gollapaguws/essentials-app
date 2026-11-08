@@ -27,6 +27,13 @@ interface GoTrueTokenResponse {
   error?: string;
 }
 
+interface GoTrueResponse extends GoTrueTokenResponse {
+  id?: string;
+  /** A factors list on GET /factors, or the enrolment secret on POST /factors. */
+  totp?: unknown;
+  [key: string]: unknown;
+}
+
 interface SessionRow {
   id: string;
   userId: string;
@@ -187,9 +194,9 @@ export class DashboardSessionService {
   async factors(req: Request) {
     const { token } = await this.accessToken(req);
     const body = await this.gotrue("/factors", { token });
-    const totp = Array.isArray(body?.totp) ? body.totp : [];
+    const totp = Array.isArray(body.totp) ? (body.totp as { id: string; friendly_name?: string; status?: string }[]) : [];
     return {
-      totp: totp.map((f: { id: string; friendly_name?: string; status?: string }) => ({
+      totp: totp.map((f) => ({
         id: f.id,
         name: f.friendly_name ?? null,
         status: f.status ?? null,
@@ -204,10 +211,11 @@ export class DashboardSessionService {
       token,
       body: JSON.stringify({ factor_type: "totp" }),
     });
+    const totp = (body.totp ?? {}) as { secret?: string; uri?: string };
     return {
       id: body.id as string,
-      secret: body.totp?.secret as string,
-      uri: body.totp?.uri as string,
+      secret: totp.secret as string,
+      uri: totp.uri as string,
     };
   }
 
@@ -332,7 +340,7 @@ export class DashboardSessionService {
   private async gotrue(
     path: string,
     opts: { method?: string; token?: string; body?: string } = {},
-  ): Promise<GoTrueTokenResponse & Record<string, any>> {
+  ): Promise<GoTrueResponse> {
     const base = this.config.get<string>("SUPABASE_URL");
     const key =
       this.config.get<string>("SUPABASE_ANON_KEY") ??
@@ -350,7 +358,7 @@ export class DashboardSessionService {
       signal: AbortSignal.timeout(10_000),
     });
     const text = await res.text();
-    let body: Record<string, any> = {};
+    let body: GoTrueResponse = {};
     try {
       body = text ? JSON.parse(text) : {};
     } catch {
