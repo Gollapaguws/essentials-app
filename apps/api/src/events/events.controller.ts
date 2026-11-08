@@ -6,7 +6,7 @@ import type { Response } from "express";
 import { Res } from "@nestjs/common";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
-import { IsInt, IsOptional, IsString, Min } from "class-validator";
+import { IsArray, IsDateString, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
 
 class RsvpDto {
   @IsOptional() @IsInt() @Min(1) headcount?: number;
@@ -35,6 +35,22 @@ class CreateEventDto {
 
 class DoorCheckInDto {
   @IsString() guestListId!: string;
+}
+
+/**
+ * Editable event fields. Ownership, status and money are deliberately absent:
+ * they move through dedicated endpoints (clone/cancel/reopen, venue decision,
+ * slots) instead of a free-form Prisma write.
+ */
+class UpdateEventDto {
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(140) title?: string;
+  @IsOptional() @IsString() @MaxLength(4000) description?: string;
+  @IsOptional() @IsDateString() date?: string;
+  @IsOptional() @IsArray() lineup?: unknown[];
+  @IsOptional() @IsInt() @Min(1) capacity?: number;
+  @IsOptional() @IsString() @MaxLength(120) dressCode?: string;
+  @IsOptional() @IsString() @MaxLength(500) ticketUrl?: string;
+  @IsOptional() @IsArray() genres?: string[];
 }
 
 class SlotFeeDto {
@@ -131,8 +147,8 @@ export class EventsController {
 
   @Patch(":id")
   @Auth("promoter", "venue_manager")
-  update(@Param("id") id: string, @CurrentUser() user: JwtUser, @Body() data: Record<string, unknown>) {
-    return this.events.update(user, id, data);
+  update(@Param("id") id: string, @CurrentUser() user: JwtUser, @Body() dto: UpdateEventDto) {
+    return this.events.update(user, id, dto);
   }
 
   @Post(":id/clone")

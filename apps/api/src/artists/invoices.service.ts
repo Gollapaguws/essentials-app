@@ -4,6 +4,7 @@ import { prisma, InvoiceStatus, PaymentStatus } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 import { NotificationsService } from "../notifications/notifications.service";
 import { randomBytes } from "crypto";
+import { escapeHtml } from "../common/html";
 
 /**
  * Phase 3 invoices + payments.
@@ -100,9 +101,12 @@ export class InvoicesService {
     if (user.role !== "admin" && invoice.artist.user.email !== user.email) throw new ForbiddenException();
 
     const rows = invoice.items
-      .map((i) => `<tr><td>${i.label}</td><td style="text-align:right">${i.amount.toLocaleString()}</td></tr>`)
+      .map(
+        (i) =>
+          `<tr><td>${escapeHtml(i.label)}</td><td style="text-align:right">${i.amount.toLocaleString()}</td></tr>`,
+      )
       .join("");
-    return `<html><head><title>${invoice.number}</title><style>
+    return `<html><head><title>${escapeHtml(invoice.number)}</title><style>
       body{font-family:Helvetica,Arial,sans-serif;color:#0A0A0A;padding:48px;max-width:640px;margin:auto}
       h1{letter-spacing:3px;color:#00B24A;margin:0}
       .bar{border-top:4px solid #00FF66;margin:12px 0 24px}
@@ -111,9 +115,9 @@ export class InvoicesService {
       .total{font-size:18px;font-weight:bold}
     </style></head><body>
       <h1>ESSENTIALS</h1><div class="bar"></div>
-      <p><strong>Invoice ${invoice.number}</strong><br/>
-      Artist: ${invoice.artist.stageName} (${invoice.artist.user.email})<br/>
-      Date: ${new Date().toISOString().slice(0, 10)} · Status: ${invoice.status}</p>
+      <p><strong>Invoice ${escapeHtml(invoice.number)}</strong><br/>
+      Artist: ${escapeHtml(invoice.artist.stageName)} (${escapeHtml(invoice.artist.user.email)})<br/>
+      Date: ${new Date().toISOString().slice(0, 10)} · Status: ${escapeHtml(invoice.status)}</p>
       <table><tr><th>Item</th><th style="text-align:right">Amount</th></tr>${rows}
       <tr><td class="total">Total</td><td class="total" style="text-align:right">${invoice.total.toLocaleString()}</td></tr></table>
       <p style="font-size:12px;color:#666;margin-top:32px">Payment: via the payment link sent by ESSENTIALS. Thank you for playing.</p>

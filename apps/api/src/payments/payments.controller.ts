@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Param, Headers, HttpCode, RawBodyRequest, Req, UseGuards } from "@nestjs/common";
+import { Controller, Post, Body, Param, Headers, HttpCode, RawBodyRequest, Req, UseGuards, BadRequestException } from "@nestjs/common";
 import type { Request } from "express";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { PaymentsService } from "./payments.service";
@@ -16,8 +16,12 @@ export class PaymentsController {
     return this.payments.checkout(user, invoiceId);
   }
 
-  /** Sandbox confirm page target (dev provider only). */
+  /**
+   * Sandbox confirm page target (dev provider only). Admin-only: it marks an
+   * invoice paid, so a guest must never be able to call it for their own invoice.
+   */
   @Post("sandbox/confirm")
+  @Auth("admin")
   sandboxConfirm(@Body("reference") reference: string) {
     return this.payments.sandboxConfirm(reference);
   }
@@ -32,7 +36,13 @@ export class PaymentsWebhookController {
   @HttpCode(200)
   async stripe(@Req() req: RawBodyRequest<Request>, @Headers("stripe-signature") signature: string) {
     const raw = req.rawBody?.toString() ?? "";
-    return this.payments.handleWebhook("stripe", raw, signature, JSON.parse(raw || "{}"));
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw || "{}");
+    } catch {
+      throw new BadRequestException("Malformed webhook payload");
+    }
+    return this.payments.handleWebhook("stripe", raw, signature, parsed);
   }
 
   /** PayFast ITN posts form-encoded data. */

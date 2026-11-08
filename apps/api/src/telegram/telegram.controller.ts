@@ -10,6 +10,7 @@ import {
 } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { ConfigService } from "@nestjs/config";
+import { timingSafeEqual } from "crypto";
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
@@ -21,6 +22,13 @@ interface TelegramUpdate {
     chat?: { id?: number };
     from?: { username?: string; first_name?: string };
   };
+}
+
+/** Constant-time comparison, so a wrong secret cannot be guessed byte by byte. */
+function sameSecret(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 const HELP = [
@@ -78,7 +86,10 @@ export class TelegramController {
     @Body() update: TelegramUpdate,
   ) {
     const expected = this.config.get<string>("TELEGRAM_WEBHOOK_SECRET");
-    if (expected && secret !== expected) throw new ForbiddenException("Bad webhook secret");
+    // Fail closed: this route is public, so an unset secret would let anyone
+    // POST forged updates (and bind chats to arbitrary accounts).
+    if (!expected) throw new ForbiddenException("Telegram webhook is not configured");
+    if (!secret || !sameSecret(secret, expected)) throw new ForbiddenException("Bad webhook secret");
 
     const chatId = update.message?.chat?.id;
     const text = update.message?.text?.trim() ?? "";

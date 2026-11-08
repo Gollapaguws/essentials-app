@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, ForbiddenException, Get, HttpCode, Param, Post, UseGuards } from "@nestjs/common";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { prisma } from "@essentials/db";
@@ -87,6 +87,9 @@ export class SocialController {
   async publishNow(@Param("id") id: string, @CurrentUser() user: JwtUser, @Body() dto: PublishDto) {
     const post = await prisma.socialPost.findUnique({ where: { id } });
     if (!post) return { ok: false };
+    if (user.role !== "admin" && post.createdBy !== user.sub) {
+      throw new ForbiddenException("Not your post");
+    }
     const platforms = (dto.platforms ?? post.platforms) as Parameters<typeof this.scheduler.publishNow>[2];
     return this.scheduler.publishNow(id, post.content, platforms as Platform[], post.mediaUrl ?? undefined);
   }

@@ -1,11 +1,23 @@
 import { Injectable, ForbiddenException, NotFoundException, BadRequestException, ConflictException } from "@nestjs/common";
 import { createHmac } from "crypto";
 import { prisma, GuestListStatus, EventStatus } from "@essentials/db";
+import type { Prisma } from "@prisma/client";
 import type { JwtUser } from "../common/roles.guard";
 import { ConfigService } from "@nestjs/config";
 import { LoyaltyService } from "../loyalty/loyalty.service";
 import { VenuesService } from "../venues/venues.service";
 import { buildSlots, normalizePlan } from "./slots";
+
+export interface EventUpdateInput {
+  title?: string;
+  description?: string;
+  dressCode?: string;
+  ticketUrl?: string;
+  lineup?: unknown[];
+  genres?: string[];
+  capacity?: number;
+  date?: string;
+}
 
 /** Every query is role-scoped: guests see own data, promoters their events, venue managers their venues, admin all. */
 @Injectable()
@@ -383,10 +395,35 @@ export class EventsService {
     return prisma.eventSlot.update({ where: { id: slotId }, data: { fee } });
   }
 
-  async update(user: JwtUser, eventId: string, data: Record<string, unknown>) {
+  /**
+   * Edit the presentational fields of an event. The caller passes an allowlisted
+   * DTO (not a raw body), so promoterId, venueId, status and the money fields can
+   * never be flipped by a crafted PATCH.
+   */
+  async update(user: JwtUser, eventId: string, input: EventUpdateInput) {
     const event = await prisma.event.findUnique({ where: { id: eventId }, include: { venue: true } });
     if (!event) throw new NotFoundException("Event not found");
     this.assertCanManage(event.promoterId, event.venue.managerId, user);
+
+    const data: Prisma.EventUpdateInput = {};
+    if (input.title !== undefined) data.title = input.title.trim();
+    if (input.description !== undefined) data.description = input.description;
+    if (input.dressCode !== undefined) data.dressCode = input.dressCode;
+    if (input.ticketUrl !== undefined) data.ticketUrl = input.ticketUrl;
+    if (input.lineup !== undefined) data.lineup = input.lineup as Prisma.InputJsonValue;
+    if (input.genres !== undefined) data.genres = input.genres;
+    if (input.capacity !== undefined) {
+      if (input.capacity > event.venue.capacity) {
+        throw new BadRequestException(`Capacity exceeds venue max (${event.venue.capacity})`);
+      }
+      data.capacity = input.capacity;
+    }
+    if (input.date !== undefined) {
+      const date = new Date(input.date);
+      if (Number.isNaN(date.getTime())) throw new BadRequestException("Invalid event date");
+      data.date = date;
+    }
+
     return prisma.event.update({ where: { id: eventId }, data });
   }
 

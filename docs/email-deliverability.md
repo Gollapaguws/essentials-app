@@ -18,8 +18,11 @@ After migration to Postal, regenerate DKIM keys in the Postal admin and update S
 ## Compliance built into v1
 - **Consent records**: `Consent` table (email channel, granted/revoked, source).
 - **One-click unsubscribe**: every bulk email carries `List-Unsubscribe` headers via
-  `unsubscribeUrl`; `GET /api/email/unsubscribe?email=…` revokes consent and logs an
-  `unsubscribe` EmailEvent. Preference center at `GET /api/email/preferences`.
+  `unsubscribeUrl`; `GET /api/email/unsubscribe?token=…` revokes consent and logs an
+  `unsubscribe` EmailEvent. Preference center at `GET /api/email/preferences?token=…`.
+  The token is an HMAC (`base64url(email).expiry.signature`, 90 days) so a public
+  link cannot unsubscribe an address it was not issued for. `EMAIL_UNSUBSCRIBE_SECRET`
+  sets the key; when unset, a purpose-specific key is derived from `QR_SECRET`.
 - **Suppression**: consent is checked at enqueue time *and* again inside the send worker.
 
 ## Flows

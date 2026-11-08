@@ -57,7 +57,10 @@ export class PaymentsService {
 
   /** Signed webhook: reconcile payment + invoice status. Idempotent. */
   async handleWebhook(providerName: string, rawBody: string, signature: string | undefined, parsed?: unknown) {
-    if (providerName !== this.provider.name && this.provider.name !== "sandbox") {
+    // Only the configured provider may reconcile payments. In sandbox mode that
+    // means the sandbox route only — a public Stripe-shaped webhook must not be
+    // able to mark invoices paid just because sandbox verification is a no-op.
+    if (providerName !== this.provider.name) {
       throw new BadRequestException("Unknown provider webhook");
     }
     if (!this.provider.verifyWebhookSignature(rawBody, signature)) {
@@ -82,6 +85,9 @@ export class PaymentsService {
   /** Sandbox confirm (dev only): completes a pending payment without a real provider. */
   async sandboxConfirm(reference: string) {
     if (this.provider.name !== "sandbox") throw new ForbiddenException("Sandbox confirm only in sandbox mode");
+    if (process.env.NODE_ENV === "production") {
+      throw new ForbiddenException("Sandbox payments are disabled in production");
+    }
     return this.handleWebhook("sandbox", JSON.stringify({ reference }), undefined, { reference });
   }
 }

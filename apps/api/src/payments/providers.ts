@@ -35,11 +35,22 @@ export class StripeProvider implements PaymentProvider {
 
   verifyWebhookSignature(rawBody: string, signature: string | undefined) {
     if (!signature) return false;
-    const secret = this.config.get("STRIPE_WEBHOOK_SECRET") ?? "";
+    // Without a configured secret the HMAC key would be empty, which anyone can
+    // reproduce — never treat that as a valid signature.
+    const secret = this.config.get<string>("STRIPE_WEBHOOK_SECRET");
+    if (!secret) return false;
     const parts = Object.fromEntries(signature.split(",").map((p) => p.split("=") as [string, string]));
+    // Stripe signs `<timestamp>.<body>`; reject stale timestamps so a captured
+    // webhook cannot be replayed later.
+    const timestamp = Number(parts.t);
+    if (!Number.isFinite(timestamp) || Math.abs(Date.now() / 1000 - timestamp) > 300) return false;
     const expected = createHmac("sha256", secret).update(`${parts.t}.${rawBody}`).digest("hex");
+    const provided = parts.v1 ?? "";
     try {
-      return timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1 ?? ""));
+      return (
+        expected.length === provided.length &&
+        timingSafeEqual(Buffer.from(expected), Buffer.from(provided))
+      );
     } catch {
       return false;
     }
@@ -82,14 +93,20 @@ export class PayfastProvider implements PaymentProvider {
   }
 
   verifyWebhookSignature(rawBody: string, _signature: string | undefined) {
+    // PayFast signs with the merchant passphrase; an unset passphrase makes the
+    // signature forgeable, so refuse the ITN instead of accepting it.
+    const passphrase = this.config.get<string>("PAYFAST_PASSPHRASE");
+    if (!passphrase) return false;
     const params = new URLSearchParams(rawBody);
     const provided = params.get("signature") ?? "";
     params.delete("signature");
-    const passphrase = this.config.get("PAYFAST_PASSPHRASE") ?? "";
     const ordered = [...params.keys()].sort().map((k) => `${k}=${encodeURIComponent(params.get(k) ?? "").replace(/%20/g, "+")}`);
-    const expected = createHmac("md5", passphrase).update(`${ordered.join("&")}${passphrase ? `&passphrase=${encodeURIComponent(passphrase)}` : ""}`).digest("hex");
+    const expected = createHmac("md5", passphrase).update(`${ordered.join("&")}&passphrase=${encodeURIComponent(passphrase)}`).digest("hex");
     try {
-      return timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
+      return (
+        expected.length === provided.length &&
+        timingSafeEqual(Buffer.from(expected), Buffer.from(provided))
+      );
     } catch {
       return false;
     }

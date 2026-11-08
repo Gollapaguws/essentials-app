@@ -47,7 +47,7 @@ export class MailboxesService {
       throw new BadRequestException("Username must be 2-32 chars: lowercase letters, digits, dot, dash, underscore");
     }
     if (RESERVED.has(username)) throw new BadRequestException("That address is reserved");
-    if (password.length < 10) throw new BadRequestException("Password must be at least 10 characters");
+    this.assertSafePassword(password);
 
     const exists = await this.run("getent", ["passwd", username]);
     if (exists.out.trim()) throw new BadRequestException("Mailbox already exists");
@@ -63,10 +63,21 @@ export class MailboxesService {
   async setPassword(username: string, password: string) {
     username = username.toLowerCase().trim();
     if (!USERNAME_RE.test(username)) throw new BadRequestException("Invalid mailbox name");
-    if (password.length < 10) throw new BadRequestException("Password must be at least 10 characters");
+    this.assertSafePassword(password);
     const res = await this.run("chpasswd", [], `${username}:${password}`);
     if (res.code !== 0) throw new BadRequestException("Could not set password");
     return { ok: true };
+  }
+
+  /**
+   * chpasswd reads one `user:password` line per stdin line: a newline in the
+   * password would let it eat the rest of the input as another account's entry.
+   */
+  private assertSafePassword(password: string) {
+    if (password.length < 10) throw new BadRequestException("Password must be at least 10 characters");
+    if (/[\r\n:]/.test(password)) {
+      throw new BadRequestException("Password cannot contain a colon or a line break");
+    }
   }
 
   async remove(username: string) {

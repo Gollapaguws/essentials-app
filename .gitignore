@@ -4,6 +4,12 @@ dist/
 .expo/
 .env
 .env.local
+# Never commit env backups or hand-edited config copies — they carry live keys.
+.env.*
+!.env.example
+*.bak
+*.bak-*
+*.bak.*
 *.log
 coverage/
 .turbo/

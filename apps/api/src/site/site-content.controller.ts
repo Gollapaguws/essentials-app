@@ -66,11 +66,11 @@ export class SiteContentController {
   @Post("media")
   @UseGuards(SupabaseAuthGuard)
   @Auth("admin")
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 10 * 1024 * 1024 } }))
   upload(@UploadedFile() file?: Express.Multer.File) {
     if (!file) throw new BadRequestException("No file");
     const allowed = [".jpg", ".jpeg", ".png", ".webp", ".avif"];
-    if (!allowed.includes(extname(file.originalname).toLowerCase())) {
+    if (!allowed.includes(extname(file.originalname).toLowerCase()) || !file.mimetype.startsWith("image/")) {
       throw new BadRequestException("Only jpg/png/webp/avif");
     }
     const mediaDir = this.config.get("MEDIA_DIR") ?? "/var/www/essentialsedm/media";

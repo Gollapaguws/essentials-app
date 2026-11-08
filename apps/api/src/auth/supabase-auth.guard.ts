@@ -46,10 +46,10 @@ export class SupabaseAuthGuard implements CanActivate {
 
     // Every controller treats `sub` as the Prisma User id (owners, promoterId,
     // guestList.userId...). Keep the Supabase uid available as `authUid`.
-    // Invalidate any prior session for this user to prevent session fixation:
-    // if an attacker had a prior session for this user, it gets cleared below.
-    await this.authUsers.invalidateById(identity?.id ?? session.sub);
-
+    // Sessions are owned by Supabase (short-lived JWTs verified above); the
+    // AuthUserService cache below only holds id/role for 60s and is invalidated
+    // on role changes, so it is not a session store and must not be cleared per
+    // request — that would turn every authenticated call into a DB lookup.
     req.user = {
       ...session,
       sub: identity?.id ?? session.sub,

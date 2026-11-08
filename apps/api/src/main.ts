@@ -21,8 +21,20 @@ async function bootstrap() {
     const missing = required.filter((k) => !config.get(k));
     if (missing.length) throw new Error(`Missing required env: ${missing.join(", ")}`);
   }
-  const origins = (config.get("CORS_ORIGINS") ?? "*").split(",").map((s: string) => s.trim());
-  app.enableCors({ origin: origins, credentials: true });
+  const origins = (config.get<string>("CORS_ORIGINS") ?? "")
+    .split(",")
+    .map((s: string) => s.trim())
+    .filter(Boolean);
+  // A wildcard cannot be combined with credentials safely: browsers either
+  // reject it or, with `origin: true`, every site gets credentialed access.
+  if (process.env.NODE_ENV === "production" && (origins.length === 0 || origins.includes("*"))) {
+    throw new Error("CORS_ORIGINS must list explicit origins in production (wildcards are not allowed)");
+  }
+  app.enableCors({
+    // Dev default: reflect the caller. Production is pinned to the allowlist above.
+    origin: origins.length === 0 || origins.includes("*") ? true : origins,
+    credentials: true,
+  });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   const port = config.get("PORT") ?? 4000;
   await app.listen(port);

@@ -3,7 +3,7 @@ import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { VenuesService } from "./venues.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
-import { IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 
 /** Promoters create the venues they run nights at; they become its manager. */
 class CreateVenueDto {
@@ -12,6 +12,10 @@ class CreateVenueDto {
   @IsInt() @Min(1) capacity!: number;
   @IsOptional() @IsNumber() @Min(-90) @Max(90) lat?: number;
   @IsOptional() @IsNumber() @Min(-180) @Max(180) lng?: number;
+}
+
+class ApproveEventDto {
+  @IsBoolean() approve!: boolean;
 }
 
 /** Venue profile + coordinates; lat/lng drive DJ route planning. */
@@ -55,8 +59,8 @@ export class VenuesController {
 
   @Post("events/:id/decision")
   @Auth("venue_manager", "promoter", "admin")
-  decide(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body("approve") approve: boolean) {
-    return this.venues.decideEvent(user, id, approve);
+  decide(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: ApproveEventDto) {
+    return this.venues.decideEvent(user, id, dto.approve);
   }
 
   @Patch(":venueId")
