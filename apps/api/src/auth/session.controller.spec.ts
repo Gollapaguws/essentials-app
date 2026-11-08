@@ -20,13 +20,19 @@ function build() {
     devices: jest.fn().mockResolvedValue([]),
     revokeDevice: jest.fn().mockResolvedValue(undefined),
     adopt: jest.fn().mockResolvedValue(undefined),
+    factors: jest.fn().mockResolvedValue({ totp: [] }),
     resolve: jest.fn().mockResolvedValue({ row: { userId: "user-1" }, session: {} }),
   };
   const agent = {
     configured: true,
     sign: jest.fn((userId: string) => ({ userID: userId, userHash: "signed-hash" })),
   };
-  const context = { role: "promoter", summary: "Promoter.", facts: { upcoming_events: 1 } };
+  const context = {
+    role: "promoter",
+    summary: "Promoter.",
+    facts: { upcoming_events: 1 },
+    states: { must_reset_password: "no", has_artist_profile: "not_applicable", mfa_enrolled: "no" },
+  };
   const agentContext = { for: jest.fn().mockResolvedValue(context) };
   return {
     controller: new SessionController(
@@ -86,7 +92,26 @@ describe("SessionController agent identity", () => {
       context,
     });
     expect(agent.sign).toHaveBeenCalledWith("user-1");
-    expect(agentContext.for).toHaveBeenCalledWith("user-1");
+    expect(agentContext.for).toHaveBeenCalledWith("user-1", { mfaEnrolled: false });
+  });
+
+  it("reports an enrolled authenticator so the agent stops telling them to add one", async () => {
+    const { controller, sessions, agentContext } = build();
+    sessions.factors.mockResolvedValue({
+      totp: [{ id: "f1", name: null, status: "unverified" }, { id: "f2", name: null, status: "verified" }],
+    });
+
+    await controller.agentIdentity(req());
+
+    expect(agentContext.for).toHaveBeenCalledWith("user-1", { mfaEnrolled: true });
+  });
+
+  it("still identifies the user when the identity provider cannot list factors", async () => {
+    const { controller, sessions, agentContext } = build();
+    sessions.factors.mockRejectedValue(new Error("gotrue down"));
+
+    await expect(controller.agentIdentity(req())).resolves.toMatchObject({ userID: "user-1" });
+    expect(agentContext.for).toHaveBeenCalledWith("user-1", { mfaEnrolled: undefined });
   });
 
   it("refuses when no agent secret is configured", async () => {

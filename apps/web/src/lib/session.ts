@@ -60,7 +60,12 @@ export const session = {
     call<{
       userID: string;
       userHash: string;
-      context: { role: string; summary: string; facts: Record<string, number> };
+      context: {
+        role: string;
+        summary: string;
+        facts: Record<string, number>;
+        states: Record<string, string>;
+      };
     }>("/auth/agent-identity"),
 
   revokeDevice: (id: string) =>

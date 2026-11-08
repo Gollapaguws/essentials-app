@@ -77,6 +77,8 @@ const config = {
         return "http://gotrue.test";
       case "SUPABASE_ANON_KEY":
         return "anon-key";
+      case "SUPABASE_SERVICE_ROLE_KEY":
+        return "service-key";
       default:
         return undefined;
     }
@@ -406,6 +408,29 @@ describe("DashboardSessionService privileged actions", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("http://gotrue.test/auth/v1/user");
     expect(fetchMock.mock.calls[0][1].method).toBe("PUT");
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe("Bearer at-1");
+  });
+
+  it("lists the caller's TOTP factors on the admin route, not the removed GET /factors", async () => {
+    const { data, cookie } = await signIn();
+    db.dashboardSession.findUnique.mockResolvedValue(data);
+    fetchMock.mockResolvedValueOnce(
+      json([
+        { id: "factor-1", friendly_name: "Phone", status: "verified", factor_type: "totp" },
+        { id: "factor-2", status: "verified", factor_type: "phone" },
+        { id: "factor-3", status: "unverified", factor_type: "totp" },
+      ]),
+    );
+
+    const { totp } = await build().factors(cookieReq({ [SESSION_COOKIE]: cookie }));
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://gotrue.test/auth/v1/admin/users/auth-uid-1/factors");
+    // The admin route refuses the anon key.
+    expect(init.headers.apikey).toBe("service-key");
+    expect(totp).toEqual([
+      { id: "factor-1", name: "Phone", status: "verified" },
+      { id: "factor-3", name: null, status: "unverified" },
+    ]);
   });
 
   it("records aal2 and the rotated tokens after a factor verifies", async () => {

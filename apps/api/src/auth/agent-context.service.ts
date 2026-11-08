@@ -1,11 +1,22 @@
 import { Injectable } from "@nestjs/common";
 import { prisma } from "@essentials/db";
 
+/** Yes/no states, written out because the agent reads them as words, not flags. */
+export type AgentState = "yes" | "no" | "unknown" | "not_applicable";
+
 export interface AgentContext {
   role: string;
   /** A one-line picture of the account, safe to send to the widget. */
   summary: string;
   facts: Record<string, number>;
+  /** Why the account is behaving as it is — the answers to most sign-in tickets. */
+  states: Record<string, AgentState>;
+}
+
+/** Set by the caller, which is the only place holding the session's access token. */
+export interface AgentContextOptions {
+  /** `undefined` when the identity provider could not be asked. */
+  mfaEnrolled?: boolean;
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -13,35 +24,57 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 /**
  * What the support agent is told about the signed-in account.
  *
- * It is deliberately small: a role, a line of counts and nothing that identifies
- * another person. The widget cannot query the database, so this is the only
- * live state the agent has — anything deeper has to come from the customer.
+ * It is deliberately small: a role, a line of counts, and a handful of yes/no
+ * states that explain the common dead ends (a password that was never chosen, a
+ * DJ role with no profile yet). It never carries anything about another person.
+ * The widget cannot query the database, so this is the only live state the agent
+ * has — anything deeper has to come from the customer.
  */
 @Injectable()
 export class AgentContextService {
-  async for(userId: string): Promise<AgentContext> {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  async for(userId: string, options: AgentContextOptions = {}): Promise<AgentContext> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        role: true,
+        mustResetPassword: true,
+        artistProfile: { select: { id: true } },
+      },
+    });
     const role = user?.role ?? "guest";
-    const facts = await this.facts(role, userId);
-    return { role, facts, summary: this.summary(role, facts) };
+    const profileId = user?.artistProfile?.id ?? null;
+    const facts = await this.facts(role, userId, profileId);
+
+    return {
+      role,
+      facts,
+      summary: this.summary(role, facts),
+      states: {
+        must_reset_password: user?.mustResetPassword ? "yes" : "no",
+        // Only meaningful for a DJ: the other roles have no artist profile by design.
+        has_artist_profile: role === "artist" ? (profileId ? "yes" : "no") : "not_applicable",
+        mfa_enrolled:
+          options.mfaEnrolled === undefined ? "unknown" : options.mfaEnrolled ? "yes" : "no",
+      },
+    };
   }
 
-  private async facts(role: string, userId: string): Promise<Record<string, number>> {
+  private async facts(
+    role: string,
+    userId: string,
+    profileId: string | null,
+  ): Promise<Record<string, number>> {
     const now = new Date();
 
     if (role === "artist") {
-      const profile = await prisma.artistProfile.findUnique({
-        where: { userId },
-        select: { id: true },
-      });
-      if (!profile) return {};
+      if (!profileId) return {};
       const [gigs, applications, unpaid] = await Promise.all([
         prisma.artistBooking.count({
-          where: { artistId: profile.id, status: "confirmed", startAt: { gte: now } },
+          where: { artistId: profileId, status: "confirmed", startAt: { gte: now } },
         }),
-        prisma.artistBooking.count({ where: { artistId: profile.id, status: "pending" } }),
+        prisma.artistBooking.count({ where: { artistId: profileId, status: "pending" } }),
         prisma.invoice.count({
-          where: { artistId: profile.id, status: { in: ["sent", "overdue"] } },
+          where: { artistId: profileId, status: { in: ["sent", "overdue"] } },
         }),
       ]);
       return { upcoming_gigs: gigs, pending_applications: applications, unpaid_invoices: unpaid };

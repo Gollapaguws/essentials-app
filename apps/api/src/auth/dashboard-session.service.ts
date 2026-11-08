@@ -29,9 +29,16 @@ interface GoTrueTokenResponse {
 
 interface GoTrueResponse extends GoTrueTokenResponse {
   id?: string;
-  /** A factors list on GET /factors, or the enrolment secret on POST /factors. */
+  /** The enrolment secret returned by POST /factors. */
   totp?: unknown;
   [key: string]: unknown;
+}
+
+interface AuthFactor {
+  id: string;
+  friendly_name?: string;
+  status?: string;
+  factor_type?: string;
 }
 
 interface SessionRow {
@@ -253,16 +260,25 @@ export class DashboardSessionService {
 
   // ---- MFA --------------------------------------------------------------
 
+  /**
+   * The identity provider no longer lists factors on `GET /factors` — it answers
+   * 405 — so the admin route is the only way to read them. The session row already
+   * names whose factors these are, so the call stays scoped to the caller.
+   */
   async factors(req: Request) {
-    const { token } = await this.accessToken(req);
-    const body = await this.gotrue("/factors", { token });
-    const totp = Array.isArray(body.totp) ? (body.totp as { id: string; friendly_name?: string; status?: string }[]) : [];
+    const { row } = await this.resolve(req);
+    const factors = await this.gotrue<AuthFactor[]>(
+      `/admin/users/${encodeURIComponent(row.authUid)}/factors`,
+      { service: true },
+    );
     return {
-      totp: totp.map((f) => ({
-        id: f.id,
-        name: f.friendly_name ?? null,
-        status: f.status ?? null,
-      })),
+      totp: (Array.isArray(factors) ? factors : [])
+        .filter((f) => f.factor_type === "totp")
+        .map((f) => ({
+          id: f.id,
+          name: f.friendly_name ?? null,
+          status: f.status ?? null,
+        })),
     };
   }
 
@@ -399,14 +415,14 @@ export class DashboardSessionService {
     return new Date(Date.now() + (expiresIn && expiresIn > 0 ? expiresIn : 3600) * 1000);
   }
 
-  private async gotrue(
+  private async gotrue<T = GoTrueResponse>(
     path: string,
-    opts: { method?: string; token?: string; body?: string } = {},
-  ): Promise<GoTrueResponse> {
+    opts: { method?: string; token?: string; body?: string; service?: boolean } = {},
+  ): Promise<T> {
     const base = this.config.get<string>("SUPABASE_URL");
-    const key =
-      this.config.get<string>("SUPABASE_ANON_KEY") ??
-      this.config.get<string>("SUPABASE_SERVICE_ROLE_KEY");
+    const serviceKey = this.config.get<string>("SUPABASE_SERVICE_ROLE_KEY");
+    // Admin routes reject the anon key; everything else prefers it.
+    const key = opts.service ? serviceKey : (this.config.get<string>("SUPABASE_ANON_KEY") ?? serviceKey);
     if (!base || !key) throw new UnauthorizedException("Sign-in is not configured.");
 
     const res = await fetch(`${base}/auth/v1${path}`, {
@@ -430,7 +446,7 @@ export class DashboardSessionService {
       const detail = body.msg ?? body.message ?? body.error_description ?? `HTTP ${res.status}`;
       throw new UnauthorizedException(String(detail));
     }
-    return body;
+    return body as T;
   }
 
   private hash(raw: string): string {

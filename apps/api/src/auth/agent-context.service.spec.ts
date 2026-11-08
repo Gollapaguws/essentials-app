@@ -4,7 +4,6 @@ import { AgentContextService } from "./agent-context.service";
 jest.mock("@essentials/db", () => ({
   prisma: {
     user: { findUnique: jest.fn() },
-    artistProfile: { findUnique: jest.fn() },
     artistBooking: { count: jest.fn() },
     invoice: { count: jest.fn() },
     event: { count: jest.fn() },
@@ -14,7 +13,6 @@ jest.mock("@essentials/db", () => ({
 
 const db = prisma as unknown as {
   user: { findUnique: jest.Mock };
-  artistProfile: { findUnique: jest.Mock };
   artistBooking: { count: jest.Mock };
   invoice: { count: jest.Mock };
   event: { count: jest.Mock };
@@ -23,15 +21,22 @@ const db = prisma as unknown as {
 
 const service = () => new AgentContextService();
 
+/** A user row as the select in the service returns it. */
+const user = (over: Record<string, unknown> = {}) => ({
+  role: "guest",
+  mustResetPassword: false,
+  artistProfile: null,
+  ...over,
+});
+
 beforeEach(() => {
   jest.resetAllMocks();
-  db.user.findUnique.mockResolvedValue({ role: "guest" });
+  db.user.findUnique.mockResolvedValue(user());
 });
 
 describe("AgentContextService", () => {
   it("gives a DJ their own gig, application and invoice counts", async () => {
-    db.user.findUnique.mockResolvedValue({ role: "artist" });
-    db.artistProfile.findUnique.mockResolvedValue({ id: "artist-1" });
+    db.user.findUnique.mockResolvedValue(user({ role: "artist", artistProfile: { id: "artist-1" } }));
     db.artistBooking.count
       .mockResolvedValueOnce(2) // upcoming confirmed gigs
       .mockResolvedValueOnce(1); // pending applications
@@ -49,18 +54,18 @@ describe("AgentContextService", () => {
   });
 
   it("does not invent facts for a DJ who has not made a profile yet", async () => {
-    db.user.findUnique.mockResolvedValue({ role: "artist" });
-    db.artistProfile.findUnique.mockResolvedValue(null);
+    db.user.findUnique.mockResolvedValue(user({ role: "artist" }));
 
     const context = await service().for("user-1");
 
     expect(context.facts).toEqual({});
     expect(context.summary).toBe("DJ account with no artist profile yet.");
+    expect(context.states.has_artist_profile).toBe("no");
     expect(db.artistBooking.count).not.toHaveBeenCalled();
   });
 
   it("counts a promoter's upcoming nights and applications to decide", async () => {
-    db.user.findUnique.mockResolvedValue({ role: "promoter" });
+    db.user.findUnique.mockResolvedValue(user({ role: "promoter" }));
     db.event.count.mockResolvedValueOnce(4);
     db.artistBooking.count.mockResolvedValueOnce(7);
 
@@ -76,7 +81,7 @@ describe("AgentContextService", () => {
   });
 
   it("counts a venue manager's rooms and events waiting on them", async () => {
-    db.user.findUnique.mockResolvedValue({ role: "venue_manager" });
+    db.user.findUnique.mockResolvedValue(user({ role: "venue_manager" }));
     db.venue.count.mockResolvedValueOnce(2);
     db.event.count.mockResolvedValueOnce(1);
 
@@ -90,11 +95,39 @@ describe("AgentContextService", () => {
   });
 
   it("keeps admins and visitors free of numbers", async () => {
-    db.user.findUnique.mockResolvedValue({ role: "admin" });
+    db.user.findUnique.mockResolvedValue(user({ role: "admin" }));
     expect((await service().for("admin-1")).facts).toEqual({});
 
     db.user.findUnique.mockResolvedValue(null);
     const guest = await service().for("gone");
-    expect(guest).toEqual({ role: "guest", facts: {}, summary: "Visitor without a platform role." });
+    expect(guest).toMatchObject({
+      role: "guest",
+      facts: {},
+      summary: "Visitor without a platform role.",
+    });
+    // A missing row must not be reported as a real "no".
+    expect(guest.states.must_reset_password).toBe("no");
+  });
+
+  it("reports the states that explain a dashboard dead end", async () => {
+    db.user.findUnique.mockResolvedValue(
+      user({ role: "promoter", mustResetPassword: true }),
+    );
+    db.event.count.mockResolvedValueOnce(0);
+    db.artistBooking.count.mockResolvedValueOnce(0);
+
+    const context = await service().for("promoter-1", { mfaEnrolled: true });
+
+    expect(context.states).toEqual({
+      must_reset_password: "yes",
+      has_artist_profile: "not_applicable",
+      mfa_enrolled: "yes",
+    });
+  });
+
+  it("says it does not know when the provider could not be asked about MFA", async () => {
+    const context = await service().for("user-1");
+
+    expect(context.states.mfa_enrolled).toBe("unknown");
   });
 });

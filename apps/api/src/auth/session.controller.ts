@@ -146,8 +146,23 @@ export class SessionController {
     const { row } = await this.sessions.resolve(req);
     return {
       ...this.agent.sign(row.userId),
-      context: await this.agentContext.for(row.userId),
+      context: await this.agentContext.for(row.userId, {
+        mfaEnrolled: await this.mfaEnrolled(req),
+      }),
     };
+  }
+
+  /**
+   * Whether the account has a verified authenticator. An identity provider that
+   * cannot answer must not break the chat: the agent is told it does not know.
+   */
+  private async mfaEnrolled(req: Request): Promise<boolean | undefined> {
+    try {
+      const { totp } = await this.sessions.factors(req);
+      return totp.some((factor) => factor.status === "verified");
+    } catch {
+      return undefined;
+    }
   }
 
   /** Sign one session out; revoking the caller's own also clears its cookie. */
