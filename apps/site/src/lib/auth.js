@@ -81,7 +81,22 @@ export async function updatePassword(password) {
   if (error) throw new Error(error.message);
 }
 
-export const signOut = () => supabase.auth.signOut();
+/**
+ * End the account on both halves of the site.
+ *
+ * The dashboard keeps a server-side session behind an httpOnly cookie on this
+ * same origin, so signing out of Supabase alone leaves the dashboard open. The
+ * API call is first because it needs that cookie to still be there.
+ */
+export async function signOut() {
+  try {
+    await fetch(`${API_URL}/auth/session`, { method: "DELETE", credentials: "include" });
+  } catch {
+    // The dashboard cookie may outlive a failed call; the browser session below
+    // still ends, and the dashboard's sign-out clears the cookie for good.
+  }
+  await supabase.auth.signOut();
+}
 
 /**
  * Swap this browser's Supabase session for the dashboard's httpOnly cookie.

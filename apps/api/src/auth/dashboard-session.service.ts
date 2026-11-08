@@ -130,10 +130,27 @@ export class DashboardSessionService {
     refreshToken: string | null,
     res: Response,
   ): Promise<void> {
+    await this.assertSessionLive(accessToken);
     await this.open(res, {
       access_token: accessToken,
       refresh_token: refreshToken ?? undefined,
     });
+  }
+
+  /**
+   * A signed JWT is not proof that the session still exists.
+   *
+   * Access tokens verify locally against the JWKS and stay valid until they
+   * expire, so a signed-out browser could hand the dashboard one it still had in
+   * memory and be let back in. Asking the identity provider whether the session
+   * is live is the only way to honour a sign-out immediately.
+   */
+  private async assertSessionLive(token: string): Promise<void> {
+    try {
+      await this.gotrue("/user", { token });
+    } catch {
+      throw new UnauthorizedException("That session has ended. Sign in again.");
+    }
   }
 
   /** Finish an emailed recovery link: the code is exchanged with our verifier. */
@@ -184,8 +201,36 @@ export class DashboardSessionService {
 
   async logout(req: Request, res: Response): Promise<void> {
     const raw = readCookie(req, SESSION_COOKIE);
-    if (raw) await prisma.dashboardSession.deleteMany({ where: { id: this.hash(raw) } });
+    if (raw) {
+      const row = await prisma.dashboardSession.findUnique({ where: { id: this.hash(raw) } });
+      if (row) await this.endUpstreamSession(row);
+      await prisma.dashboardSession.deleteMany({ where: { id: this.hash(raw) } });
+    }
     res.clearCookie(SESSION_COOKIE, { path: "/" });
+  }
+
+  /**
+   * End the identity-provider session behind this dashboard session.
+   *
+   * Deleting the cookie alone looked like a sign-out but was not one: the browser
+   * kept its Supabase tokens, and the public site could swap them for a fresh
+   * dashboard session on the very next click. Best effort — a token that has
+   * already expired cannot be logged out, and the session is dropped regardless.
+   */
+  private async endUpstreamSession(row: SessionRow): Promise<void> {
+    const end = (token: string) => this.gotrue("/logout", { method: "POST", token });
+    try {
+      await end(this.decrypt(row.accessToken));
+      return;
+    } catch {
+      /* expired access token: the refresh token below can still end it */
+    }
+    try {
+      const grant = await this.refreshOnce(row);
+      if (grant.access_token) await end(grant.access_token);
+    } catch (e) {
+      this.logger.warn(`could not end the upstream session: ${(e as Error).message}`);
+    }
   }
 
   /**

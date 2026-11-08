@@ -255,13 +255,44 @@ describe("DashboardSessionService sign-out", () => {
     expect(db.dashboardSession.deleteMany).toHaveBeenCalledWith({ where: { id: sha256("abc") } });
     expect(res.clearCookie).toHaveBeenCalledWith(SESSION_COOKIE, { path: "/" });
   });
+
+  it("ends the identity-provider session too, so the site cannot sign straight back in", async () => {
+    const { data, cookie } = await signIn();
+    db.dashboardSession.findUnique.mockResolvedValue(data);
+    fetchMock.mockResolvedValueOnce(json({}));
+
+    await build().logout(cookieReq({ [SESSION_COOKIE]: cookie }), mockRes());
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://gotrue.test/auth/v1/logout");
+    expect(init.method).toBe("POST");
+    expect(init.headers.Authorization).toBe("Bearer at-1");
+    expect(db.dashboardSession.deleteMany).toHaveBeenCalledWith({ where: { id: data.id } });
+  });
+
+  it("still signs this browser out when the provider refuses the logout", async () => {
+    const { data, cookie } = await signIn();
+    db.dashboardSession.findUnique.mockResolvedValue(data);
+    // An expired access token and a refresh token that cannot be swapped.
+    fetchMock.mockResolvedValueOnce(json({ msg: "token expired" }, 401));
+    fetchMock.mockResolvedValueOnce(json({ msg: "invalid refresh token" }, 400));
+    const res = mockRes();
+
+    await expect(build().logout(cookieReq({ [SESSION_COOKIE]: cookie }), res)).resolves.toBeUndefined();
+
+    expect(db.dashboardSession.deleteMany).toHaveBeenCalledWith({ where: { id: data.id } });
+    expect(res.clearCookie).toHaveBeenCalledWith(SESSION_COOKIE, { path: "/" });
+  });
 });
 
 describe("DashboardSessionService adoption from the site", () => {
   it("verifies the token and stores it encrypted behind the cookie", async () => {
     const res = mockRes();
+    fetchMock.mockResolvedValueOnce(json({ id: "auth-uid-1" }));
 
     await build().adopt("at-site", "rt-site", res);
+
+    expect(fetchMock.mock.calls[0][0]).toBe("http://gotrue.test/auth/v1/user");
 
     const data = db.dashboardSession.create.mock.calls[0][0].data as Row;
     expect(tokens.verify).toHaveBeenCalledWith("at-site");
@@ -271,11 +302,23 @@ describe("DashboardSessionService adoption from the site", () => {
   });
 
   it("creates no session for a token that does not verify", async () => {
+    fetchMock.mockResolvedValueOnce(json({ id: "auth-uid-1" }));
     tokens.verify.mockRejectedValueOnce(new UnauthorizedException("Invalid or expired token"));
 
     await expect(build().adopt("not-a-token", null, mockRes())).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
+    expect(db.dashboardSession.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses a signed token whose session has already been signed out", async () => {
+    // The signature still verifies; the session behind it is gone.
+    fetchMock.mockResolvedValueOnce(json({ msg: "session not found" }, 403));
+
+    await expect(build().adopt("at-signed-out", "rt-old", mockRes())).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    expect(tokens.verify).not.toHaveBeenCalled();
     expect(db.dashboardSession.create).not.toHaveBeenCalled();
   });
 });
