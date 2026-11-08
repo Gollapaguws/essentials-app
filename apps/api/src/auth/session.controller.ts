@@ -162,14 +162,19 @@ export class SessionController {
    * arbitrary host an attacker put in the body.
    */
   private allowedOrigin(req: Request): string {
-    const configured = (process.env.CORS_ORIGINS ?? "")
-      .split(",")
-      .map((s) => s.trim())
+    // CORS_ORIGINS lists the origins that may *call* the API; SITE_URL is where
+    // the dashboard is actually served, and it is same-origin with /api, so it
+    // never appears there. Both are trusted hosts to send a recovery link to.
+    const allowed = [
+      ...(process.env.CORS_ORIGINS ?? "").split(","),
+      process.env.SITE_URL ?? "",
+    ]
+      .map((s) => s.trim().replace(/\/+$/, ""))
       .filter((s) => s && s !== "*");
-    const origin = req.get("origin");
-    const fallback = configured[0] ?? `${req.protocol}://${req.get("host")}`;
-    if (!origin) return fallback;
-    if (configured.length === 0 || configured.includes(origin)) return origin;
+    const origin = req.get("origin")?.replace(/\/+$/, "");
+    if (!origin) return allowed[0] ?? `${req.protocol}://${req.get("host")}`;
+    // Always an allowlist in production: a body field must not pick the host.
+    if (allowed.length === 0 || allowed.includes(origin)) return origin;
     throw new BadRequestException("Origin not allowed");
   }
 }
