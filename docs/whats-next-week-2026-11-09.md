@@ -3,6 +3,9 @@
 Internal. Follows *Release notes — week of 2 November 2026*; the items below are
 the loose ends that note left open, in the order we should take them.
 
+**Status, 8 November:** items 1, 2, 4 and 5 are done and deployed. Item 3 is the
+only one left, and it needs a person with a real inbox.
+
 | What | Why now | Done when |
 | --- | --- | --- |
 | **1. Run the smoke script from the deploy script** | The release notes say deploys check themselves, but `scripts/deploy-vps.sh` still ends with three `curl`s and never calls `npm run smoke`. Today the checks pass only because someone remembers to run them. | `deploy-vps.sh` runs `npm run smoke` after the restart and exits non-zero when it fails; proven once by breaking a check on purpose, watching the deploy stop, then restoring it. |

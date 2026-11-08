@@ -56,6 +56,17 @@ Notable changes to ESSENTIALS. Dates are UTC.
   confirmed DJ is listed with their set time, and nothing cancelled appears.
 - Smoke also checks the dashboard session end to end: login returns an httpOnly
   cookie, `/auth/me` answers with it, and logout revokes it.
+- **Account → Signed-in devices** lists every browser session on the account
+  with when it signed in and whether it is two-step, and can revoke one without
+  disturbing the others. Revoking the browser you are using signs it out.
+- Expired dashboard sessions are pruned every night at 03:00. Until now a row
+  was only removed when its cookie came back or the account signed in again, so
+  an abandoned session kept encrypted tokens in the table indefinitely.
+- `scripts/deploy-vps.sh` now runs `npm run smoke` as its last step and exits
+  non-zero when any check fails, instead of ending on three `curl`s that only
+  prove the pages respond.
+- CI runs the API test suite (`npx jest`) on pull requests, alongside the
+  existing typecheck, lint and web build.
 - Smoke guards the recovery flow, in read-only runs too: a reset request from
   the dashboard's own origin must be accepted and must set the verifier cookie,
   a foreign origin must be refused, and the callback page must be served. It
