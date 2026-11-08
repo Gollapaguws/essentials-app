@@ -31,6 +31,11 @@ Notable changes to ESSENTIALS. Dates are UTC.
 
 ### Changed
 
+- The dashboard no longer stores Supabase tokens in `localStorage`. Sign-in,
+  two-step verification, password changes and recovery links now go through the
+  API, which keeps the tokens in a `DashboardSession` row (encrypted with
+  `SESSION_SECRET`) and hands the browser a single httpOnly, Secure,
+  SameSite=Lax cookie. Logout deletes the row, so a stolen cookie is revocable.
 - Unsubscribe and email-preference links carry an HMAC-signed, expiring token.
   A bare `?email=` is rejected, so one person can no longer unsubscribe
   another. Links in mail that was already sent now read "invalid or has
@@ -45,6 +50,8 @@ Notable changes to ESSENTIALS. Dates are UTC.
   that must not write. It creates and removes a throwaway guest.
 - The smoke run verifies the front page against the bookings table: every
   confirmed DJ is listed with their set time, and nothing cancelled appears.
+- Smoke also checks the dashboard session end to end: login returns an httpOnly
+  cookie, `/auth/me` answers with it, and logout revokes it.
 
 ### Fixed
 
