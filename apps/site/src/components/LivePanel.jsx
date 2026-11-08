@@ -4,14 +4,6 @@ import { fetchMe } from "@/lib/auth";
 import { liveStatus, setLiveSource, stopLiveSource, startScreenIngest, viewerUrl } from "@/live/live";
 
 /**
- * Held on the media box while the room is dark: a silent, looping reel so the
- * section reads as a channel between shows instead of a blank frame. Drop the
- * file at `apps/site/public/media/not-live.mp4`; if it is missing the box falls
- * back to the plain standby slate rather than showing a broken player.
- */
-const IDLE_LOOP = "/media/not-live.mp4";
-
-/**
  * LIVE section on the front page:
  * - restream: any RTSP/HTTP/HLS source set by an admin is played here (hls.js)
  * - GO LIVE: admin captures screen+audio → server FFmpeg → rtsp://essentialsedm.com:8554/essentials
@@ -23,7 +15,6 @@ export default function LivePanel() {
   const [unmuted, setUnmuted] = useState(false);
   const [error, setError] = useState(null);
   const [srcUrl, setSrcUrl] = useState("");
-  const [idleMissing, setIdleMissing] = useState(false);
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
   const ingestRef = useRef(null);
@@ -103,7 +94,7 @@ export default function LivePanel() {
         <div className="noir-stream-screen">
           {showPlayer ? (
             <video ref={videoRef} muted playsInline />
-          ) : idleMissing ? (
+          ) : (
             <div className="noir-stream-empty">
               <span className="noir-micro">{casting ? "LINKING" : "STANDING BY"}</span>
               <span className="noir-frame-title">
@@ -111,16 +102,6 @@ export default function LivePanel() {
               </span>
               <span className="noir-micro">THE FEED APPEARS HERE WHEN THE ROOM OPENS</span>
             </div>
-          ) : (
-            <video
-              src={IDLE_LOOP}
-              autoPlay
-              loop
-              muted
-              playsInline
-              // A missing reel must not leave a dead frame behind.
-              onError={() => setIdleMissing(true)}
-            />
           )}
 
           <span className="noir-scan" aria-hidden="true" />
