@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@essentials/api-client";
 import { DASHBOARD_ROLES, landingPath, type MeResponse } from "@essentials/auth";
-import { supabase } from "@/lib/supabase";
+import { session } from "@/lib/session";
 import { InfoTip, Tooltip } from "@/components/Tooltip";
 
 /** Sign-in for promoters/venue managers/admins: email and password. */
@@ -30,16 +30,14 @@ export default function LoginPage() {
     router.replace(me.mfaRequired ? "/auth/mfa" : landingPath(me.user.role));
   };
 
-  // Already signed in (site or dashboard) with a privileged role? Go straight in.
+  // Already signed in with a live session cookie? Go straight in.
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) return;
-      try {
-        routeByRole(await api.get<MeResponse>("/auth/me"));
-      } catch {
-        // stale session: stay on the form
-      }
-    });
+    session
+      .me()
+      .then(routeByRole)
+      .catch(() => {
+        // no session: stay on the form
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -71,25 +69,27 @@ export default function LoginPage() {
     // dashboard's base path (`/dashboard` in production, empty in dev). This page is
     // `<basePath>/login`, so strip that segment rather than assuming where it is.
     const basePath = window.location.pathname.replace(/\/login\/?$/, "");
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}${basePath}/auth/callback?type=recovery`,
-    });
-    if (err) setError("Could not send the reset email. Try again in a moment.");
-    else setResetSent(true);
+    try {
+      await session.recover(email, `${basePath}/auth/callback?type=recovery`);
+      setResetSent(true);
+    } catch {
+      setError("Could not send the reset email. Try again in a moment.");
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-    if (err) {
+    try {
+      await session.login(email, password);
+    } catch {
       setBusy(false);
       setError("Wrong email or password.");
       return;
     }
     try {
-      routeByRole(await api.get<MeResponse>("/auth/me"));
+      routeByRole(await session.me());
     } catch {
       setError("Signed in, but the dashboard could not be loaded.");
     } finally {

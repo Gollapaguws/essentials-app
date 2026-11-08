@@ -3,9 +3,8 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api } from "@essentials/api-client";
-import { DASHBOARD_ROLES, landingPath, type MeResponse } from "@essentials/auth";
-import { supabase } from "@/lib/supabase";
+import { DASHBOARD_ROLES, landingPath } from "@essentials/auth";
+import { session } from "@/lib/session";
 
 function CallbackInner() {
   const params = useSearchParams();
@@ -20,23 +19,24 @@ function CallbackInner() {
     }
 
     (async () => {
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-      if (exchangeError) {
+      try {
+        await session.exchange(code);
+      } catch {
         setError("This link has expired. Request a new one.");
         return;
       }
 
-      // Recovery links sign the account in just to change the password: skip the role
-      // gate and send them to the screen that owns that one job.
+      // Recovery links sign the account in just to change the password: skip the
+      // role gate and send them to the screen that owns that one job.
       if (params.get("type") === "recovery") {
         router.replace("/auth/password?recovery=1");
         return;
       }
 
       try {
-        const me = await api.get<MeResponse>("/auth/me");
+        const me = await session.me();
         if (!DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
-          await supabase.auth.signOut();
+          await session.logout().catch(() => undefined);
           setError("Dashboard is for DJs, promoters, venue managers and admins.");
           return;
         }

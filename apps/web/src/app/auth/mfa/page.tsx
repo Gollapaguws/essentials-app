@@ -3,14 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
-import { api } from "@essentials/api-client";
-import type { MeResponse } from "@essentials/auth";
-import { supabase } from "@/lib/supabase";
+import { session } from "@/lib/session";
 import { InfoTip } from "@/components/Tooltip";
 
 /**
  * Privileged roles must reach aal2 before any data endpoint answers.
  * Existing factors are challenged; otherwise a new TOTP factor is enrolled.
+ * Both happen through the API, so the session tokens stay on the server.
  */
 export default function MfaPage() {
   const router = useRouter();
@@ -24,42 +23,37 @@ export default function MfaPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) return router.replace("/");
+      try {
+        await session.me();
+      } catch {
+        router.replace("/login");
+        return;
+      }
 
-      const { data: factors } = await supabase.auth.mfa.listFactors();
-      const existing = factors?.totp?.[0];
+      try {
+        const { totp } = await session.factors();
+        const existing = totp[0];
 
-      if (existing) {
-        const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
-          factorId: existing.id,
-        });
-        if (challengeError) {
-          setError(challengeError.message);
+        if (existing) {
+          const challenge = await session.challenge(existing.id);
+          setFactorId(existing.id);
+          setChallengeId(challenge.id);
           setBusy(false);
           return;
         }
-        setFactorId(existing.id);
+
+        const enrolled = await session.enroll();
+        setFactorId(enrolled.id);
+        setSecret(enrolled.secret);
+        setQr(await QRCode.toDataURL(enrolled.uri, { margin: 1, width: 240 }));
+
+        const challenge = await session.challenge(enrolled.id);
         setChallengeId(challenge.id);
         setBusy(false);
-        return;
-      }
-
-      const { data: enrolled, error: enrollError } = await supabase.auth.mfa.enroll({
-        factorType: "totp",
-      });
-      if (enrollError) {
-        setError(enrollError.message);
+      } catch (e) {
+        setError((e as Error).message);
         setBusy(false);
-        return;
       }
-      setFactorId(enrolled.id);
-      setSecret(enrolled.totp.secret);
-      setQr(await QRCode.toDataURL(enrolled.totp.uri, { margin: 1, width: 240 }));
-
-      const { data: challenge } = await supabase.auth.mfa.challenge({ factorId: enrolled.id });
-      setChallengeId(challenge?.id ?? null);
-      setBusy(false);
     })();
   }, [router]);
 
@@ -69,30 +63,20 @@ export default function MfaPage() {
     setBusy(true);
     setError(null);
 
-    // One challenge was issued on load; verifying it activates a fresh factor too.
-    const { error: verifyError } = await supabase.auth.mfa.verify({
-      factorId,
-      challengeId,
-      code: code.trim(),
-    });
-    if (verifyError) {
-      setBusy(false);
-      setError("That code did not work. Check your authenticator and try again.");
-      return;
-    }
-
-    await supabase.auth.refreshSession();
     try {
-      const me = await api.get<MeResponse>("/auth/me");
+      // One challenge was issued on load; verifying it activates a fresh factor too.
+      await session.verify(factorId, challengeId, code.trim());
+      const me = await session.me();
       if (!me.mfaRequired) {
         router.replace("/");
         return;
       }
+      setBusy(false);
+      setError("Two-step verification is not active yet. Try again.");
     } catch {
-      // fall through to the error state
+      setBusy(false);
+      setError("That code did not work. Check your authenticator and try again.");
     }
-    setBusy(false);
-    setError("Two-step verification is not active yet. Try again.");
   };
 
   return (

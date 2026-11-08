@@ -11,13 +11,13 @@ import { WhatsNew } from "@/components/WhatsNew";
  * here would duplicate it.
  */
 export default function DashboardLayout({ children }: { children: import("react").ReactNode }) {
-  const { session, me, loading } = useAuth();
+  const { authenticated, me, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     if (loading) return;
-    if (!session) {
+    if (!authenticated) {
       router.replace("/login");
       return;
     }
@@ -38,9 +38,9 @@ export default function DashboardLayout({ children }: { children: import("react"
     if (pathname === "/" && me.user.role !== "promoter" && me.user.role !== "admin") {
       router.replace(landingPath(me.user.role));
     }
-  }, [loading, session, me, router, pathname]);
+  }, [loading, authenticated, me, router, pathname]);
 
-  if (loading || (session && !me)) {
+  if (loading || (authenticated && !me)) {
     return (
       <main className="min-h-screen grid place-items-center">
         <p className="text-neutral-500 text-sm tracking-widest">LOADING…</p>
@@ -48,7 +48,7 @@ export default function DashboardLayout({ children }: { children: import("react"
     );
   }
 
-  if (!session) return null;
+  if (!authenticated) return null;
 
   return (
     <>

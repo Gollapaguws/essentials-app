@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@essentials/api-client";
 import { landingPath, type MeResponse } from "@essentials/auth";
-import { supabase } from "@/lib/supabase";
+import { session } from "@/lib/session";
 import { InfoTip } from "@/components/Tooltip";
 
 /**
@@ -28,18 +28,18 @@ export default function SetPasswordPage() {
     const isRecovery = new URLSearchParams(window.location.search).get("recovery") === "1";
     setRecovery(isRecovery);
     (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) return router.replace("/login");
+      let me: MeResponse;
       try {
-        const me = await api.get<MeResponse>("/auth/me");
-        // Already done, or never needed: don't trap the account on this screen.
-        // A recovery link is allowed through even when no reset was pending.
-        if (!isRecovery && !me.mustResetPassword) {
-          leave(me);
-          return;
-        }
+        me = await session.me();
       } catch {
-        setError("Could not load your account. Reload the page.");
+        router.replace("/login");
+        return;
+      }
+      // Already done, or never needed: don't trap the account on this screen.
+      // A recovery link is allowed through even when no reset was pending.
+      if (!isRecovery && !me.mustResetPassword) {
+        leave(me);
+        return;
       }
       setChecking(false);
     })();
@@ -55,10 +55,11 @@ export default function SetPasswordPage() {
     setBusy(true);
     setError(null);
 
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    if (updateError) {
+    try {
+      await session.setPassword(password);
+    } catch (e) {
       setBusy(false);
-      setError(updateError.message);
+      setError((e as Error).message);
       return;
     }
 

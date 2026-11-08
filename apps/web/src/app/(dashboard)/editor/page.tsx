@@ -39,7 +39,8 @@ export default function FrontPageEditor() {
     try {
       const res = await fetch(`${API_URL}/site/media`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${localStorage.getItem("essentials_token")}` },
+        // Admin upload: the httpOnly session cookie authenticates it.
+        credentials: "include",
         body: fd,
       });
       const data = await res.json();

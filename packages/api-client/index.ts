@@ -58,6 +58,8 @@ async function send(path: string, init: RequestInit | undefined, token: string |
   const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
   return fetch(`${API_URL}${path}`, {
     ...init,
+    // The dashboard signs in with an httpOnly cookie; mobile still sends a bearer.
+    credentials: "include",
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

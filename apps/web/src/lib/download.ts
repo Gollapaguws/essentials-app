@@ -1,14 +1,11 @@
-import { supabase } from "./supabase";
-
 /**
- * Fetch an export from the API with the session's bearer token and hand it to the
- * browser as a file. Export routes are role-guarded, so a plain <a href> cannot
- * work: the token has to travel in the Authorization header.
+ * Fetch an export from the API and hand it to the browser as a file. Export
+ * routes are role-guarded; the dashboard's httpOnly session cookie rides along
+ * because this is a same-site request.
  */
 export async function downloadFromApi(path: string, filename: string) {
-  const { data } = await supabase.auth.getSession();
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${path}`, {
-    headers: data.session ? { Authorization: `Bearer ${data.session.access_token}` } : {},
+    credentials: "include",
   });
   if (!res.ok) {
     let message = `Download failed (${res.status})`;

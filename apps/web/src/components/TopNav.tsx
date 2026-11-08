@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
+import { session } from "@/lib/session";
 import { Tooltip } from "@/components/Tooltip";
 
 import type { AuthRole } from "@essentials/auth";
@@ -155,7 +155,7 @@ export function TopNav() {
   const visible = links.filter((l) => role === "admin" || !l.roles || l.roles.includes(role));
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await session.logout().catch(() => undefined);
     router.replace("/");
   };
 
