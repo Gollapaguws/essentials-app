@@ -1,7 +1,8 @@
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { SessionController } from "./session.controller";
 import type { DashboardSessionService } from "./dashboard-session.service";
+import type { AgentIdentityService } from "./agent-identity.service";
 
 /** The controller only uses `get("origin")` for the recovery redirect. */
 const req = (origin?: string) =>
@@ -17,10 +18,19 @@ function build() {
     startRecovery: jest.fn().mockResolvedValue(undefined),
     devices: jest.fn().mockResolvedValue([]),
     revokeDevice: jest.fn().mockResolvedValue(undefined),
+    resolve: jest.fn().mockResolvedValue({ row: { userId: "user-1" }, session: {} }),
+  };
+  const agent = {
+    configured: true,
+    sign: jest.fn((userId: string) => ({ userID: userId, userHash: "signed-hash" })),
   };
   return {
-    controller: new SessionController(sessions as unknown as DashboardSessionService),
+    controller: new SessionController(
+      sessions as unknown as DashboardSessionService,
+      agent as unknown as AgentIdentityService,
+    ),
     sessions,
+    agent,
   };
 }
 
@@ -38,6 +48,26 @@ afterAll(() => {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
+});
+
+describe("SessionController agent identity", () => {
+  it("signs the caller's own id, not one from the request", async () => {
+    const { controller, agent } = build();
+
+    await expect(controller.agentIdentity(req())).resolves.toEqual({
+      userID: "user-1",
+      userHash: "signed-hash",
+    });
+    expect(agent.sign).toHaveBeenCalledWith("user-1");
+  });
+
+  it("refuses when no agent secret is configured", async () => {
+    const { controller, agent } = build();
+    agent.configured = false;
+
+    await expect(controller.agentIdentity(req())).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(agent.sign).not.toHaveBeenCalled();
+  });
 });
 
 describe("SessionController devices", () => {

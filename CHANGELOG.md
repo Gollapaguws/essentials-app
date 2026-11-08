@@ -56,6 +56,10 @@ Notable changes to ESSENTIALS. Dates are UTC.
   confirmed DJ is listed with their set time, and nothing cancelled appears.
 - Smoke also checks the dashboard session end to end: login returns an httpOnly
   cookie, `/auth/me` answers with it, and logout revokes it.
+- Support chat (Jotform agent) on the public site and across the dashboard.
+  On the dashboard the API signs the signed-in account's id with
+  `JOTFORM_AGENT_SECRET` and returns only the HMAC, so the secret never reaches
+  the browser or the bundle; signing out resets the widget to anonymous.
 - **Account → Signed-in devices** lists every browser session on the account
   with when it signed in and whether it is two-step, and can revoke one without
   disturbing the others. Revoking the browser you are using signs it out.

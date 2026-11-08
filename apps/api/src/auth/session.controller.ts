@@ -10,12 +10,14 @@ import {
   Post,
   Req,
   Res,
+  ServiceUnavailableException,
   UseGuards,
 } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { IsEmail, IsString, Matches, MinLength } from "class-validator";
 import type { Request, Response } from "express";
 import { DashboardSessionService } from "./dashboard-session.service";
+import { AgentIdentityService } from "./agent-identity.service";
 import { SupabaseAuthGuard } from "./supabase-auth.guard";
 import { SkipMfa } from "../common/skip-mfa.decorator";
 
@@ -73,7 +75,10 @@ class VerifyDto extends FactorDto {
  */
 @Controller("auth")
 export class SessionController {
-  constructor(private readonly sessions: DashboardSessionService) {}
+  constructor(
+    private readonly sessions: DashboardSessionService,
+    private readonly agent: AgentIdentityService,
+  ) {}
 
   @Post("session")
   @HttpCode(200)
@@ -96,6 +101,22 @@ export class SessionController {
   @Throttle({ default: { limit: 60, ttl: 60_000 } })
   async devices(@Req() req: Request) {
     return { sessions: await this.sessions.devices(req) };
+  }
+
+  /**
+   * The support widget's identity, signed server-side. The browser never holds
+   * the agent secret, only the hash for its own account.
+   */
+  @Get("agent-identity")
+  @UseGuards(SupabaseAuthGuard)
+  @SkipMfa()
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  async agentIdentity(@Req() req: Request) {
+    if (!this.agent.configured) {
+      throw new ServiceUnavailableException("Support chat identity is not configured.");
+    }
+    const { row } = await this.sessions.resolve(req);
+    return this.agent.sign(row.userId);
   }
 
   /** Sign one session out; revoking the caller's own also clears its cookie. */

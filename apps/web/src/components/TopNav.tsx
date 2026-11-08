@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { session } from "@/lib/session";
+import { resetAgentUser } from "@/lib/agent";
 import { Tooltip } from "@/components/Tooltip";
 
 import type { AuthRole } from "@essentials/auth";
@@ -161,6 +162,8 @@ export function TopNav() {
 
   const signOut = async () => {
     await session.logout().catch(() => undefined);
+    // The chat widget must forget the account that just signed out.
+    resetAgentUser();
     router.replace("/");
   };
 

@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { AuthProvider } from "@/components/AuthProvider";
+import { AgentChat } from "@/components/AgentChat";
 
 export const metadata: Metadata = {
   title: "ESSENTIALS · Promoter Dashboard",
@@ -11,7 +12,10 @@ export default function RootLayout({ children }: { children: import("react").Rea
   return (
     <html lang="en" className="dark">
       <body className="bg-bg text-white min-h-screen font-sans">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <AgentChat />
+        </AuthProvider>
       </body>
     </html>
   );
