@@ -110,6 +110,25 @@ export class DashboardSessionService {
     await this.open(res, grant);
   }
 
+  /**
+   * Turn a Supabase session the browser already holds into a dashboard session.
+   *
+   * The public site signs in with the Supabase client, so its Google and
+   * password sign-ins never touched this cookie and the dashboard sent people
+   * back to its own login. The token is verified here like any bearer token
+   * before anything is stored.
+   */
+  async adopt(
+    accessToken: string,
+    refreshToken: string | null,
+    res: Response,
+  ): Promise<void> {
+    await this.open(res, {
+      access_token: accessToken,
+      refresh_token: refreshToken ?? undefined,
+    });
+  }
+
   /** Finish an emailed recovery link: the code is exchanged with our verifier. */
   async exchange(code: string, req: Request, res: Response): Promise<void> {
     const verifier = readCookie(req, PKCE_COOKIE);

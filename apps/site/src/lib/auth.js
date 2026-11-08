@@ -82,3 +82,32 @@ export async function updatePassword(password) {
 }
 
 export const signOut = () => supabase.auth.signOut();
+
+/**
+ * Swap this browser's Supabase session for the dashboard's httpOnly cookie.
+ *
+ * Signing in here only creates a Supabase session; the dashboard reads a
+ * server-side cookie, so without this step it greeted everyone — Google or
+ * password — with its own login form. Going through the API also verifies the
+ * token before anything is stored.
+ */
+export async function openDashboard() {
+  const { data } = await supabase.auth.getSession();
+  const current = data.session;
+  if (current) {
+    try {
+      await fetch(`${API_URL}/auth/session/token`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessToken: current.access_token,
+          refreshToken: current.refresh_token,
+        }),
+      });
+    } catch {
+      // Navigating anyway lets the dashboard explain itself on its own form.
+    }
+  }
+  window.location.href = "/dashboard";
+}

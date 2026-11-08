@@ -14,10 +14,11 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
-import { IsEmail, IsString, Matches, MinLength } from "class-validator";
+import { IsEmail, IsOptional, IsString, Matches, MinLength } from "class-validator";
 import type { Request, Response } from "express";
 import { DashboardSessionService } from "./dashboard-session.service";
 import { AgentIdentityService } from "./agent-identity.service";
+import { AgentContextService } from "./agent-context.service";
 import { SupabaseAuthGuard } from "./supabase-auth.guard";
 import { SkipMfa } from "../common/skip-mfa.decorator";
 
@@ -28,6 +29,17 @@ class LoginDto {
   @IsString()
   @MinLength(1)
   password!: string;
+}
+
+class AdoptDto {
+  @IsString()
+  @MinLength(20)
+  accessToken!: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  refreshToken?: string;
 }
 
 class ExchangeDto {
@@ -78,6 +90,7 @@ export class SessionController {
   constructor(
     private readonly sessions: DashboardSessionService,
     private readonly agent: AgentIdentityService,
+    private readonly agentContext: AgentContextService,
   ) {}
 
   @Post("session")
@@ -92,6 +105,21 @@ export class SessionController {
   @HttpCode(204)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     await this.sessions.logout(req, res);
+  }
+
+  /**
+   * Hand a Supabase session from the public site over to the dashboard: the
+   * token is verified server-side and exchanged for the httpOnly cookie.
+   */
+  @Post("session/token")
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  async adopt(
+    @Body() dto: AdoptDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.sessions.adopt(dto.accessToken, dto.refreshToken ?? null, res);
+    return { ok: true };
   }
 
   /** Signed-in sessions for the account, so one can be revoked if it is lost. */
@@ -116,7 +144,10 @@ export class SessionController {
       throw new ServiceUnavailableException("Support chat identity is not configured.");
     }
     const { row } = await this.sessions.resolve(req);
-    return this.agent.sign(row.userId);
+    return {
+      ...this.agent.sign(row.userId),
+      context: await this.agentContext.for(row.userId),
+    };
   }
 
   /** Sign one session out; revoking the caller's own also clears its cookie. */

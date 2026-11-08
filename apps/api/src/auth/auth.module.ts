@@ -4,6 +4,7 @@ import { SessionController } from "./session.controller";
 import { DashboardSessionService } from "./dashboard-session.service";
 import { DashboardSessionCleanup } from "./dashboard-session.cron";
 import { AgentIdentityService } from "./agent-identity.service";
+import { AgentContextService } from "./agent-context.service";
 import { SupabaseTokenService } from "./supabase-token.service";
 import { SupabaseAuthGuard } from "./supabase-auth.guard";
 import { AuthUserService } from "./auth-user.service";
@@ -21,6 +22,7 @@ import { SupabaseAdminService } from "./supabase-admin.service";
     DashboardSessionService,
     DashboardSessionCleanup,
     AgentIdentityService,
+    AgentContextService,
   ],
   exports: [
     SupabaseTokenService,

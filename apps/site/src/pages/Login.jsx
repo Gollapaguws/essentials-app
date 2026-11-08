@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { signInWithPassword, signInWithGoogle } from "@/lib/auth";
+import { openDashboard, signInWithPassword, signInWithGoogle } from "@/lib/auth";
 import { authCallbackUrl } from "@/lib/supabase";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
@@ -18,9 +18,9 @@ export default function Login() {
     setError(null);
     try {
       await signInWithPassword(email, password);
-      // Signing in here is only half the job: the dashboard owns MFA and role
-      // routing, so hand off instead of leaving the visitor on a silent form.
-      window.location.href = "/dashboard";
+      // Signing in here is only half the job: the dashboard reads its own
+      // cookie, so swap the Supabase session for it, then hand over.
+      await openDashboard();
     } catch {
       setError("That email and password do not match an account. Check both, or use Google.");
     } finally {

@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import { SessionController } from "./session.controller";
 import type { DashboardSessionService } from "./dashboard-session.service";
 import type { AgentIdentityService } from "./agent-identity.service";
+import type { AgentContextService } from "./agent-context.service";
 
 /** The controller only uses `get("origin")` for the recovery redirect. */
 const req = (origin?: string) =>
@@ -18,19 +19,25 @@ function build() {
     startRecovery: jest.fn().mockResolvedValue(undefined),
     devices: jest.fn().mockResolvedValue([]),
     revokeDevice: jest.fn().mockResolvedValue(undefined),
+    adopt: jest.fn().mockResolvedValue(undefined),
     resolve: jest.fn().mockResolvedValue({ row: { userId: "user-1" }, session: {} }),
   };
   const agent = {
     configured: true,
     sign: jest.fn((userId: string) => ({ userID: userId, userHash: "signed-hash" })),
   };
+  const context = { role: "promoter", summary: "Promoter.", facts: { upcoming_events: 1 } };
+  const agentContext = { for: jest.fn().mockResolvedValue(context) };
   return {
     controller: new SessionController(
       sessions as unknown as DashboardSessionService,
       agent as unknown as AgentIdentityService,
+      agentContext as unknown as AgentContextService,
     ),
     sessions,
     agent,
+    agentContext,
+    context,
   };
 }
 
@@ -50,15 +57,36 @@ afterAll(() => {
   }
 });
 
+describe("SessionController site handoff", () => {
+  it("adopts the token pair the site already holds", async () => {
+    const { controller, sessions } = build();
+
+    await expect(
+      controller.adopt({ accessToken: "at-site", refreshToken: "rt-site" }, res),
+    ).resolves.toEqual({ ok: true });
+    expect(sessions.adopt).toHaveBeenCalledWith("at-site", "rt-site", res);
+  });
+
+  it("adopts an access token with no refresh token", async () => {
+    const { controller, sessions } = build();
+
+    await controller.adopt({ accessToken: "at-site" }, res);
+
+    expect(sessions.adopt).toHaveBeenCalledWith("at-site", null, res);
+  });
+});
+
 describe("SessionController agent identity", () => {
-  it("signs the caller's own id, not one from the request", async () => {
-    const { controller, agent } = build();
+  it("signs the caller's own id and adds their live context", async () => {
+    const { controller, agent, agentContext, context } = build();
 
     await expect(controller.agentIdentity(req())).resolves.toEqual({
       userID: "user-1",
       userHash: "signed-hash",
+      context,
     });
     expect(agent.sign).toHaveBeenCalledWith("user-1");
+    expect(agentContext.for).toHaveBeenCalledWith("user-1");
   });
 
   it("refuses when no agent secret is configured", async () => {

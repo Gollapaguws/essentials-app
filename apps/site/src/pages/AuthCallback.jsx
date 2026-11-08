@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { DASHBOARD_ROLES } from "@essentials/auth";
 import { supabase } from "@/lib/supabase";
-import { fetchMe } from "@/lib/auth";
+import { fetchMe, openDashboard } from "@/lib/auth";
 
 /** @type {import('react').CSSProperties} */
 const style = { minHeight: "80vh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" };
@@ -63,7 +63,9 @@ export default function AuthCallback() {
       // there — hand them over exactly like the password form does. Guests and
       // signed-out-onboarding accounts stay on the public site.
       if (DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
-        window.location.href = "/dashboard";
+        // Google (and any other OAuth) lands here with a Supabase session, not
+        // the dashboard's cookie — exchange it before handing over.
+        await openDashboard();
         return;
       }
       navigate("/", { replace: true });

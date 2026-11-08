@@ -255,6 +255,29 @@ describe("DashboardSessionService sign-out", () => {
   });
 });
 
+describe("DashboardSessionService adoption from the site", () => {
+  it("verifies the token and stores it encrypted behind the cookie", async () => {
+    const res = mockRes();
+
+    await build().adopt("at-site", "rt-site", res);
+
+    const data = db.dashboardSession.create.mock.calls[0][0].data as Row;
+    expect(tokens.verify).toHaveBeenCalledWith("at-site");
+    expect(data.accessToken).not.toContain("at-site");
+    expect(data.refreshToken).not.toContain("rt-site");
+    expect(res.headers[SESSION_COOKIE].value).toMatch(/^[A-Za-z0-9_-]{40,}$/);
+  });
+
+  it("creates no session for a token that does not verify", async () => {
+    tokens.verify.mockRejectedValueOnce(new UnauthorizedException("Invalid or expired token"));
+
+    await expect(build().adopt("not-a-token", null, mockRes())).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    expect(db.dashboardSession.create).not.toHaveBeenCalled();
+  });
+});
+
 describe("DashboardSessionService devices", () => {
   it("lists this account's live sessions and marks the caller's own", async () => {
     const { data, cookie } = await signIn();

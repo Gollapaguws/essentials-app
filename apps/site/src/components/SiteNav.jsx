@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchMe, signOut } from "@/lib/auth";
+import { fetchMe, openDashboard, signOut } from "@/lib/auth";
 
 // Each label carries one line of plain description, so the menu says where it
 // goes. Same-origin links with a hash keep working from the auth pages too: the
@@ -58,7 +58,14 @@ export default function SiteNav() {
         </Link>
         <div className="noir-nav-actions">
           {hasDashboard && (
-            <a href="/dashboard" className="noir-nav-quiet">
+            <a
+              href="/dashboard"
+              className="noir-nav-quiet"
+              onClick={(e) => {
+                e.preventDefault();
+                void openDashboard();
+              }}
+            >
               DASHBOARD
             </a>
           )}
@@ -96,7 +103,15 @@ export default function SiteNav() {
               </Link>
             ))}
             {hasDashboard && (
-              <a href="/dashboard" onClick={() => setOpen(false)} className="noir-navlink">
+              <a
+                href="/dashboard"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setOpen(false);
+                  void openDashboard();
+                }}
+                className="noir-navlink"
+              >
                 DASHBOARD
                 <span className="noir-navnote">Your dashboard tools</span>
               </a>
