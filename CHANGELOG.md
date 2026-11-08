@@ -28,6 +28,10 @@ Notable changes to ESSENTIALS. Dates are UTC.
   call into an extra database lookup.
 - `.gitignore` now covers env files and backups, and the Google OAuth secret
   was removed from `supabase/config.toml.bak-smtp`.
+- Recovery links use PKCE end to end: the verifier sits in an httpOnly cookie
+  scoped to `/api/auth` for one hour, Supabase receives only its SHA-256 hash,
+  and the code is exchanged server-side. The browser is never handed a token to
+  complete a reset.
 
 ### Changed
 
@@ -52,6 +56,10 @@ Notable changes to ESSENTIALS. Dates are UTC.
   confirmed DJ is listed with their set time, and nothing cancelled appears.
 - Smoke also checks the dashboard session end to end: login returns an httpOnly
   cookie, `/auth/me` answers with it, and logout revokes it.
+- Smoke guards the recovery flow, in read-only runs too: a reset request from
+  the dashboard's own origin must be accepted and must set the verifier cookie,
+  a foreign origin must be refused, and the callback page must be served. It
+  waits out the endpoint's 5/min throttle instead of reporting a false failure.
 
 ### Fixed
 
@@ -61,3 +69,8 @@ Notable changes to ESSENTIALS. Dates are UTC.
 - Confirmed DJs appear on the front-page lineup with their slot times, read at
   request time so a confirmation or cancellation shows up without re-saving the
   page.
+- Password recovery no longer fails with `400 Origin not allowed` when requested
+  from the dashboard. The redirect allowlist trusted only `CORS_ORIGINS`, which
+  lists the origins that call the API from elsewhere; the dashboard is served
+  from `SITE_URL` and calls `/api` same-origin, so it never appeared there. Both
+  are trusted now, and an unknown origin is still rejected.
