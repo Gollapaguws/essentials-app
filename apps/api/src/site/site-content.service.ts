@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, Logger } from "@nestjs/common";
-import { prisma } from "@essentials/db";
+import { ArtistBookingStatus, EventStatus, prisma } from "@essentials/db";
 import { IsArray, IsIn, IsOptional, IsString, MaxLength, MinLength, validateSync } from "class-validator";
 
 /** Editable front-page content schema (validated on save). */
@@ -34,14 +34,93 @@ const KEY = "front_page";
 export class SiteContentService {
   private readonly logger = new Logger(SiteContentService.name);
 
-  async get() {
+  async get(): Promise<FrontPageContent & { updatedAt: Date | null }> {
     const row = await prisma.siteContent.findUnique({ where: { key: KEY } });
     const value = (row?.value ?? {}) as Record<string, unknown>;
     const publishAt = value["lineupPublishAt"] as string | undefined;
     if (publishAt && new Date(publishAt) > new Date() && Array.isArray(value["events"])) {
       value["events"] = []; // scheduled drop — hidden until publish time
     }
-    return { ...value, updatedAt: row?.updatedAt ?? null };
+    if (Array.isArray(value["events"])) {
+      const lineup = await this.pruneLineup(value["events"] as Record<string, unknown>[]);
+      value["events"] = await this.withArtists(lineup);
+    }
+    return { ...value, updatedAt: row?.updatedAt ?? null } as FrontPageContent & {
+      updatedAt: Date | null;
+    };
+  }
+
+  /**
+   * The lineup is curated copy, but an entry that points at an event is only
+   * shown while that event still exists, is announced and has not passed.
+   * Without this, a deleted or cancelled night — or a QA event saved into the
+   * array — stays on the front page forever, and duplicate ids show twice.
+   * Entries with no eventId are hand-written announcements and always kept.
+   */
+  private async pruneLineup(events: Record<string, unknown>[]) {
+    const ids = [
+      ...new Set(
+        events.map((e) => e["eventId"]).filter((id): id is string => typeof id === "string"),
+      ),
+    ];
+    const live = ids.length
+      ? await prisma.event.findMany({
+          where: {
+            id: { in: ids },
+            status: { in: [EventStatus.approved, EventStatus.live] },
+            date: { gte: new Date() },
+          },
+          select: { id: true },
+        })
+      : [];
+    const liveIds = new Set(live.map((e) => e.id));
+    const seen = new Set<string>();
+    return events.filter((entry) => {
+      const id = entry["eventId"];
+      if (typeof id !== "string") return true;
+      if (!liveIds.has(id) || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }
+
+  /**
+   * A confirmed DJ is public: the night's lineup and the time they play.
+   * Attached at read time so a confirmation (or a cancellation) shows up
+   * without anyone re-saving the curated front page.
+   */
+  private async withArtists(events: Record<string, unknown>[]) {
+    const ids = events
+      .map((e) => e["eventId"])
+      .filter((id): id is string => typeof id === "string");
+    if (!ids.length) return events;
+
+    const bookings = await prisma.artistBooking.findMany({
+      where: { eventId: { in: ids }, status: ArtistBookingStatus.confirmed },
+      select: {
+        eventId: true,
+        slot: true,
+        slotRef: { select: { label: true } },
+        artist: { select: { stageName: true } },
+      },
+      orderBy: { startAt: "asc" },
+    });
+
+    const byEvent = new Map<string, { name: string; time: string | null }[]>();
+    for (const booking of bookings) {
+      const list = byEvent.get(booking.eventId) ?? [];
+      list.push({
+        name: booking.artist.stageName,
+        time: booking.slotRef?.label ?? booking.slot ?? null,
+      });
+      byEvent.set(booking.eventId, list);
+    }
+
+    return events.map((entry) => {
+      const id = entry["eventId"];
+      const artists = typeof id === "string" ? byEvent.get(id) : undefined;
+      return artists?.length ? { ...entry, artists } : entry;
+    });
   }
 
   async save(input: FrontPageContent) {

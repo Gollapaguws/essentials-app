@@ -601,6 +601,36 @@
   margin-top: auto;
 }
 
+/* Confirmed DJs, with the time they play, on the front-page lineup. */
+.noir-djs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.noir-dj {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(207, 227, 255, 0.16);
+}
+
+.noir-dj-name {
+  color: #eaf2ff;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.noir-dj-time {
+  color: var(--noir-steel);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  white-space: nowrap;
+}
+
 .noir-frame-empty {
   align-items: center;
   justify-content: center;

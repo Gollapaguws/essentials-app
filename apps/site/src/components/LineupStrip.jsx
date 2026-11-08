@@ -20,12 +20,22 @@ export default function LineupStrip({ events = [] }) {
                 <span className="noir-micro">
                   {event.city ? `${event.city} — ${event.venue}` : event.venue}
                 </span>
+                {Array.isArray(event.artists) && event.artists.length > 0 && (
+                  <span className="noir-djs">
+                    {event.artists.map((dj, i) => (
+                      <span className="noir-dj" key={`${dj.name}-${i}`}>
+                        <span className="noir-dj-name">{dj.name}</span>
+                        {dj.time && <span className="noir-dj-time">{dj.time}</span>}
+                      </span>
+                    ))}
+                  </span>
+                )}
                 <span className="noir-frame-meta">
                   <span className="noir-micro">Doors {event.doors}</span>
                   <span className="noir-micro">{event.status}</span>
                 </span>
                 <a
-                  href={`/events/${event.id}`}
+                  href={`/events/${event.eventId ?? event.id}`}
                   className="noir-ticket"
                 >
                   VIEW THE NIGHT
