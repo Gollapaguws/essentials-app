@@ -106,6 +106,7 @@ model User {
   matches2        Match[]        @relation("MatchUser2")
   groupMessages   GroupMessage[]
   loyaltyVisits   LoyaltyVisit[]
+  dashboardSessions DashboardSession[]
   referralsGiven  Referral[]     @relation("Referrer")
   artistProfile   ArtistProfile?
   artistNotes     ArtistNote[]
@@ -345,6 +346,25 @@ model PromotionRedemption {
 }
 
 // ===== Artist portal (Phase 3 — SCHEMA ONLY) =====
+/// Server-side dashboard session. The browser only holds an opaque, httpOnly
+/// cookie; the Supabase tokens live here, encrypted, and never reach the client.
+model DashboardSession {
+  id           String   @id // sha256 of the cookie value — the raw id is never stored
+  userId       String
+  authUid      String
+  accessToken  String // AES-256-GCM, keyed from SESSION_SECRET/JWT_SECRET
+  refreshToken String?
+  aal          String   @default("aal1")
+  expiresAt    DateTime // access token expiry (refreshed in place)
+  refreshUntil DateTime
+  createdAt    DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 model ArtistProfile {
   id                          String          @id @default(cuid())
   userId                      String          @unique

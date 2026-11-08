@@ -8,6 +8,7 @@ import { Reflector } from "@nestjs/core";
 import type { Role } from "@prisma/client";
 import { SupabaseTokenService } from "./supabase-token.service";
 import { AuthUserService } from "./auth-user.service";
+import { DashboardSessionService } from "./dashboard-session.service";
 import { SKIP_MFA_KEY } from "../common/skip-mfa.decorator";
 
 /** Roles that must present an aal2 (MFA-satisfied) session on data endpoints. */
@@ -18,17 +19,21 @@ export class SupabaseAuthGuard implements CanActivate {
   constructor(
     private readonly tokens: SupabaseTokenService,
     private readonly authUsers: AuthUserService,
+    private readonly sessions: DashboardSessionService,
     private readonly reflector: Reflector,
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();
     const header: unknown = req.headers?.authorization;
-    if (typeof header !== "string" || !header.startsWith("Bearer ")) {
-      throw new UnauthorizedException("Missing bearer token");
-    }
 
-    const session = await this.tokens.verify(header.slice(7).trim());
+    // Two ways in: a bearer token (mobile app, public site, exports) or the
+    // dashboard's server-side session cookie. The cookie path is what keeps the
+    // dashboard's tokens out of the browser entirely.
+    const session =
+      typeof header === "string" && header.startsWith("Bearer ")
+        ? await this.tokens.verify(header.slice(7).trim())
+        : (await this.sessions.resolve(req)).session;
 
     // Prisma is the source of truth for both identity and role: an admin's
     // promotion applies immediately instead of waiting for a new token.

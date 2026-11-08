@@ -230,6 +230,32 @@ async function main() {
     const users = await req(`${API}/users`, { token });
     check("GET /users as guest → 403", users.status === 403, users.status);
 
+    // The dashboard signs in with a server-side session, not a localStorage token.
+    const login = await fetch(`${API}/auth/session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const setCookie = login.headers.get("set-cookie") ?? "";
+    const cookie = setCookie.split(";")[0] ?? "";
+    check(
+      "dashboard login → httpOnly session cookie",
+      login.status === 200 && /^ess_dash=/.test(cookie) && /HttpOnly/i.test(setCookie),
+      { status: login.status, httpOnly: /HttpOnly/i.test(setCookie) },
+    );
+
+    const cookieMe = await fetch(`${API}/auth/me`, { headers: { cookie } });
+    check("GET /auth/me with the cookie → 200", cookieMe.status === 200, cookieMe.status);
+
+    const logout = await fetch(`${API}/auth/session`, { method: "DELETE", headers: { cookie } });
+    const cookieMeAfter = await fetch(`${API}/auth/me`, { headers: { cookie } });
+    check(
+      "logout revokes the server session",
+      logout.status === 204 && cookieMeAfter.status === 401,
+      { logout: logout.status, after: cookieMeAfter.status },
+    );
+
     // 3. Door pass -------------------------------------------------------
     const feed = await req(`${API}/events`, { token });
     const events = Array.isArray(feed.body) ? feed.body : [];
