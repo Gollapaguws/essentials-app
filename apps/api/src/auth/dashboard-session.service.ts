@@ -251,9 +251,14 @@ export class DashboardSessionService {
   async revokeDevice(req: Request, res: Response, id: string): Promise<void> {
     const { row } = await this.resolve(req);
     // Scoped to the caller's user id: an id from another account matches nothing.
-    const { count } = await prisma.dashboardSession.deleteMany({ where: { id, userId: row.userId } });
-    if (count === 0) throw new NotFoundException("That device is not signed in.");
-    if (id === row.id) res.clearCookie(SESSION_COOKIE, { path: "/" });
+    const target = await prisma.dashboardSession.findFirst({ where: { id, userId: row.userId } });
+    if (!target) throw new NotFoundException("That device is not signed in.");
+    // Revoking the row alone only took that browser's cookie away: its Supabase
+    // tokens stayed valid, so the site could hand it a fresh session on the next
+    // click. The provider session has to end for the sign-out to hold.
+    await this.endUpstreamSession(target);
+    await prisma.dashboardSession.deleteMany({ where: { id: target.id } });
+    if (target.id === row.id) res.clearCookie(SESSION_COOKIE, { path: "/" });
   }
 
   /**

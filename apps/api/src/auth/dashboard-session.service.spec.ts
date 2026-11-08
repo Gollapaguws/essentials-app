@@ -11,6 +11,7 @@ jest.mock("@essentials/db", () => ({
   prisma: {
     dashboardSession: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -22,6 +23,7 @@ jest.mock("@essentials/db", () => ({
 const db = prisma as unknown as {
   dashboardSession: {
     findUnique: jest.Mock;
+    findFirst: jest.Mock;
     findMany: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
@@ -111,6 +113,7 @@ async function signIn(over: Partial<VerifiedSession> = {}) {
 
 beforeEach(() => {
   db.dashboardSession.findUnique.mockReset();
+  db.dashboardSession.findFirst.mockReset();
   db.dashboardSession.findMany.mockReset().mockResolvedValue([]);
   db.dashboardSession.create.mockReset().mockResolvedValue({});
   db.dashboardSession.update.mockReset().mockResolvedValue({});
@@ -345,34 +348,52 @@ describe("DashboardSessionService devices", () => {
   it("revokes another device without signing the caller out", async () => {
     const { data, cookie } = await signIn();
     db.dashboardSession.findUnique.mockResolvedValue(data);
+    db.dashboardSession.findFirst.mockResolvedValueOnce({ ...data, id: sha256("other") });
+    fetchMock.mockResolvedValueOnce(json({}));
     const res = mockRes();
 
     await build().revokeDevice(cookieReq({ [SESSION_COOKIE]: cookie }), res, sha256("other"));
 
-    expect(db.dashboardSession.deleteMany).toHaveBeenCalledWith({
-      where: { id: sha256("other"), userId: "user-1" },
-    });
+    expect(db.dashboardSession.deleteMany).toHaveBeenCalledWith({ where: { id: sha256("other") } });
     expect(res.clearCookie).not.toHaveBeenCalled();
+  });
+
+  it("ends that device's provider session, not just its row", async () => {
+    const { data, cookie } = await signIn();
+    db.dashboardSession.findUnique.mockResolvedValue(data);
+    db.dashboardSession.findFirst.mockResolvedValueOnce({ ...data, id: sha256("other") });
+    fetchMock.mockResolvedValueOnce(json({}));
+
+    await build().revokeDevice(cookieReq({ [SESSION_COOKIE]: cookie }), mockRes(), sha256("other"));
+
+    // Without this the other browser keeps usable tokens and signs back in.
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://gotrue.test/auth/v1/logout");
+    expect(init.headers.Authorization).toBe("Bearer at-1");
   });
 
   it("revoking your own session also clears the cookie", async () => {
     const { data, cookie } = await signIn();
     db.dashboardSession.findUnique.mockResolvedValue(data);
+    db.dashboardSession.findFirst.mockResolvedValueOnce(data);
+    fetchMock.mockResolvedValueOnce(json({}));
     const res = mockRes();
 
     await build().revokeDevice(cookieReq({ [SESSION_COOKIE]: cookie }), res, data.id);
 
+    expect(fetchMock.mock.calls[0][0]).toBe("http://gotrue.test/auth/v1/logout");
     expect(res.clearCookie).toHaveBeenCalledWith(SESSION_COOKIE, { path: "/" });
   });
 
   it("refuses an id the account does not own", async () => {
     const { data, cookie } = await signIn();
     db.dashboardSession.findUnique.mockResolvedValue(data);
-    db.dashboardSession.deleteMany.mockResolvedValueOnce({ count: 0 });
+    db.dashboardSession.findFirst.mockResolvedValueOnce(null);
 
     await expect(
       build().revokeDevice(cookieReq({ [SESSION_COOKIE]: cookie }), mockRes(), sha256("someone-elses")),
     ).rejects.toBeInstanceOf(NotFoundException);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

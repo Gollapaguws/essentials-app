@@ -3,27 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { session } from "@/lib/session";
-import { resetAgentUser } from "@/lib/agent";
+import { signOutEverywhere } from "@/lib/signOut";
 import { Tooltip } from "@/components/Tooltip";
 
 import type { AuthRole } from "@essentials/auth";
 
 /** `hint` is the hover/focus tooltip; `roles` decides who sees the item. */
 type NavLink = { href: string; label: string; hint: string; roles?: readonly AuthRole[] };
-
-/**
- * Drop the site's Supabase session from this browser.
- *
- * supabase-js stores under `sb-<ref>-auth-token` (plus a PKCE verifier key), and
- * the dashboard shares the origin with the site, so signing out here has to
- * clear it too — the API has already ended the session behind the tokens.
- */
-function forgetSiteSession(): void {
-  for (const key of Object.keys(window.localStorage)) {
-    if (/^sb-.*-auth-token/.test(key)) window.localStorage.removeItem(key);
-  }
-}
 
 const links: NavLink[] = [
   {
@@ -177,18 +163,8 @@ export function TopNav() {
   const role = user?.role ?? "guest";
   const visible = links.filter((l) => role === "admin" || !l.roles || l.roles.includes(role));
 
-  const signOut = async () => {
-    await session.logout().catch(() => undefined);
-    // The chat widget must forget the account that just signed out.
-    resetAgentUser();
-    // The public site keeps its Supabase session in this browser's storage on
-    // the same origin. Left there, it swaps itself for a new dashboard session
-    // the moment anyone clicks Dashboard — a sign-out that signs straight back in.
-    forgetSiteSession();
-    // Leave the dashboard rather than routing to its root: every dashboard page
-    // is signed-in only, so "home" would render the login card a moment after
-    // signing out. The public site is what a DJ expects to land on.
-    window.location.replace("/");
+  const signOut = () => {
+    void signOutEverywhere();
   };
 
   return (

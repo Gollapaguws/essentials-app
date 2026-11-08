@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { TopNav } from "@/components/TopNav";
 import { session, type DashboardDevice } from "@/lib/session";
+import { signOutEverywhere } from "@/lib/signOut";
 import { errorMessage } from "@/lib/errors";
 
 const when = (iso: string) => {
@@ -25,7 +25,6 @@ const when = (iso: string) => {
  * the browser that might not be the one holding it.
  */
 export default function Account() {
-  const router = useRouter();
   const [devices, setDevices] = useState<DashboardDevice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
@@ -48,13 +47,14 @@ export default function Account() {
     setRevoking(device.id);
     setError(null);
     try {
-      await session.revokeDevice(device.id);
-      // Revoking this browser ends the session it is using, so there is nothing
-      // left to show here.
+      // Signing this browser out is a full sign-out, not just a revoked row:
+      // the site's tokens and the chat widget are on this browser too, and the
+      // login card is not where a DJ expects to be after signing out.
       if (device.current) {
-        router.replace("/login");
+        await signOutEverywhere();
         return;
       }
+      await session.revokeDevice(device.id);
       setDevices((prev) => prev?.filter((d) => d.id !== device.id) ?? prev);
     } catch (e) {
       setError(errorMessage(e) ?? "Could not sign that device out.");
