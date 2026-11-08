@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { session } from "@/lib/session";
 import { resetAgentUser } from "@/lib/agent";
@@ -149,11 +149,15 @@ const links: NavLink[] = [
     hint: "Platform rates every DJ and invoice is priced from — the standard travel rate per kilometre.",
     roles: ["admin"],
   },
+  {
+    href: "/help",
+    label: "Help",
+    hint: "The manual for your role: what each screen is for, how the money works, and what to do when something looks wrong.",
+  },
 ];
 
 export function TopNav() {
   const path = usePathname();
-  const router = useRouter();
   const { me } = useAuth();
   const user = me?.user ?? null;
   // Admins see the whole dashboard; everyone else only the sections their role owns.
@@ -164,7 +168,10 @@ export function TopNav() {
     await session.logout().catch(() => undefined);
     // The chat widget must forget the account that just signed out.
     resetAgentUser();
-    router.replace("/");
+    // Leave the dashboard rather than routing to its root: every dashboard page
+    // is signed-in only, so "home" would render the login card a moment after
+    // signing out. The public site is what a DJ expects to land on.
+    window.location.replace("/");
   };
 
   return (

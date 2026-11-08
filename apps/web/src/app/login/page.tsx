@@ -7,7 +7,7 @@ import { DASHBOARD_ROLES, landingPath, type MeResponse } from "@essentials/auth"
 import { session } from "@/lib/session";
 import { InfoTip, Tooltip } from "@/components/Tooltip";
 
-/** Sign-in for promoters/venue managers/admins: email and password. */
+/** Sign-in for every dashboard role: email and password. */
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -101,7 +101,7 @@ export default function LoginPage() {
     <main className="min-h-screen grid place-items-center px-6">
       <div className="w-full max-w-md border border-line bg-surface rounded-2xl p-8">
         <h1 className="text-neon text-3xl font-black tracking-widest">ESSENTIALS</h1>
-        <p className="text-neutral-500 mt-2 text-sm">Promoter dashboard — sign in to continue.</p>
+        <p className="text-neutral-500 mt-2 text-sm">Dashboard — sign in to continue.</p>
         {mailDown && (
           <p className="mt-4 text-xs text-amber-400" role="status">
             Password reset email is down right now, so a reset link will not arrive. An admin can set

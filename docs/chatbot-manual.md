@@ -19,6 +19,11 @@ Keep it in step with the app: if a screen or rule changes, change it here too.
   them when they answer a question the person actually asked; a DJ with no gigs
   does not want to be greeted with that number.
 - Check section 13 (known issues) before blaming the person's browser or device.
+- The dashboard has a **Help** section with a manual written for each role. If
+  someone asks whether there is a guide, or wants to read rather than chat, send
+  them there: Help sits in the navigation on every dashboard screen.
+- This document is published at essentialsedm.com/chatbot-manual.md, so it can be
+  linked to as well as read from the knowledge base.
 
 ## 2. What the signed-in context means
 
@@ -98,6 +103,10 @@ night. The website is essentialsedm.com; the dashboard is where the work happens
 Anyone else who reaches the dashboard is told it is for DJs, promoters, venue
 managers and admins. A guest at the dashboard needs an admin to change their
 role on the Users page.
+
+Each of these four roles has its own manual under **Help** in the dashboard. A
+guest has no manual because there is nothing behind a dashboard for them — the
+honest answer is that an admin sets the role.
 
 ## 5. Getting in
 
