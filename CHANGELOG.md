@@ -56,6 +56,11 @@ Notable changes to ESSENTIALS. Dates are UTC.
   confirmed DJ is listed with their set time, and nothing cancelled appears.
 - Smoke also checks the dashboard session end to end: login returns an httpOnly
   cookie, `/auth/me` answers with it, and logout revokes it.
+- The support agent is told who it is helping: on the dashboard the API returns
+  the account's role and live counts (a DJ's upcoming gigs, applications and
+  unpaid invoices; a promoter's events and applications to decide; a venue
+  manager's rooms and pending approvals). `docs/chatbot-manual.md` is the
+  knowledge base it answers from.
 - Support chat (Jotform agent) on the public site and across the dashboard.
   On the dashboard the API signs the signed-in account's id with
   `JOTFORM_AGENT_SECRET` and returns only the HMAC, so the secret never reaches
@@ -84,6 +89,10 @@ Notable changes to ESSENTIALS. Dates are UTC.
 - Confirmed DJs appear on the front-page lineup with their slot times, read at
   request time so a confirmation or cancellation shows up without re-saving the
   page.
+- Signing in on the public site — with Google or with a password — now opens the
+  dashboard instead of asking for a second sign-in. The site hands its Supabase
+  session to the API, which verifies the token and sets the dashboard's own
+  HttpOnly cookie; before this, only the dashboard login ever created one.
 - Password recovery no longer fails with `400 Origin not allowed` when requested
   from the dashboard. The redirect allowlist trusted only `CORS_ORIGINS`, which
   lists the origins that call the API from elsewhere; the dashboard is served

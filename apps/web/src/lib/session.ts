@@ -56,7 +56,12 @@ export const session = {
   devices: () => call<{ sessions: DashboardDevice[] }>("/auth/sessions"),
 
   /** Hash signed by the API for the support widget; no secret leaves the server. */
-  agentIdentity: () => call<{ userID: string; userHash: string }>("/auth/agent-identity"),
+  agentIdentity: () =>
+    call<{
+      userID: string;
+      userHash: string;
+      context: { role: string; summary: string; facts: Record<string, number> };
+    }>("/auth/agent-identity"),
 
   revokeDevice: (id: string) =>
     call<void>(`/auth/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),

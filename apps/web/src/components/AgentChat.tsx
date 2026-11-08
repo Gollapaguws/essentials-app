@@ -20,12 +20,21 @@ export function AgentChat() {
     let active = true;
     session
       .agentIdentity()
-      .then(({ userID, userHash }) => {
+      .then(({ userID, userHash, context }) => {
         if (!active) return;
+        // The manual tells the agent what these keys mean; counts are live and
+        // role-specific, so it can answer "what do I owe?" without guessing.
         identifyAgentUser({
           userID,
           userHash,
-          metadata: { email: me.user.email, role: me.user.role ?? undefined },
+          metadata: {
+            email: me.user.email,
+            role: context.role,
+            summary: context.summary,
+            ...Object.fromEntries(
+              Object.entries(context.facts).map(([key, value]) => [key, String(value)]),
+            ),
+          },
         });
       })
       // Anonymous chat still works; a signed id is an improvement, not a requirement.
