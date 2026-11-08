@@ -40,3 +40,11 @@ systemctl is-active essentials-api essentials-web
 curl -s -o /dev/null -w "site:%{http_code}\n" https://essentialsedm.com/
 curl -s -o /dev/null -w "dashboard:%{http_code}\n" https://essentialsedm.com/dashboard
 curl -s -o /dev/null -w "api:%{http_code}\n" https://essentialsedm.com/api/auth/me
+
+# The smoke run is the only thing that proves the stack works end to end, so it
+# is the deploy gate: it goes through nginx like a real client, and any failing
+# check (health, lineup, cookie session, recovery origin, RBAC, door pass) stops
+# the script with a non-zero exit instead of reporting a success nobody checked.
+echo
+echo "Deploy gate: npm run smoke"
+API_URL=https://essentialsedm.com/api npm run smoke
