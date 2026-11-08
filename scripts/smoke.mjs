@@ -15,8 +15,15 @@
  * exactly the confirmed bookings for those events — nothing missing, nothing
  * cancelled, nothing without a time.
  *
+ * The recovery check also always runs: a password-reset request from the
+ * dashboard's own origin must be accepted (it is same-origin with /api and so is
+ * absent from CORS_ORIGINS) and must set the PKCE verifier cookie, a foreign
+ * origin must be refused, and the callback page the link lands on must be served.
+ *
  * Env: API_URL (default http://127.0.0.1:4000/api), SUPABASE_URL
- * (default http://127.0.0.1:54321), plus DATABASE_URL,
+ * (default http://127.0.0.1:54321), SITE_URL (dashboard origin, enables the
+ * recovery checks), WEB_URL (dashboard base, defaults to SITE_URL + /dashboard),
+ * plus DATABASE_URL,
  * SUPABASE_SERVICE_ROLE_KEY and SUPABASE_ANON_KEY (falls back to the service
  * role key for the password grant) — all read from .env when not exported.
  *
@@ -50,6 +57,8 @@ const GT = `${SUPABASE}/auth/v1`;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const APIKEY = process.env.SUPABASE_ANON_KEY ?? SERVICE_KEY;
 const READ_ONLY = process.argv.includes("--read-only");
+const SITE = (process.env.SITE_URL ?? "").replace(/\/+$/, "");
+const WEB = (process.env.WEB_URL ?? (SITE ? `${SITE}/dashboard` : "")).replace(/\/+$/, "");
 
 const email = `smoke-${Date.now()}@example.test`;
 const password = `${randomUUID()}Aa1!`;
@@ -167,6 +176,70 @@ async function checkLineup() {
   }
 }
 
+const RECOVERY_PATH = "/dashboard/auth/callback?type=recovery";
+
+/**
+ * POST /auth/password/recover is throttled to 5/min per IP (Redis-backed, so it
+ * survives a restart). Two runs inside one minute would trip it and look like a
+ * failure; wait the window out once instead.
+ */
+async function recoverRequest(origin, body) {
+  const send = () =>
+    fetch(`${API}/auth/password/recover`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: origin },
+      body,
+      signal: AbortSignal.timeout(10_000),
+    });
+  const first = await send();
+  if (first.status !== 429) return first;
+  console.log("\n       rate limited (5/min): waiting 61s for the window to reset");
+  await new Promise((r) => setTimeout(r, 61_000));
+  return send();
+}
+
+/**
+ * The dashboard is served from SITE_URL and calls /api same-origin, so it is
+ * never in CORS_ORIGINS. Trusting only CORS_ORIGINS once refused every reset
+ * request the dashboard made; these checks keep that regression visible.
+ */
+async function checkRecovery() {
+  if (!SITE) {
+    skip("recovery accepts the dashboard origin", "SITE_URL not set");
+    skip("recovery refuses a foreign origin", "SITE_URL not set");
+    skip("recovery callback page is served", "SITE_URL not set");
+    return;
+  }
+
+  // An address with no account: the endpoint must answer the same either way,
+  // and no real mailbox should receive a smoke-test reset link.
+  const body = JSON.stringify({
+    email: `smoke-nobody-${Date.now()}@example.test`,
+    path: RECOVERY_PATH,
+  });
+
+  const own = await recoverRequest(SITE, body);
+  const setCookie = own.headers.get("set-cookie") ?? "";
+  check(
+    "recovery accepts the dashboard origin",
+    own.status === 200 && /(^|,\s*)ess_pkce=/.test(setCookie) && /HttpOnly/i.test(setCookie),
+    { origin: SITE, status: own.status, verifierCookie: /ess_pkce=/.test(setCookie) },
+  );
+
+  const foreign = await recoverRequest("https://evil.example", body);
+  check("recovery refuses a foreign origin", foreign.status === 400, { status: foreign.status });
+
+  const callback = await fetch(`${WEB}/auth/callback?type=recovery&code=smoke-not-a-code`, {
+    signal: AbortSignal.timeout(10_000),
+  });
+  const html = await callback.text();
+  check(
+    "recovery callback page is served",
+    callback.status === 200 && /<html/i.test(html),
+    { url: `${WEB}/auth/callback`, status: callback.status, bytes: html.length },
+  );
+}
+
 async function main() {
   if (!SERVICE_KEY || !APIKEY) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY and SUPABASE_ANON_KEY must be set");
@@ -184,12 +257,15 @@ async function main() {
   // 2. Front-page lineup (read-only, runs in both modes) ------------------
   await checkLineup();
 
+  // 3. Dashboard recovery link (read-only, runs in both modes) ------------
+  await checkRecovery();
+
   if (READ_ONLY) {
     console.log("\nRead-only: skipping auth and door-pass checks.");
     return;
   }
 
-  // 2. Auth --------------------------------------------------------------
+  // 4. Auth --------------------------------------------------------------
   let authUserId = null;
   let token = null;
   let eventId = null;
@@ -256,7 +332,7 @@ async function main() {
       { logout: logout.status, after: cookieMeAfter.status },
     );
 
-    // 3. Door pass -------------------------------------------------------
+    // 5. Door pass -------------------------------------------------------
     const feed = await req(`${API}/events`, { token });
     const events = Array.isArray(feed.body) ? feed.body : [];
     check("GET /events → 200 list", feed.status === 200 && Array.isArray(feed.body), {
@@ -317,7 +393,7 @@ async function main() {
       if (cancel.status === 200) eventId = null;
     }
   } finally {
-    // 4. Cleanup — always, even if a check threw.
+    // 6. Cleanup — always, even if a check threw.
     try {
       if (eventId && token) {
         await req(`${API}/events/${eventId}/rsvp`, { token, method: "DELETE" });
