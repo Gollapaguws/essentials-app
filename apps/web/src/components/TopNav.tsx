@@ -126,6 +126,11 @@ const links: NavLink[] = [
     hint: "Your bell feed: DJ calls, applications, confirmations and invoice notices, with unread counts.",
   },
   {
+    href: "/account",
+    label: "Account",
+    hint: "The browsers signed in to your account, and a way to sign one out if you lose it.",
+  },
+  {
     href: "/users",
     label: "Users",
     hint: "Every registered account: make someone a DJ, venue manager or promoter.",

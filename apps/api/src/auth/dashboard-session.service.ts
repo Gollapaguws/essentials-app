@@ -4,7 +4,7 @@ import {
   createHash,
   randomBytes,
 } from "node:crypto";
-import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { prisma } from "@essentials/db";
 import type { Request, Response } from "express";
@@ -48,6 +48,14 @@ interface SessionRow {
 export interface ResolvedDashboardSession {
   session: VerifiedSession;
   row: SessionRow;
+}
+
+export interface DashboardDevice {
+  id: string;
+  createdAt: Date;
+  lastSeenAt: Date;
+  aal: string;
+  current: boolean;
 }
 
 function readCookie(req: Request, name: string): string | null {
@@ -152,6 +160,41 @@ export class DashboardSessionService {
     const raw = readCookie(req, SESSION_COOKIE);
     if (raw) await prisma.dashboardSession.deleteMany({ where: { id: this.hash(raw) } });
     res.clearCookie(SESSION_COOKIE, { path: "/" });
+  }
+
+  /**
+   * Sign-ins the account can see and revoke. Tokens and the auth uid never leave
+   * the server; `id` is the row's hash, which is useless as a cookie value.
+   */
+  async devices(req: Request): Promise<DashboardDevice[]> {
+    const { row } = await this.resolve(req);
+    const rows = await prisma.dashboardSession.findMany({
+      where: { userId: row.userId, refreshUntil: { gte: new Date() } },
+      orderBy: { lastSeenAt: "desc" },
+      select: { id: true, createdAt: true, lastSeenAt: true, aal: true },
+    });
+    return rows.map((r) => ({ ...r, current: r.id === row.id }));
+  }
+
+  /** Revoke one of this account's sessions; revoking the caller's own signs it out. */
+  async revokeDevice(req: Request, res: Response, id: string): Promise<void> {
+    const { row } = await this.resolve(req);
+    // Scoped to the caller's user id: an id from another account matches nothing.
+    const { count } = await prisma.dashboardSession.deleteMany({ where: { id, userId: row.userId } });
+    if (count === 0) throw new NotFoundException("That device is not signed in.");
+    if (id === row.id) res.clearCookie(SESSION_COOKIE, { path: "/" });
+  }
+
+  /**
+   * Delete every session whose refresh window has closed. Called nightly: rows
+   * otherwise only disappear when their cookie comes back or the account signs
+   * in again, so an abandoned session would keep encrypted tokens forever.
+   */
+  async pruneExpired(now = new Date()): Promise<number> {
+    const { count } = await prisma.dashboardSession.deleteMany({
+      where: { refreshUntil: { lt: now } },
+    });
+    return count;
   }
 
   /** Cookie → session row → verified Supabase claims, refreshing when needed. */

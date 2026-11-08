@@ -1,4 +1,4 @@
-import { UnauthorizedException } from "@nestjs/common";
+import { NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "node:crypto";
 import type { Request, Response } from "express";
@@ -11,6 +11,7 @@ jest.mock("@essentials/db", () => ({
   prisma: {
     dashboardSession: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       deleteMany: jest.fn(),
@@ -21,6 +22,7 @@ jest.mock("@essentials/db", () => ({
 const db = prisma as unknown as {
   dashboardSession: {
     findUnique: jest.Mock;
+    findMany: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
     deleteMany: jest.Mock;
@@ -107,6 +109,7 @@ async function signIn(over: Partial<VerifiedSession> = {}) {
 
 beforeEach(() => {
   db.dashboardSession.findUnique.mockReset();
+  db.dashboardSession.findMany.mockReset().mockResolvedValue([]);
   db.dashboardSession.create.mockReset().mockResolvedValue({});
   db.dashboardSession.update.mockReset().mockResolvedValue({});
   db.dashboardSession.deleteMany.mockReset().mockResolvedValue({ count: 1 });
@@ -249,6 +252,76 @@ describe("DashboardSessionService sign-out", () => {
 
     expect(db.dashboardSession.deleteMany).toHaveBeenCalledWith({ where: { id: sha256("abc") } });
     expect(res.clearCookie).toHaveBeenCalledWith(SESSION_COOKIE, { path: "/" });
+  });
+});
+
+describe("DashboardSessionService devices", () => {
+  it("lists this account's live sessions and marks the caller's own", async () => {
+    const { data, cookie } = await signIn();
+    db.dashboardSession.findUnique.mockResolvedValue(data);
+    db.dashboardSession.findMany.mockResolvedValueOnce([
+      { id: data.id, createdAt: new Date("2026-11-08T09:00:00Z"), lastSeenAt: new Date("2026-11-08T09:30:00Z"), aal: "aal2" },
+      { id: sha256("other"), createdAt: new Date("2026-11-05T08:00:00Z"), lastSeenAt: new Date("2026-11-05T08:10:00Z"), aal: "aal1" },
+    ]);
+
+    const devices = await build().devices(cookieReq({ [SESSION_COOKIE]: cookie }));
+
+    expect(db.dashboardSession.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: "user-1", refreshUntil: { gte: expect.any(Date) } } }),
+    );
+    expect(devices).toHaveLength(2);
+    expect(devices.filter((d) => d.current).map((d) => d.id)).toEqual([data.id]);
+    expect(devices[0]).not.toHaveProperty("accessToken");
+  });
+
+  it("revokes another device without signing the caller out", async () => {
+    const { data, cookie } = await signIn();
+    db.dashboardSession.findUnique.mockResolvedValue(data);
+    const res = mockRes();
+
+    await build().revokeDevice(cookieReq({ [SESSION_COOKIE]: cookie }), res, sha256("other"));
+
+    expect(db.dashboardSession.deleteMany).toHaveBeenCalledWith({
+      where: { id: sha256("other"), userId: "user-1" },
+    });
+    expect(res.clearCookie).not.toHaveBeenCalled();
+  });
+
+  it("revoking your own session also clears the cookie", async () => {
+    const { data, cookie } = await signIn();
+    db.dashboardSession.findUnique.mockResolvedValue(data);
+    const res = mockRes();
+
+    await build().revokeDevice(cookieReq({ [SESSION_COOKIE]: cookie }), res, data.id);
+
+    expect(res.clearCookie).toHaveBeenCalledWith(SESSION_COOKIE, { path: "/" });
+  });
+
+  it("refuses an id the account does not own", async () => {
+    const { data, cookie } = await signIn();
+    db.dashboardSession.findUnique.mockResolvedValue(data);
+    db.dashboardSession.deleteMany.mockResolvedValueOnce({ count: 0 });
+
+    await expect(
+      build().revokeDevice(cookieReq({ [SESSION_COOKIE]: cookie }), mockRes(), sha256("someone-elses")),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe("DashboardSessionService pruning", () => {
+  it("deletes only rows whose refresh window has closed", async () => {
+    db.dashboardSession.deleteMany.mockResolvedValueOnce({ count: 3 });
+    const now = new Date("2026-11-09T03:00:00Z");
+
+    await expect(build().pruneExpired(now)).resolves.toBe(3);
+
+    expect(db.dashboardSession.deleteMany).toHaveBeenCalledWith({ where: { refreshUntil: { lt: now } } });
+  });
+
+  it("reports zero when nothing is due", async () => {
+    db.dashboardSession.deleteMany.mockResolvedValueOnce({ count: 0 });
+
+    await expect(build().pruneExpired()).resolves.toBe(0);
   });
 });
 

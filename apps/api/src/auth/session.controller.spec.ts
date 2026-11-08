@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { SessionController } from "./session.controller";
 import type { DashboardSessionService } from "./dashboard-session.service";
@@ -13,7 +13,11 @@ const req = (origin?: string) =>
 const res = {} as Response;
 
 function build() {
-  const sessions = { startRecovery: jest.fn().mockResolvedValue(undefined) };
+  const sessions = {
+    startRecovery: jest.fn().mockResolvedValue(undefined),
+    devices: jest.fn().mockResolvedValue([]),
+    revokeDevice: jest.fn().mockResolvedValue(undefined),
+  };
   return {
     controller: new SessionController(sessions as unknown as DashboardSessionService),
     sessions,
@@ -34,6 +38,35 @@ afterAll(() => {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
+});
+
+describe("SessionController devices", () => {
+  const id = "a".repeat(64);
+
+  it("returns the account's sessions under one key", async () => {
+    const { controller, sessions } = build();
+    sessions.devices.mockResolvedValueOnce([{ id, current: true, aal: "aal2" }]);
+
+    await expect(controller.devices(req())).resolves.toEqual({
+      sessions: [{ id, current: true, aal: "aal2" }],
+    });
+    expect(sessions.devices).toHaveBeenCalledWith(expect.anything());
+  });
+
+  it("hands a revoke to the service with the caller's response", async () => {
+    const { controller, sessions } = build();
+
+    await controller.revoke(id, req(), res);
+
+    expect(sessions.revokeDevice).toHaveBeenCalledWith(expect.anything(), res, id);
+  });
+
+  it("refuses an id that cannot name a session row", async () => {
+    const { controller, sessions } = build();
+
+    await expect(controller.revoke("not-a-hash", req(), res)).rejects.toBeInstanceOf(NotFoundException);
+    expect(sessions.revokeDevice).not.toHaveBeenCalled();
+  });
 });
 
 describe("SessionController recovery links", () => {

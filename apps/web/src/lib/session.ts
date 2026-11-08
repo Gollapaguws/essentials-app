@@ -27,6 +27,15 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** One row per signed-in browser; `id` names the row, not the cookie. */
+export interface DashboardDevice {
+  id: string;
+  createdAt: string;
+  lastSeenAt: string;
+  aal: string;
+  current: boolean;
+}
+
 export interface MfaFactor {
   id: string;
   name: string | null;
@@ -43,6 +52,11 @@ export const session = {
   logout: () => call<void>("/auth/session", { method: "DELETE" }),
 
   me: () => call<MeResponse>("/auth/me"),
+
+  devices: () => call<{ sessions: DashboardDevice[] }>("/auth/sessions"),
+
+  revokeDevice: (id: string) =>
+    call<void>(`/auth/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
   /** Ask for a recovery mail; the link returns to `path` on this origin. */
   recover: (email: string, path: string) =>

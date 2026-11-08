@@ -5,6 +5,8 @@ import {
   Delete,
   Get,
   HttpCode,
+  NotFoundException,
+  Param,
   Post,
   Req,
   Res,
@@ -85,6 +87,30 @@ export class SessionController {
   @HttpCode(204)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     await this.sessions.logout(req, res);
+  }
+
+  /** Signed-in sessions for the account, so one can be revoked if it is lost. */
+  @Get("sessions")
+  @UseGuards(SupabaseAuthGuard)
+  @SkipMfa()
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  async devices(@Req() req: Request) {
+    return { sessions: await this.sessions.devices(req) };
+  }
+
+  /** Sign one session out; revoking the caller's own also clears its cookie. */
+  @Delete("sessions/:id")
+  @HttpCode(204)
+  @UseGuards(SupabaseAuthGuard)
+  @SkipMfa()
+  async revoke(
+    @Param("id") id: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // Row ids are the SHA-256 of the cookie; anything else cannot name a session.
+    if (!/^[a-f0-9]{64}$/.test(id)) throw new NotFoundException("That device is not signed in.");
+    await this.sessions.revokeDevice(req, res, id);
   }
 
   /** Landing point for the emailed recovery link. */
