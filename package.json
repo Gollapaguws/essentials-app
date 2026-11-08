@@ -13,7 +13,8 @@
     "dev:web": "npm run dev --workspace @essentials/web",
     "dev:mobile": "npm run dev --workspace @essentials/mobile",
     "build": "npm run build --workspaces --if-present",
-    "proof:auth": "node scripts/auth-proof.mjs"
+    "proof:auth": "node scripts/auth-proof.mjs",
+    "smoke": "node scripts/smoke.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
