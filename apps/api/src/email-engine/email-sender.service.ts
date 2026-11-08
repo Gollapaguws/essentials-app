@@ -2,6 +2,7 @@ import { Injectable, Logger, Inject, forwardRef } from "@nestjs/common";
 import { prisma, ConsentStatus } from "@essentials/db";
 import { MailService } from "../mail/mail.service";
 import { emailTemplates, wrapTemplate } from "../mail/templates";
+import { unsubscribeLink } from "../mail/unsubscribe";
 import { EmailEngineService } from "./email-engine.service";
 import { ConfigService } from "@nestjs/config";
 
@@ -33,7 +34,7 @@ export class EmailSenderService {
       // Guests are not dashboard users: APP_URL points at the promoter login, so
       // every link in a guest email has to go to the public site instead.
       const siteUrl = (this.config.get("SITE_URL") ?? this.config.get("APP_URL") ?? "http://localhost:3001").replace(/\/$/, "");
-      const unsub = `${siteUrl}/api/email/unsubscribe?email=${encodeURIComponent(user.email)}`;
+      const unsub = unsubscribeLink(user.email, siteUrl);
       let html: string;
 
       switch (campaign.flow) {

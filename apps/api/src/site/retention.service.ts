@@ -2,6 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 import { prisma, ConsentStatus } from "@essentials/db";
 import { MailService } from "../mail/mail.service";
 import { wrapTemplate } from "../mail/templates";
+import { unsubscribeLink } from "../mail/unsubscribe";
+import { escapeHtml } from "../common/html";
 
 /**
  * Retention automations (Phase 4.5):
@@ -42,10 +44,10 @@ export class RetentionService {
       });
       if (!matches.length) continue;
 
-      const unsub = `${siteUrl}/api/email/unsubscribe?email=${encodeURIComponent(guest.email)}`;
+      const unsub = unsubscribeLink(guest.email, siteUrl);
       const html = `<h1 style="color:#00FF66;letter-spacing:2px;font-size:22px">FOR YOUR TASTE</h1>
-        <p>${guest.name ?? "there"}, these upcoming rooms match what you actually listen to (${guest.musicTastes.join(", ")}):</p>
-        ${matches.map((e) => `<p style="font-size:16px"><strong>${e.title}</strong><br/>${e.venue.name} · ${e.date.toDateString()} · <a href="${siteUrl}/events/${e.id}" style="color:#00FF66">RSVP →</a></p>`).join("")}`;
+        <p>${escapeHtml(guest.name ?? "there")}, these upcoming rooms match what you actually listen to (${escapeHtml(guest.musicTastes.join(", "))}):</p>
+        ${matches.map((e) => `<p style="font-size:16px"><strong>${escapeHtml(e.title)}</strong><br/>${escapeHtml(e.venue.name)} · ${e.date.toDateString()} · <a href="${siteUrl}/events/${e.id}" style="color:#00FF66">RSVP →</a></p>`).join("")}`;
       try {
         await this.mail.send({ to: guest.email, subject: "Events picked for your taste", html: wrapTemplate(html, unsub), unsubscribeUrl: unsub });
         sent++;
@@ -82,12 +84,12 @@ export class RetentionService {
       for (const gl of event.guestLists) {
         const consent = gl.user.consentRecords.find((c) => c.channel === "email");
         if (!consent || consent.status !== ConsentStatus.granted) continue;
-        const unsub = `${siteUrl}/api/email/unsubscribe?email=${encodeURIComponent(gl.user.email)}`;
+        const unsub = unsubscribeLink(gl.user.email, siteUrl);
         const next = nextEvent
-          ? `<p>Next up: <strong>${nextEvent.title}</strong> — ${nextEvent.date.toDateString()} @ <a href="${siteUrl}/events/${nextEvent.id}" style="color:#00FF66">RSVP →</a></p>`
+          ? `<p>Next up: <strong>${escapeHtml(nextEvent.title)}</strong> — ${nextEvent.date.toDateString()} @ <a href="${siteUrl}/events/${nextEvent.id}" style="color:#00FF66">RSVP →</a></p>`
           : `<p>Next dates drop soon — watch this space.</p>`;
         const html = `<h1 style="color:#00FF66;letter-spacing:2px;font-size:22px">SEE YOU IN THE ROOM</h1>
-          <p>${gl.user.name ?? "there"}, thanks for being on the floor at <strong>${event.title}</strong>.</p>${next}`;
+          <p>${escapeHtml(gl.user.name ?? "there")}, thanks for being on the floor at <strong>${escapeHtml(event.title)}</strong>.</p>${next}`;
         try {
           await this.mail.send({ to: gl.user.email, subject: `See you at the next one — ${event.title}`, html: wrapTemplate(html, unsub), unsubscribeUrl: unsub });
           sent++;

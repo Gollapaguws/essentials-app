@@ -4,6 +4,9 @@ import { EmailEngineService } from "./email-engine.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { IsString, IsOptional } from "class-validator";
+import { Throttle } from "@nestjs/throttler";
+import { escapeHtml } from "../common/html";
+import { readUnsubscribeToken } from "../mail/unsubscribe";
 
 class SegmentDto {
   @IsString() name!: string;
@@ -52,34 +55,53 @@ export class EmailEngineController {
   }
 
   // ---- public endpoints (no auth): unsubscribe & preference center ----
+  //
+  // Anyone can open these URLs, so the address is carried by an HMAC-signed,
+  // expiring token (`mail/unsubscribe.ts`) instead of a raw `?email=`. A raw
+  // address would let a stranger unsubscribe anyone they can name.
+
   @Get("unsubscribe")
-  async unsubscribePage(@Query("email") email: string, @Res() res: Response) {
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  async unsubscribePage(@Query("token") token: string | undefined, @Res() res: Response) {
+    const email = token ? readUnsubscribeToken(token) : null;
     if (email) await this.engine.unsubscribe(email);
+    const prefs = email ? `/api/email/preferences?token=${encodeURIComponent(token ?? "")}` : null;
     res.type("html").send(
       `<html><body style="background:#0A0A0A;color:#fff;font-family:sans-serif;display:grid;place-items:center;height:100vh">
       <div style="text-align:center"><h1 style="color:#00FF66">ESSENTIALS</h1>
-      <p>${email ? "You're unsubscribed. No more emails." : "Missing email parameter."}</p>
-      <p><a href="/api/email/preferences?email=${encodeURIComponent(email ?? "")}" style="color:#00FF66">Manage preferences</a></p></div></body></html>`,
+      <p>${email ? "You're unsubscribed. No more emails." : "This unsubscribe link is invalid or has expired."}</p>
+      ${prefs ? `<p><a href="${escapeHtml(prefs)}" style="color:#00FF66">Manage preferences</a></p>` : ""}
+      </div></body></html>`,
     );
   }
 
   @Get("preferences")
-  async preferences(@Query("email") email: string, @Res() res: Response) {
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  async preferences(@Query("token") token: string | undefined, @Res() res: Response) {
+    const email = token ? readUnsubscribeToken(token) : null;
     const status = email ? (await this.engine.getConsent(email)).status : "unknown";
+    const safeToken = escapeHtml(token ?? "");
+    const body = email
+      ? `<p>Status for ${escapeHtml(email)}: <strong>${escapeHtml(status)}</strong></p>
+      <form method="post" action="/api/email/resubscribe">
+        <input type="hidden" name="token" value="${safeToken}" />
+        <button style="background:#00FF66;color:#0A0A0A;padding:10px 20px;border:0;border-radius:6px;font-weight:bold">Re-subscribe</button>
+      </form>`
+      : `<p>This preferences link is invalid or has expired.</p>`;
     res.type("html").send(
       `<html><body style="background:#0A0A0A;color:#fff;font-family:sans-serif;display:grid;place-items:center;height:100vh">
       <div style="text-align:center"><h1 style="color:#00FF66">ESSENTIALS · Preferences</h1>
-      <p>Status for ${email ?? "—"}: <strong>${status}</strong></p>
-      <form method="post" action="/api/email/resubscribe">
-        <input type="hidden" name="email" value="${email ?? ""}" />
-        <button style="background:#00FF66;color:#0A0A0A;padding:10px 20px;border:0;border-radius:6px;font-weight:bold">Re-subscribe</button>
-      </form></div></body></html>`,
+      ${body}</div></body></html>`,
     );
   }
 
   @Post("resubscribe")
-  async resubscribe(@Body("email") email: string, @Res() res: Response) {
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  async resubscribe(@Body("token") token: string | undefined, @Res() res: Response) {
+    const email = token ? readUnsubscribeToken(token) : null;
     if (email) await this.engine.grantConsent(email);
-    res.redirect(`/api/email/preferences?email=${encodeURIComponent(email ?? "")}`);
+    res.redirect(
+      email ? `/api/email/preferences?token=${encodeURIComponent(token!)}` : "/api/email/preferences",
+    );
   }
 }
