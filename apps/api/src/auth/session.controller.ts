@@ -80,6 +80,12 @@ class VerifyDto extends FactorDto {
   code!: string;
 }
 
+class RecoveryCodeDto {
+  @IsString()
+  @MinLength(8)
+  code!: string;
+}
+
 /**
  * The dashboard's own sign-in surface. Tokens never leave the server: each
  * successful call sets one httpOnly cookie and stores the Supabase session in
@@ -248,6 +254,31 @@ export class SessionController {
   async verify(@Body() dto: VerifyDto, @Req() req: Request) {
     await this.sessions.verifyMfa(req, dto.factorId, dto.challengeId, dto.code);
     return { ok: true };
+  }
+
+  @Get("mfa/recovery")
+  @UseGuards(SupabaseAuthGuard)
+  @SkipMfa()
+  recoveryStatus(@Req() req: Request) {
+    return this.sessions.recoveryStatus(req);
+  }
+
+  @Post("mfa/recovery")
+  @HttpCode(200)
+  @UseGuards(SupabaseAuthGuard)
+  @SkipMfa()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  generateRecovery(@Req() req: Request) {
+    return this.sessions.generateRecoveryCodes(req);
+  }
+
+  @Post("mfa/recovery/consume")
+  @HttpCode(200)
+  @UseGuards(SupabaseAuthGuard)
+  @SkipMfa()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  consumeRecovery(@Body() dto: RecoveryCodeDto, @Req() req: Request) {
+    return this.sessions.consumeRecoveryCode(req, dto.code);
   }
 
   /**

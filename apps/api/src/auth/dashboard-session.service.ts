@@ -3,6 +3,7 @@ import {
   createDecipheriv,
   createHash,
   randomBytes,
+  timingSafeEqual,
 } from "node:crypto";
 import { Injectable, Logger, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -431,15 +432,63 @@ export class DashboardSessionService {
     }
     try {
       const verified = await this.tokens.verify(access);
-      // Keep the row's aal honest if Supabase promoted the token.
-      if (verified.aal !== row.aal) {
-        await prisma.dashboardSession.update({ where: { id: row.id }, data: { aal: verified.aal } });
+      // A recovery code elevates this session to aal2 without a GoTrue token
+      // refresh, so treat the stored level as a floor rather than downgrading it.
+      const aal = verified.aal === "aal2" || row.aal === "aal2" ? "aal2" : "aal1";
+      if (aal !== row.aal) {
+        await prisma.dashboardSession.update({ where: { id: row.id }, data: { aal } });
       }
-      return verified;
+      return { ...verified, aal };
     } catch {
       await prisma.dashboardSession.deleteMany({ where: { id: row.id } });
       throw new UnauthorizedException("Session expired");
     }
+  }
+
+  // ---- MFA recovery codes -----------------------------------------------
+
+  async recoveryStatus(req: Request) {
+    const { row } = await this.resolve(req);
+    const [remaining, total] = await Promise.all([
+      prisma.mfaRecoveryCode.count({ where: { userId: row.userId, usedAt: null } }),
+      prisma.mfaRecoveryCode.count({ where: { userId: row.userId } }),
+    ]);
+    return { remaining, total };
+  }
+
+  /** Issue a fresh set and retire any previous codes. Plaintext leaves this call once. */
+  async generateRecoveryCodes(req: Request) {
+    const { row } = await this.resolve(req);
+    const codes = Array.from({ length: 10 }, () =>
+      randomBytes(5).toString("hex").toUpperCase().replace(/(.{5})(.{5})/, "$1-$2"),
+    );
+    const hashes = codes.map((c) => this.hashRecovery(c));
+    await prisma.$transaction([
+      prisma.mfaRecoveryCode.deleteMany({ where: { userId: row.userId } }),
+      prisma.mfaRecoveryCode.createMany({ data: hashes.map((codeHash) => ({ userId: row.userId, codeHash })) }),
+    ]);
+    return { codes };
+  }
+
+  /** Consume one code and satisfy two-step for this browser session. */
+  async consumeRecoveryCode(req: Request, code: string) {
+    const { row } = await this.resolve(req);
+    const codeHash = this.hashRecovery(code);
+    const match = await prisma.mfaRecoveryCode.findFirst({
+      where: { userId: row.userId, codeHash, usedAt: null },
+      select: { id: true },
+    });
+    if (!match) throw new UnauthorizedException("That recovery code is not valid.");
+    await prisma.$transaction([
+      prisma.mfaRecoveryCode.update({ where: { id: match.id }, data: { usedAt: new Date() } }),
+      prisma.dashboardSession.update({ where: { id: row.id }, data: { aal: "aal2", lastSeenAt: new Date() } }),
+    ]);
+    return { ok: true };
+  }
+
+  private hashRecovery(code: string): string {
+    // Normalise so a copied code with spaces or dashes still matches.
+    return createHash("sha256").update(code.replace(/[-\s]/g, "").toUpperCase(), "utf8").digest("hex");
   }
 
   /** One refresh per session at a time — GoTrue rotates and reuses are fatal. */

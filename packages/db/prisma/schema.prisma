@@ -107,6 +107,7 @@ model User {
   groupMessages   GroupMessage[]
   loyaltyVisits   LoyaltyVisit[]
   dashboardSessions DashboardSession[]
+  mfaRecoveryCodes MfaRecoveryCode[]
   referralsGiven  Referral[]     @relation("Referrer")
   artistProfile   ArtistProfile?
   artistNotes     ArtistNote[]
@@ -363,6 +364,20 @@ model DashboardSession {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+/// A single-use backup code for two-step sign-in. The plaintext is shown once at
+/// generation; only a SHA-256 hash is stored, so a database read cannot recover it.
+model MfaRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, codeHash])
+  @@index([userId, usedAt])
 }
 
 model ArtistProfile {

@@ -107,4 +107,15 @@ export const session = {
       method: "POST",
       body: JSON.stringify({ factorId, challengeId, code }),
     }),
+
+  recoveryStatus: () => call<{ remaining: number; total: number }>("/auth/mfa/recovery"),
+
+  generateRecovery: () =>
+    call<{ codes: string[] }>("/auth/mfa/recovery", { method: "POST" }),
+
+  consumeRecovery: (code: string) =>
+    call<{ ok: true }>("/auth/mfa/recovery/consume", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }),
 };
