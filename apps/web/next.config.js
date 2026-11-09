@@ -9,6 +9,10 @@ const basePath = process.env.NEXT_BASE_PATH ?? "";
 const nextConfig = {
   reactStrictMode: true,
   basePath,
+  // The 14.x image optimizer has unauthenticated RCE advisories and the dashboard
+  // never uses next/image. Disabling it removes that request surface until the
+  // framework is upgraded off the 14.x line.
+  images: { unoptimized: true },
 
   async redirects() {
     // Dashboard pages used to live in `app/dashboard`, one segment below the base
