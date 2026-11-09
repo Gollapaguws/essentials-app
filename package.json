@@ -16,10 +16,26 @@
     "proof:auth": "node scripts/auth-proof.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
+  "overrides": {
+    "body-parser": "1.20.9",
+    "qs": "6.16.0",
+    "@nestjs/platform-express": {
+      "multer": "2.5.0",
+      "body-parser": "1.20.9"
+    },
+    "express": {
+      "body-parser": "1.20.9",
+      "qs": "6.16.0"
+    }
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "globals": "^15.15.0",
     "typescript": "^5.6.0",
     "typescript-eslint": "^8.72.1"
+  },
+  "dependencies": {
+    "body-parser": "1.20.9",
+    "qs": "6.16.0"
   }
 }
