@@ -75,6 +75,8 @@ export default function EventManager() {
   // Per-slot fee overrides, keyed by slot id, for the expanded plan panel.
   const [slotDrafts, setSlotDrafts] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
+  // ?focus=<id> is how the ⌘K palette points at one night in a long table.
+  const [focusId, setFocusId] = useState<string | null>(null);
   const { me } = useAuth();
 
   const selectedVenue = venues.find((v) => v.id === form.venueId) ?? null;
@@ -84,10 +86,16 @@ export default function EventManager() {
 
   const load = () => api.get<EventRow[]>("/events/manage/list").then(setEvents).catch((e) => setError(errorMessage(e)));
   useEffect(() => {
+    setFocusId(new URLSearchParams(window.location.search).get("focus"));
     load();
     api.get<VenueOption[]>("/venues/options").then(setVenues).catch((e) => setError(errorMessage(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!focusId) return;
+    document.getElementById(`event-${focusId}`)?.scrollIntoView({ block: "center" });
+  }, [focusId, events.length]);
 
   const pickVenue = (venueId: string) => {
     const venue = venues.find((v) => v.id === venueId) ?? null;
@@ -303,7 +311,10 @@ export default function EventManager() {
                 const allocated = fee * (e.slotCount ?? 0);
                 return (
                   <Fragment key={e.id}>
-                    <tr className={`border-t border-line${e.status === "cancelled" ? " opacity-50" : ""}`}>
+                    <tr
+                      id={`event-${e.id}`}
+                      className={`border-t border-line${e.status === "cancelled" ? " opacity-50" : ""}${focusId === e.id ? " bg-neon/10" : ""}`}
+                    >
                       <td className="px-4 py-3">
                         <p className="font-bold">{e.title}</p>
                         {e.slotCount ? (

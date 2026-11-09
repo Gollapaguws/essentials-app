@@ -36,9 +36,18 @@ export default function Door() {
   const [eventId, setEventId] = useState("");
   const [guests, setGuests] = useState<Guest[]>([]);
   const [query, setQuery] = useState("");
+  // Arriving from the palette: ?event= picks the night and ?q= pre-fills the search.
+  const [requestedEvent, setRequestedEvent] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setRequestedEvent(params.get("event"));
+    const seeded = params.get("q");
+    if (seeded) setQuery(seeded);
+  }, []);
 
   useEffect(() => {
     api
@@ -46,10 +55,12 @@ export default function Door() {
       .then((rows) => {
         const usable = rows.filter((e) => e.status === "approved" || e.status === "live" || e.status === "completed");
         setEvents(usable);
-        if (usable[0]) setEventId(usable[0].id);
+        const wanted = usable.find((e) => e.id === requestedEvent);
+        if (wanted) setEventId(wanted.id);
+        else if (usable[0]) setEventId(usable[0].id);
       })
       .catch((e) => setError(errorMessage(e) ?? "Could not load your events."));
-  }, []);
+  }, [requestedEvent]);
 
   const load = useCallback(async () => {
     if (!eventId) return;

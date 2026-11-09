@@ -183,6 +183,15 @@ export function TopNav() {
         ))}
         {user && (
           <div className="ml-auto flex items-center gap-3">
+            <Tooltip label="Find an event, a DJ or a guest without leaving this page. ⌘K (Ctrl-K) opens it anywhere." align="right">
+              <button
+                onClick={() => window.dispatchEvent(new Event("essentials:search"))}
+                className="text-xs tracking-widest text-neutral-500 hover:text-neon"
+                aria-label="Search events, DJs and guests"
+              >
+                SEARCH ⌘K
+              </button>
+            </Tooltip>
             <Tooltip label="The account you are signed in as. Roles are set by an admin on the Users page." className="hidden sm:inline-flex" align="right">
               <span className="text-xs text-neutral-500">{user.email}</span>
             </Tooltip>

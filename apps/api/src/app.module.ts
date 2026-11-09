@@ -23,6 +23,7 @@ import { MailboxesModule } from "./mailboxes/mailboxes.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { TelegramModule } from "./telegram/telegram.module";
 import { SocialPostingModule } from "./social/social-posting.module";
+import { SearchModule } from "./search/search.module";
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { SocialPostingModule } from "./social/social-posting.module";
     TelegramModule,
     NotificationsModule,
     SocialPostingModule,
+    SearchModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

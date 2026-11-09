@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { DASHBOARD_ROLES, landingPath } from "@essentials/auth";
 import { useAuth } from "@/components/AuthProvider";
 import { WhatsNew } from "@/components/WhatsNew";
+import { CommandPalette } from "@/components/CommandPalette";
 
 /**
  * Guard only — each dashboard page renders its own <TopNav />, so mounting one
@@ -54,6 +55,7 @@ export default function DashboardLayout({ children }: { children: import("react"
     <>
       {children}
       <WhatsNew />
+      <CommandPalette />
     </>
   );
 }
