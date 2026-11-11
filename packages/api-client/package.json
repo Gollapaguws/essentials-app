@@ -10,6 +10,6 @@
     "typecheck": "tsc --noEmit index.ts"
   },
   "devDependencies": {
-    "vitest": "^2"
+    "vitest": "^4.1.12"
   }
 }

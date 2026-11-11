@@ -48,3 +48,9 @@ curl -s -o /dev/null -w "api:%{http_code}\n" https://essentialsedm.com/api/auth/
 echo
 echo "Deploy gate: npm run smoke"
 API_URL=https://essentialsedm.com/api npm run smoke
+
+# The plain smoke proves sign-in; this proves the second factor and recovery
+# codes against the deployed database and auth service.
+echo
+echo "Deploy gate: npm run smoke:mfa"
+API_URL=https://essentialsedm.com/api npm run smoke:mfa

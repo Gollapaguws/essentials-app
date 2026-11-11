@@ -14,7 +14,8 @@
     "dev:mobile": "npm run dev --workspace @essentials/mobile",
     "build": "npm run build --workspaces --if-present",
     "proof:auth": "node scripts/auth-proof.mjs",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "smoke:mfa": "node scripts/mfa-smoke.mjs"
   },
   "overrides": {
     "body-parser": "1.20.9",
