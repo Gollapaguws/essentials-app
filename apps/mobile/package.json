@@ -5,11 +5,21 @@
   "main": "expo-router/entry",
   "scripts": {
     "dev": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "build": "echo 'use eas build'",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "build": "expo export --platform android --platform ios --output-dir dist",
+    "build:android": "npx eas-cli@latest build --platform android --profile production",
+    "build:ios": "npx eas-cli@latest build --platform ios --profile production",
+    "prebuild": "expo prebuild --clean",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --quiet"
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "typescript"
+      ]
+    }
   },
   "dependencies": {
     "@essentials/api-client": "*",
@@ -17,11 +27,12 @@
     "@supabase/supabase-js": "^2",
     "expo": "~51.0.0",
     "expo-clipboard": "~6.0.0",
-    "expo-image-picker": "~15.0.7",
+    "expo-image-picker": "~15.1.0",
     "expo-linking": "~6.3.0",
     "expo-router": "~3.5.0",
     "expo-secure-store": "~13.0.0",
     "expo-status-bar": "~1.12.0",
+    "expo-system-ui": "~3.0.7",
     "expo-web-browser": "~13.0.0",
     "lucide-react-native": "^0.428.0",
     "react": "18.2.0",

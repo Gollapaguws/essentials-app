@@ -7,6 +7,16 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0A0A0A",
+    "ios": {
+      "bundleIdentifier": "com.essentials.app",
+      "buildNumber": "1",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.essentials.app",
+      "versionCode": 1,
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
+    },
     "plugins": ["expo-router"],
     "experiments": { "typedRoutes": true }
   }

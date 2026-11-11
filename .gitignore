@@ -21,3 +21,6 @@ supabase/.branches/
 apps/site/.env.production
 supabase/config.toml
 supabase/config.toml
+# Native projects are generated from app.json by `expo prebuild` (CNG).
+apps/mobile/android/
+apps/mobile/ios/
