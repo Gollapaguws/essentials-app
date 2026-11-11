@@ -4,7 +4,7 @@ import type { JwtUser } from "../common/roles.guard";
 import { VenuesService } from "./venues.service";
 
 jest.mock("@essentials/db", () => ({
-  prisma: { venue: { create: jest.fn() } },
+  prisma: { venue: { create: jest.fn(), findFirst: jest.fn() } },
   EventStatus: {},
 }));
 
@@ -15,11 +15,13 @@ function service() {
   return new VenuesService({} as never, {} as never, {} as never);
 }
 
-const venues = (prisma as unknown as { venue: { create: jest.Mock } }).venue;
+const venues = (prisma as unknown as { venue: { create: jest.Mock; findFirst: jest.Mock } }).venue;
 
 beforeEach(() => {
   venues.create.mockReset();
   venues.create.mockImplementation(({ data }: { data: Record<string, unknown> }) => data);
+  venues.findFirst.mockReset();
+  venues.findFirst.mockResolvedValue(null);
 });
 
 describe("VenuesService.create", () => {
@@ -56,6 +58,19 @@ describe("VenuesService.create", () => {
     const created = await service().create(promoter, { name: "  Basement  ", capacity: 120, address: "   " });
 
     expect(created).toMatchObject({ name: "Basement", address: null });
+  });
+
+  it("refuses a second venue with the same name, ignoring case and padding", async () => {
+    venues.findFirst.mockResolvedValue({ name: "Opium Lounge" });
+
+    await expect(
+      service().create(promoter, { name: "  opium lounge ", capacity: 700 }),
+    ).rejects.toThrow('A venue named "Opium Lounge" already exists');
+    expect(venues.findFirst).toHaveBeenCalledWith({
+      where: { name: { equals: "opium lounge", mode: "insensitive" } },
+      select: { name: true },
+    });
+    expect(venues.create).not.toHaveBeenCalled();
   });
 
   it("rejects a blank name", async () => {

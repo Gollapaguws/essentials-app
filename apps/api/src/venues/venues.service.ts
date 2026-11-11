@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from "@nestjs/common";
 import { prisma, EventStatus } from "@essentials/db";
 import { NotificationsService } from "../notifications/notifications.service";
 import { DjBookingService } from "../artists/dj-booking.service";
@@ -60,6 +60,17 @@ export class VenuesService {
     if ((input.lat === undefined) !== (input.lng === undefined)) {
       throw new BadRequestException(
         "Send latitude and longitude together so DJ route planning stays correct.",
+      );
+    }
+    // Two rooms with one name split the events, staff and door logs between them.
+    // Refuse the second: the existing venue is already in the picker.
+    const duplicate = await prisma.venue.findFirst({
+      where: { name: { equals: name, mode: "insensitive" } },
+      select: { name: true },
+    });
+    if (duplicate) {
+      throw new ConflictException(
+        `A venue named "${duplicate.name}" already exists — pick it from the venue list instead of creating a new one.`,
       );
     }
 

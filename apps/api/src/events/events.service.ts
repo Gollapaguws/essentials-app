@@ -280,7 +280,10 @@ export class EventsService {
 
     // A promoter who manages the venue *is* the venue: there is nobody left to
     // approve the night, so it goes live on creation — DJ call out, on the front page.
-    const selfManaged = venue.managerId === user.sub;
+    // A venue with no manager is the same dead end: leaving the event pending
+    // hides it from the artist gig calendar forever, because only a venue manager
+    // can approve it.
+    const selfManaged = !venue.managerId || venue.managerId === user.sub;
     const created = await prisma.event.create({
       data: {
         ...eventData,

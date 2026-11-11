@@ -66,6 +66,16 @@ describe("EventsService.create approval", () => {
     expect(announceApproval.mock.calls[0][0]).toMatchObject({ id: "event-1", venueId: "venue-1" });
   });
 
+  it("approves the event when the venue has no manager to approve it", async () => {
+    db.venue.findUnique.mockResolvedValue({ id: "venue-1", capacity: 200, managerId: null });
+    const { service, announceApproval } = build();
+
+    const created = await service.create(promoter, input);
+
+    expect(created).toMatchObject({ status: EventStatus.approved });
+    expect(announceApproval).toHaveBeenCalledTimes(1);
+  });
+
   it("still waits for the venue's approval when someone else manages it", async () => {
     db.venue.findUnique.mockResolvedValue({ id: "venue-1", capacity: 200, managerId: "other-manager" });
     const { service, announceApproval } = build();
