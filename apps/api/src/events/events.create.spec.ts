@@ -3,6 +3,7 @@ import { prisma, EventStatus } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 import type { LoyaltyService } from "../loyalty/loyalty.service";
 import type { VenuesService } from "../venues/venues.service";
+import type { DjBookingService } from "../artists/dj-booking.service";
 import { EventsService } from "./events.service";
 
 jest.mock("@essentials/db", () => ({
@@ -32,6 +33,7 @@ function build() {
     { get: () => undefined } as unknown as ConfigService,
     {} as unknown as LoyaltyService,
     { announceApproval } as unknown as VenuesService,
+    {} as unknown as DjBookingService,
   );
   return { service, announceApproval };
 }

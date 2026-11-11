@@ -164,6 +164,14 @@ export class EventsController {
     return this.tools.repeat(user, id, dto.weeks);
   }
 
+  /** Admin: re-send the DJ call for a night that is already approved. */
+  @Post(":id/announce")
+  @HttpCode(200)
+  @Auth("admin")
+  announce(@Param("id") id: string) {
+    return this.events.resendDjCall(id);
+  }
+
   @Post(":id/cancel")
   @Auth("promoter")
   cancelEvent(@Param("id") id: string, @CurrentUser() user: JwtUser) {

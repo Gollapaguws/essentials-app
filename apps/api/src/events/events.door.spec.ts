@@ -4,6 +4,7 @@ import { prisma } from "@essentials/db";
 import { EventsService } from "./events.service";
 import type { LoyaltyService } from "../loyalty/loyalty.service";
 import type { VenuesService } from "../venues/venues.service";
+import type { DjBookingService } from "../artists/dj-booking.service";
 import type { JwtUser } from "../common/roles.guard";
 
 jest.mock("@essentials/db", () => ({
@@ -31,6 +32,7 @@ const service = () =>
     { get: () => undefined } as unknown as ConfigService,
     { recordVisit } as unknown as LoyaltyService,
     {} as VenuesService,
+    {} as DjBookingService,
   );
 
 function guest(over: Record<string, unknown> = {}) {

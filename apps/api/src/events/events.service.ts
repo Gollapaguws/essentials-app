@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import type { JwtUser } from "../common/roles.guard";
 import { ConfigService } from "@nestjs/config";
 import { LoyaltyService } from "../loyalty/loyalty.service";
+import { DjBookingService } from "../artists/dj-booking.service";
 import { VenuesService } from "../venues/venues.service";
 import { buildSlots, normalizePlan } from "./slots";
 
@@ -26,7 +27,27 @@ export class EventsService {
     private config: ConfigService,
     private loyalty: LoyaltyService,
     private venues: VenuesService,
+    private djBooking: DjBookingService,
   ) {}
+
+  /**
+   * Admin: re-send the DJ call for a night that is already approved. Approval is
+   * normally what sends it, so this is for a call that went out too early or got
+   * lost — never for an unapproved night, which would invite applications for a
+   * gig the venue has not agreed to.
+   */
+  async resendDjCall(eventId: string) {
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true, title: true, status: true },
+    });
+    if (!event) throw new NotFoundException("Event not found");
+    if (event.status !== EventStatus.approved && event.status !== EventStatus.live) {
+      throw new BadRequestException("Only an approved event can send a DJ call.");
+    }
+    const { notified } = await this.djBooking.announceToArtists(event.id);
+    return { eventId: event.id, title: event.title, notified };
+  }
 
   /** Door-pass HMAC key — independent of the (removed) session JWT secret. */
   private qrSecret() {

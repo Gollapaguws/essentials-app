@@ -4,6 +4,7 @@ import { prisma } from "@essentials/db";
 import { EventsService } from "./events.service";
 import type { LoyaltyService } from "../loyalty/loyalty.service";
 import type { VenuesService } from "../venues/venues.service";
+import type { DjBookingService } from "../artists/dj-booking.service";
 import type { JwtUser } from "../common/roles.guard";
 
 jest.mock("@essentials/db", () => ({
@@ -24,7 +25,7 @@ const db = prisma as unknown as {
 const promoter: JwtUser = { sub: "promoter-1", email: "p@example.com", role: "promoter" };
 
 const service = () =>
-  new EventsService({ get: () => undefined } as unknown as ConfigService, {} as LoyaltyService, {} as VenuesService);
+  new EventsService({ get: () => undefined } as unknown as ConfigService, {} as LoyaltyService, {} as VenuesService, {} as DjBookingService);
 
 beforeEach(() => {
   db.event.findUnique.mockReset().mockResolvedValue({

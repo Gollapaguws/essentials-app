@@ -176,11 +176,11 @@ export class ArtistsController {
     return this.djBooking.apply(user, dto);
   }
 
-  /** Promoter: list DJ applications across their events. */
+  /** Promoter: list DJ applications, optionally for one event. */
   @Get("applications")
   @Auth("promoter", "admin")
-  applications(@CurrentUser() user: JwtUser) {
-    return this.djBooking.applications(user);
+  applications(@CurrentUser() user: JwtUser, @Query("eventId") eventId?: string) {
+    return this.djBooking.applications(user, eventId);
   }
 
   /** Promoter: confirm/decline a DJ application. */

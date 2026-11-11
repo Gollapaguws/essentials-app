@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
+import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
@@ -25,6 +26,23 @@ interface EventRow {
   venue: { name: string };
   _count: { guestLists: number };
 }
+
+interface ApplicationRow {
+  id: string;
+  slot?: string | null;
+  status: string;
+  appliedAt?: string;
+  performanceFee: number;
+  declineReason?: string | null;
+  artist: { stageName: string; user: { name: string | null; email: string } };
+}
+
+const APP_STATUS: Record<string, string> = {
+  pending: "text-yellow-400",
+  confirmed: "text-neon",
+  completed: "text-neon",
+  cancelled: "text-neutral-500",
+};
 
 interface VenueOption {
   id: string;
@@ -77,7 +95,14 @@ export default function EventManager() {
   const [error, setError] = useState<string | null>(null);
   // ?focus=<id> is how the ⌘K palette points at one night in a long table.
   const [focusId, setFocusId] = useState<string | null>(null);
+  // One event's DJ applications, opened inline from its row.
+  const [appsFor, setAppsFor] = useState<string | null>(null);
+  const [apps, setApps] = useState<ApplicationRow[]>([]);
+  const [appsLoading, setAppsLoading] = useState(false);
+  const [appsError, setAppsError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const { me } = useAuth();
+  const isAdmin = me?.user.role === "admin";
 
   const selectedVenue = venues.find((v) => v.id === form.venueId) ?? null;
   // Managing the venue means there is nobody else to approve the night: the API
@@ -189,6 +214,37 @@ export default function EventManager() {
     }
   };
 
+  const toggleApplications = async (event: EventRow) => {
+    if (appsFor === event.id) {
+      setAppsFor(null);
+      return;
+    }
+    setAppsFor(event.id);
+    setApps([]);
+    setAppsError(null);
+    setAppsLoading(true);
+    try {
+      setApps(await api.get<ApplicationRow[]>(`/artists/applications?eventId=${event.id}`));
+    } catch (err) {
+      setAppsError(errorMessage(err));
+    } finally {
+      setAppsLoading(false);
+    }
+  };
+
+  /** Admin only: approval already sends the DJ call, so this is the explicit re-send. */
+  const resendDjCall = async (event: EventRow) => {
+    if (!window.confirm(`Send the DJ call for ${event.title} to every DJ?\n\nThey get an in-app notification, an email and a Telegram message where linked.`)) return;
+    setError(null);
+    setNotice(null);
+    try {
+      const { notified } = await api.post<{ notified: number }>(`/events/${event.id}/announce`);
+      setNotice(`DJ call for ${event.title} re-sent to ${notified} DJ${notified === 1 ? "" : "s"}.`);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
+
   const repeatWeekly = async (event: EventRow) => {
     const raw = window.prompt("Create how many weekly copies? (1–12)", "4");
     if (!raw) return;
@@ -214,6 +270,7 @@ export default function EventManager() {
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <h1 className="text-2xl font-black tracking-wide">EVENT MANAGER</h1>
         {error && <p className="text-red-400 text-sm">{error}</p>}
+        {notice && <p className="text-neon text-sm">{notice}</p>}
 
         <form onSubmit={create} className="space-y-3 border border-line bg-surface rounded-xl p-4">
           <div className="grid md:grid-cols-4 gap-3 items-end">
@@ -338,6 +395,12 @@ export default function EventManager() {
                         <button onClick={() => (slots.eventId === e.id ? setSlots(EMPTY_SLOTS) : openSlots(e))} className="text-neutral-300 underline text-xs">
                           {slots.eventId === e.id ? "Close" : "Slots & budget"}
                         </button>
+                        <button onClick={() => toggleApplications(e)} className="text-neutral-300 underline text-xs">
+                          {appsFor === e.id ? "Hide applications" : "Applications"}
+                        </button>
+                        {isAdmin && (e.status === "approved" || e.status === "live") && (
+                          <button onClick={() => resendDjCall(e)} className="text-neon underline text-xs">Resend DJ call</button>
+                        )}
                         <button onClick={async () => { await api.post(`/events/${e.id}/clone`); load(); }} className="text-neon underline text-xs">Clone</button>
                         <button onClick={() => repeatWeekly(e)} className="text-neutral-300 underline text-xs">Repeat weekly</button>
                         <DownloadButton path={`/events/${e.id}/guest-list.csv`} filename={`guestlist-${e.id}.csv`} label="Guest CSV" />
@@ -350,6 +413,38 @@ export default function EventManager() {
                         <button onClick={() => remove(e)} className="text-red-400 underline text-xs">Delete</button>
                       </td>
                     </tr>
+                    {appsFor === e.id && (
+                      <tr className="border-t border-line bg-surface/60">
+                        <td colSpan={6} className="px-4 py-3 space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-[10px] uppercase tracking-widest text-neutral-500">
+                              DJ applications — {e.title}
+                            </p>
+                            <Link href="/applications" className="text-neon underline text-xs">
+                              Review in Applications
+                            </Link>
+                          </div>
+                          {appsLoading && <p className="text-neutral-500 text-xs">Loading applications…</p>}
+                          {appsError && <p className="text-red-400 text-xs">{appsError}</p>}
+                          {!appsLoading && !appsError && !apps.length && (
+                            <p className="text-neutral-500 text-xs">No DJ has applied for this night yet.</p>
+                          )}
+                          {apps.map((a) => (
+                            <div key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                              <span className="font-bold">{a.artist.stageName}</span>
+                              <span className="text-neutral-400">{a.artist.user.name ?? a.artist.user.email}</span>
+                              <span className="text-neutral-300">{a.slot ?? "day / evening / late-night"}</span>
+                              <span className="text-neutral-300">R{a.performanceFee.toLocaleString()}</span>
+                              <span className={APP_STATUS[a.status] ?? "text-neutral-400"}>{a.status}</span>
+                              <span className="text-neutral-500">
+                                {a.appliedAt ? new Date(a.appliedAt).toLocaleDateString() : ""}
+                                {a.declineReason ? ` · ${a.declineReason}` : ""}
+                              </span>
+                            </div>
+                          ))}
+                        </td>
+                      </tr>
+                    )}
                     {slots.eventId === e.id && (
                       <tr className="border-t border-line bg-surface/60">
                         <td colSpan={6} className="px-4 py-3 space-y-2">
