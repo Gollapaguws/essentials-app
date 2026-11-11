@@ -48,11 +48,13 @@ export function probeSmtp(host: string, port: number, timeoutMs = PROBE_TIMEOUT_
         if (!buffer.includes("\r\n")) return;
         if (!buffer.startsWith("220")) return finish({ ok: false, reason: "not an SMTP banner" });
         greeted = true;
+        // One command at a time: Postfix rejects EHLO and QUIT sent together as
+        // improper pipelining and hangs up before it ever answers.
         socket.write("EHLO mail-status\r\n");
-        socket.write("QUIT\r\n");
         return;
       }
       // Any reply once the greeting was accepted means a live, speaking relay.
+      socket.write("QUIT\r\n");
       finish({ ok: true });
     });
     socket.connect(port, host);

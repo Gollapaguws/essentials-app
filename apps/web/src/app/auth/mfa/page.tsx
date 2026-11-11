@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { session } from "@/lib/session";
+import { useAuth } from "@/components/AuthProvider";
 import { InfoTip } from "@/components/Tooltip";
 
 /**
@@ -14,6 +15,7 @@ import { InfoTip } from "@/components/Tooltip";
  */
 export default function MfaPage() {
   const router = useRouter();
+  const { refresh } = useAuth();
   const [qr, setQr] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
   const [factorId, setFactorId] = useState<string | null>(null);
@@ -28,10 +30,18 @@ export default function MfaPage() {
 
   useEffect(() => {
     (async () => {
-      try {
-        await session.me();
-      } catch {
+      // Read the identity through the provider as well: its cached copy is what
+      // the dashboard layout checks, so it must not stay behind this page's
+      // successful verification.
+      const me = await refresh();
+      if (!me) {
         router.replace("/login");
+        return;
+      }
+      // A session that already reached aal2 has nothing to do here (this is
+      // what escapes a stale redirect loop).
+      if (!me.mfaRequired) {
+        router.replace("/");
         return;
       }
 
@@ -61,11 +71,11 @@ export default function MfaPage() {
         setBusy(false);
       }
     })();
-  }, [router]);
+  }, [refresh, router]);
 
   const done = async () => {
-    const me = await session.me();
-    if (!me.mfaRequired) {
+    const me = await refresh();
+    if (me && !me.mfaRequired) {
       router.replace("/");
       return true;
     }

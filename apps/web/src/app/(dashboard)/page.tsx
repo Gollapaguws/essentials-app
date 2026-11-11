@@ -32,10 +32,16 @@ export default function Dashboard() {
 
   const [pacing, setPacing] = useState<PacingRow[]>([]);
   useEffect(() => {
+    // Wait for /auth/me: firing before it answers sends these requests without
+    // the session cookie, and the API's 401 is then shown as a page error.
+    if (!me) return;
     // Analytics is promoter/admin data; other roles get redirected by the layout,
     // so don't fire requests that can only answer 403.
-    const role = me?.user.role;
-    if (role && role !== "promoter" && role !== "admin") return;
+    const role = me.user.role;
+    if (role !== "promoter" && role !== "admin") return;
+    // The layout sends an aal1 session to /auth/mfa; until then every data
+    // endpoint answers 401 (MFA_REQUIRED).
+    if (me.mfaRequired) return;
     api.get<Overview>("/analytics/overview").then(setData).catch((e) => setError(errorMessage(e)));
     api.get<PacingRow[]>("/analytics/pacing").then((rows) => setPacing(rows.filter((r) => r.alert))).catch(() => {});
   }, [me]);

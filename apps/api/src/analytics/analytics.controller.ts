@@ -14,4 +14,10 @@ export class AnalyticsController {
   overview(@CurrentUser() user: JwtUser) {
     return this.analytics.overview(user);
   }
+
+  @Get("pacing")
+  @Auth("promoter")
+  pacing(@CurrentUser() user: JwtUser) {
+    return this.analytics.pacing(user);
+  }
 }

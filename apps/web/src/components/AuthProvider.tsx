@@ -9,14 +9,14 @@ interface AuthState {
   loading: boolean;
   /** True once /auth/me has answered for this browser's session cookie. */
   authenticated: boolean;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<MeResponse | null>;
 }
 
 const AuthContext = createContext<AuthState>({
   me: null,
   loading: true,
   authenticated: false,
-  refresh: async () => {},
+  refresh: async () => null,
 });
 
 /**
@@ -30,10 +30,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      setMe(await session.me());
+      const next = await session.me();
+      setMe(next);
+      return next;
     } catch {
       // 401 is the normal "not signed in" answer.
       setMe(null);
+      return null;
     }
   }, []);
 

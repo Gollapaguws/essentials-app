@@ -56,6 +56,43 @@ export class AnalyticsService {
       perVenue: byVenue,
     };
   }
+
+  /**
+   * Upcoming events whose RSVPs are at least 2x the promoter's previous event.
+   * One pass over the promoter's events keeps this from being a query per row.
+   */
+  async pacing(user: JwtUser) {
+    if (user.role !== "promoter" && user.role !== "admin") throw new ForbiddenException();
+    const promoterFilter = user.role === "admin" ? {} : { promoterId: user.sub };
+
+    const events = await prisma.event.findMany({
+      where: promoterFilter,
+      include: { _count: { select: { guestLists: true } } },
+      orderBy: { date: "asc" },
+    });
+
+    const now = new Date();
+    const previousRsvpsByPromoter = new Map<string, number>();
+    const rows = [];
+    for (const e of events) {
+      const previousRsvps = previousRsvpsByPromoter.get(e.promoterId) ?? null;
+      const upcoming = e.date >= now && (e.status === "approved" || e.status === "live");
+      if (upcoming) {
+        const rsvps = e._count.guestLists;
+        rows.push({
+          eventId: e.id,
+          title: e.title,
+          date: e.date,
+          rsvps,
+          previousRsvps,
+          ratio: previousRsvps ? +(rsvps / previousRsvps).toFixed(2) : null,
+          alert: previousRsvps ? rsvps >= previousRsvps * 2 : false,
+        });
+      }
+      previousRsvpsByPromoter.set(e.promoterId, e._count.guestLists);
+    }
+    return rows;
+  }
 }
 
 function attending0(rsvps: number, checkedIn: number) {
