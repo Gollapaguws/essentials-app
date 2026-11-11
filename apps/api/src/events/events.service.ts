@@ -457,7 +457,7 @@ export class EventsService {
       where: user.role === "admin" ? {} : { promoterId: user.sub },
       include: {
         venue: { select: { name: true } },
-        _count: { select: { guestLists: true } },
+        _count: { select: { guestLists: true, artistBookings: true } },
         slots: {
           orderBy: { startsAt: "asc" },
           select: {

@@ -24,7 +24,7 @@ interface EventRow {
   slots: EventSlotRow[];
   committed: number;
   venue: { name: string };
-  _count: { guestLists: number };
+  _count: { guestLists: number; artistBookings: number };
 }
 
 interface ApplicationRow {
@@ -34,7 +34,9 @@ interface ApplicationRow {
   appliedAt?: string;
   performanceFee: number;
   declineReason?: string | null;
+  endAt: string;
   artist: { stageName: string; user: { name: string | null; email: string } };
+  event: { title: string; date: string; budget: number; committed: number };
 }
 
 const APP_STATUS: Record<string, string> = {
@@ -100,6 +102,8 @@ export default function EventManager() {
   const [apps, setApps] = useState<ApplicationRow[]>([]);
   const [appsLoading, setAppsLoading] = useState(false);
   const [appsError, setAppsError] = useState<string | null>(null);
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [deciding, setDeciding] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const { me } = useAuth();
   const isAdmin = me?.user.role === "admin";
@@ -221,14 +225,38 @@ export default function EventManager() {
     }
     setAppsFor(event.id);
     setApps([]);
-    setAppsError(null);
+    await loadApplications(event.id);
+  };
+
+  const loadApplications = async (eventId: string) => {
     setAppsLoading(true);
+    setAppsError(null);
     try {
-      setApps(await api.get<ApplicationRow[]>(`/artists/applications?eventId=${event.id}`));
+      setApps(await api.get<ApplicationRow[]>(`/artists/applications?eventId=${eventId}`));
     } catch (err) {
       setAppsError(errorMessage(err));
     } finally {
       setAppsLoading(false);
+    }
+  };
+
+  /** Same decision the Applications page makes: confirm the slot, or decline with an optional reason. */
+  const decideApplication = async (eventId: string, id: string, confirm: boolean) => {
+    setAppsError(null);
+    setNotice(null);
+    setDeciding(id);
+    try {
+      await api.post(`/artists/applications/${id}/decide`, {
+        confirm,
+        reason: reasons[id]?.trim() || undefined,
+      });
+      setReasons((prev) => ({ ...prev, [id]: "" }));
+      await loadApplications(eventId);
+      await load(); // committed spend and the applicant count moved
+    } catch (err) {
+      setAppsError(errorMessage(err));
+    } finally {
+      setDeciding(null);
     }
   };
 
@@ -396,7 +424,7 @@ export default function EventManager() {
                           {slots.eventId === e.id ? "Close" : "Slots & budget"}
                         </button>
                         <button onClick={() => toggleApplications(e)} className="text-neutral-300 underline text-xs">
-                          {appsFor === e.id ? "Hide applications" : "Applications"}
+                          {appsFor === e.id ? "Hide applications" : `Applications (${e._count.artistBookings})`}
                         </button>
                         {isAdmin && (e.status === "approved" || e.status === "live") && (
                           <button onClick={() => resendDjCall(e)} className="text-neon underline text-xs">Resend DJ call</button>
@@ -429,19 +457,55 @@ export default function EventManager() {
                           {!appsLoading && !appsError && !apps.length && (
                             <p className="text-neutral-500 text-xs">No DJ has applied for this night yet.</p>
                           )}
-                          {apps.map((a) => (
-                            <div key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                              <span className="font-bold">{a.artist.stageName}</span>
-                              <span className="text-neutral-400">{a.artist.user.name ?? a.artist.user.email}</span>
-                              <span className="text-neutral-300">{a.slot ?? "day / evening / late-night"}</span>
-                              <span className="text-neutral-300">R{a.performanceFee.toLocaleString()}</span>
-                              <span className={APP_STATUS[a.status] ?? "text-neutral-400"}>{a.status}</span>
-                              <span className="text-neutral-500">
-                                {a.appliedAt ? new Date(a.appliedAt).toLocaleDateString() : ""}
-                                {a.declineReason ? ` · ${a.declineReason}` : ""}
-                              </span>
-                            </div>
-                          ))}
+                          {apps.map((a) => {
+                            // Confirming promises money: the budget is a ceiling, not a warning.
+                            const overBudget =
+                              a.event.budget > 0 && a.event.committed + a.performanceFee > a.event.budget;
+                            return (
+                              <div key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                                <span className="font-bold">{a.artist.stageName}</span>
+                                <span className="text-neutral-400">{a.artist.user.name ?? a.artist.user.email}</span>
+                                <span className="text-neutral-300">{a.slot ?? "day / evening / late-night"}</span>
+                                <span className="text-neutral-300">R{a.performanceFee.toLocaleString()}</span>
+                                <span className={APP_STATUS[a.status] ?? "text-neutral-400"}>{a.status}</span>
+                                <span className="text-neutral-500">
+                                  {a.appliedAt ? new Date(a.appliedAt).toLocaleDateString() : ""}
+                                  {a.declineReason ? ` · ${a.declineReason}` : ""}
+                                </span>
+                                {a.status === "pending" && (
+                                  <span className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => decideApplication(e.id, a.id, true)}
+                                      disabled={deciding === a.id || overBudget}
+                                      title={
+                                        overBudget
+                                          ? "This confirmation would put the night over its budget — raise it on Events first"
+                                          : undefined
+                                      }
+                                      className="bg-neon text-bg font-black rounded-lg px-2 py-0.5 tracking-widest disabled:opacity-40"
+                                    >
+                                      CONFIRM
+                                    </button>
+                                    <input
+                                      value={reasons[a.id] ?? ""}
+                                      onChange={(ev) => setReasons({ ...reasons, [a.id]: ev.target.value })}
+                                      maxLength={500}
+                                      placeholder="Reason (optional)"
+                                      aria-label={`Reason for declining ${a.artist.stageName}`}
+                                      className="bg-bg border border-line rounded-lg px-2 py-0.5 w-32"
+                                    />
+                                    <button
+                                      onClick={() => decideApplication(e.id, a.id, false)}
+                                      disabled={deciding === a.id}
+                                      className="border border-red-500 text-red-400 rounded-lg px-2 py-0.5 font-bold disabled:opacity-40"
+                                    >
+                                      DECLINE
+                                    </button>
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
                         </td>
                       </tr>
                     )}
