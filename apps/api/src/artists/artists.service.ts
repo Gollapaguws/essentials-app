@@ -320,8 +320,14 @@ export class ArtistsService {
   /** Gig calendar: approved upcoming events that the artist has not applied to. */
   async openGigs(user: JwtUser) {
     const profile = await prisma.artistProfile.findUnique({ where: { userId: user.sub } });
+    // A cancelled application is not a claim on the event: the DJ may apply again.
     const applied = profile
-      ? (await prisma.artistBooking.findMany({ where: { artistId: profile.id }, select: { eventId: true } })).map((b) => b.eventId)
+      ? (
+          await prisma.artistBooking.findMany({
+            where: { artistId: profile.id, status: { not: "cancelled" } },
+            select: { eventId: true },
+          })
+        ).map((b) => b.eventId)
       : [];
     const events = await prisma.event.findMany({
       where: {
@@ -363,11 +369,11 @@ export class ArtistsService {
     }));
   }
 
-  /** Upcoming confirmed/pending gigs for the signed-in artist. */
+  /** Upcoming confirmed/pending gigs for the signed-in artist; cancelled applications drop out. */
   async myGigs(user: JwtUser) {
     const profile = await this.requireProfile(user);
     return prisma.artistBooking.findMany({
-      where: { artistId: profile.id },
+      where: { artistId: profile.id, status: { not: "cancelled" } },
       include: {
         event: { include: { venue: { select: { name: true, lat: true, lng: true, address: true } } } },
         routeLegs: true,

@@ -66,4 +66,29 @@ describe("DjBookingService.applications", () => {
     await expect(service().applications(promoter)).resolves.toEqual([]);
     expect(notes.findMany).not.toHaveBeenCalled();
   });
+
+  it("offers only future, open slots the DJ does not already have", async () => {
+    notes.findMany.mockResolvedValue([]);
+    const a = application("app-1", "artist-1");
+    bookings.findMany.mockResolvedValue([{
+      ...a,
+      event: {
+        ...a.event,
+        id: "event-1",
+        budget: 5000,
+        slots: [
+          { id: "open", label: "21:00–22:00", startsAt: new Date("2099-01-01T21:00:00.000Z"), fee: 750, bookings: [] },
+          { id: "held", label: "22:00–23:00", startsAt: new Date("2099-01-01T22:00:00.000Z"), fee: 750, bookings: [{ artistId: "artist-2", status: "confirmed" }] },
+          { id: "mine-pending", label: "23:00–00:00", startsAt: new Date("2099-01-01T23:00:00.000Z"), fee: 750, bookings: [{ artistId: "artist-1", status: "pending" }] },
+          { id: "past", label: "20:00–21:00", startsAt: new Date("2020-01-01T20:00:00.000Z"), fee: 750, bookings: [] },
+        ],
+      },
+    }]);
+
+    const [row] = await service().applications(promoter);
+
+    expect(row.event.extendableSlots).toEqual([
+      { id: "open", label: "21:00–22:00", startsAt: new Date("2099-01-01T21:00:00.000Z"), fee: 750 },
+    ]);
+  });
 });

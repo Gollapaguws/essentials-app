@@ -119,10 +119,16 @@ export class DjBookingService {
       endAt = end > start ? new Date(Date.UTC(y, m, d, end)) : new Date(Date.UTC(y, m + 1, d, end));
     }
 
+    // One application per event. Extra slots are a promoter decision: the DJ
+    // asks, and the promoter extends them deliberately from Applications.
     const existing = await prisma.artistBooking.findFirst({
       where: { eventId: event.id, artistId: profile.id, status: { not: "cancelled" } },
     });
-    if (existing) throw new ConflictException("You already applied for this event");
+    if (existing) {
+      throw new ConflictException(
+        "You can only apply for one slot per event. Ask the promoter if you want to be added to another slot.",
+      );
+    }
 
     const booking = await prisma.artistBooking.create({
       data: {
@@ -156,7 +162,7 @@ export class DjBookingService {
    * A budget of 0 means the promoter set no ceiling.
    */
   private async assertBudgetRoom(booking: {
-    id: string;
+    id?: string;
     eventId: string;
     performanceFee: number;
     event: { budget: number };
@@ -167,7 +173,7 @@ export class DjBookingService {
     const committed = await prisma.artistBooking.aggregate({
       where: {
         eventId: booking.eventId,
-        id: { not: booking.id },
+        ...(booking.id ? { id: { not: booking.id } } : {}),
         // Agreed money: a confirmed gig and a played one both count.
         status: { in: ["confirmed", "completed"] },
       },
@@ -180,6 +186,41 @@ export class DjBookingService {
         `Over budget — this slot pays R${booking.performanceFee.toLocaleString()} and the night is already committed to R${before.toLocaleString()} of its R${budget.toLocaleString()} budget. Raise the budget on the event, or decline this DJ.`,
       );
     }
+  }
+
+  /** Artist: remove a pending application they no longer want to be considered for. */
+  async withdraw(user: JwtUser, bookingId: string) {
+    const profile = await prisma.artistProfile.findUnique({
+      where: { userId: user.sub },
+      select: { id: true, stageName: true },
+    });
+    if (!profile) throw new BadRequestException("Create your artist profile first");
+
+    const booking = await prisma.artistBooking.findUnique({
+      where: { id: bookingId },
+      include: {
+        event: { select: { id: true, title: true, promoterId: true } },
+      },
+    });
+    if (!booking) throw new NotFoundException("Application not found");
+    if (booking.artistId !== profile.id) throw new ForbiddenException("Not your application");
+    if (booking.status !== "pending") {
+      throw new BadRequestException("Only a pending application can be cancelled");
+    }
+
+    const cancelled = await prisma.artistBooking.update({
+      where: { id: bookingId },
+      data: { status: "cancelled" },
+    });
+
+    await this.notifications.deliver([booking.event.promoterId], {
+      kind: "application",
+      title: `Application cancelled — ${booking.event.title}`,
+      body: `${profile.stageName} cancelled their application for ${booking.slot ?? "the slot"}.`,
+      link: `${this.appUrl()}/applications`,
+      channels: ["inapp", "email"],
+    });
+    return cancelled;
   }
 
   /** Step 4 — promoter confirms (or declines) an application. */
@@ -251,6 +292,200 @@ export class DjBookingService {
   }
 
   /**
+   * Promoter: add one confirmed DJ to another open slot on the same event.
+   *
+   * This is the only way a DJ can hold more than one slot: the DJ cannot apply
+   * again, and the promoter has to choose the extra slot explicitly. The extra
+   * set is its own confirmed booking, so it keeps its own fee and invoice.
+   */
+  async extend(user: JwtUser, bookingId: string, slotId: string) {
+    const booking = await prisma.artistBooking.findUnique({
+      where: { id: bookingId },
+      include: {
+        event: { include: { venue: { select: { name: true } } } },
+        artist: { include: { user: { select: { id: true, email: true } } } },
+      },
+    });
+    if (!booking) throw new NotFoundException("Booking not found");
+    if (user.role !== "admin" && booking.event.promoterId !== user.sub) {
+      throw new ForbiddenException("Not your event");
+    }
+    if (booking.status !== "confirmed") {
+      throw new BadRequestException("Only a confirmed booking can be extended to another slot");
+    }
+
+    const slot = await prisma.eventSlot.findUnique({ where: { id: slotId } });
+    if (!slot) throw new NotFoundException("Slot not found");
+    if (slot.eventId !== booking.eventId) {
+      throw new BadRequestException("That slot belongs to another event");
+    }
+    if (slot.startsAt.getTime() <= Date.now()) {
+      throw new BadRequestException("That slot has already started");
+    }
+
+    // Never duplicate the DJ in one slot, including an older application for it.
+    const duplicate = await prisma.artistBooking.findFirst({
+      where: {
+        eventId: booking.eventId,
+        artistId: booking.artistId,
+        status: { not: "cancelled" },
+        OR: [{ slotId: slot.id }, { startAt: slot.startsAt }],
+      },
+      select: { id: true },
+    });
+    if (duplicate) throw new ConflictException("That DJ is already on this slot");
+
+    // A slot can still have other applicants, but only one confirmed DJ.
+    const holder = await prisma.artistBooking.findFirst({
+      where: {
+        slotId: slot.id,
+        id: { not: booking.id },
+        status: { in: ["confirmed", "completed"] },
+      },
+      select: { id: true },
+    });
+    if (holder) throw new ConflictException("Another DJ already holds that slot");
+
+    await this.assertBudgetRoom({
+      eventId: booking.eventId,
+      performanceFee: slot.fee,
+      event: booking.event,
+    });
+
+    const created = await prisma.artistBooking.create({
+      data: {
+        eventId: booking.eventId,
+        artistId: booking.artistId,
+        slot: slot.label,
+        slotId: slot.id,
+        startAt: slot.startsAt,
+        endAt: slot.endsAt,
+        performanceFee: slot.fee,
+        appliedAt: new Date(),
+        status: "confirmed",
+      },
+      include: { artist: { include: { user: { select: { id: true, email: true } } } } },
+    });
+
+    await this.notifications.deliver([booking.artist.userId], {
+      kind: "confirmed",
+      title: `EXTENDED — ${booking.event.title}`,
+      body: `The promoter added you to ${slot.label} at ${booking.event.title}. Fee: R${slot.fee.toLocaleString()}.`,
+      link: `${this.appUrl()}/artist`,
+      channels: ["inapp", "email", "telegram"],
+    });
+    return created;
+  }
+
+  /**
+   * Promoter: move an application or a confirmed booking to another slot on the
+   * same event. This changes the booking in place, so its fee becomes the target
+   * slot's fee and its invoice follows it.
+   */
+  async move(user: JwtUser, bookingId: string, slotId: string) {
+    const booking = await prisma.artistBooking.findUnique({
+      where: { id: bookingId },
+      include: {
+        event: { include: { venue: { select: { name: true } } } },
+        artist: { include: { user: { select: { id: true, email: true } } } },
+      },
+    });
+    if (!booking) throw new NotFoundException("Booking not found");
+    if (user.role !== "admin" && booking.event.promoterId !== user.sub) {
+      throw new ForbiddenException("Not your event");
+    }
+    if (booking.status === "completed") {
+      throw new BadRequestException("A completed gig cannot be moved");
+    }
+    if (booking.status === "cancelled") {
+      throw new BadRequestException("A cancelled application cannot be moved");
+    }
+    if (booking.slotId === slotId) return booking;
+
+    const slot = await prisma.eventSlot.findUnique({ where: { id: slotId } });
+    if (!slot) throw new NotFoundException("Slot not found");
+    if (slot.eventId !== booking.eventId) {
+      throw new BadRequestException("That slot belongs to another event");
+    }
+    if (slot.startsAt.getTime() <= Date.now()) {
+      throw new BadRequestException("That slot has already started");
+    }
+
+    // The same DJ may not end up on two rows for one slot, including a pending row.
+    const duplicate = await prisma.artistBooking.findFirst({
+      where: {
+        eventId: booking.eventId,
+        artistId: booking.artistId,
+        id: { not: booking.id },
+        status: { not: "cancelled" },
+        OR: [{ slotId: slot.id }, { startAt: slot.startsAt }],
+      },
+      select: { id: true },
+    });
+    if (duplicate) throw new ConflictException("That DJ is already on this slot");
+
+    const holder = await prisma.artistBooking.findFirst({
+      where: {
+        slotId: slot.id,
+        id: { not: booking.id },
+        status: { in: ["confirmed", "completed"] },
+      },
+      select: { id: true },
+    });
+    if (holder) throw new ConflictException("Another DJ already holds that slot");
+
+    // A pending application costs nothing yet; only a confirmed booking has to fit.
+    if (booking.status === "confirmed") {
+      await this.assertBudgetRoom({
+        id: booking.id,
+        eventId: booking.eventId,
+        performanceFee: slot.fee,
+        event: booking.event,
+      });
+    }
+
+    const previousSlot = booking.slot;
+    const moved = await prisma.artistBooking.update({
+      where: { id: booking.id },
+      data: {
+        slot: slot.label,
+        slotId: slot.id,
+        startAt: slot.startsAt,
+        endAt: slot.endsAt,
+        performanceFee: slot.fee,
+      },
+    });
+
+    // Moving a confirmed DJ frees the old slot, so its other applicants are back
+    // in the running — the same courtesy a decline gives them.
+    if (booking.status === "confirmed" && booking.slotId) {
+      const waiting = await prisma.artistBooking.findMany({
+        where: { slotId: booking.slotId, id: { not: booking.id }, status: "pending" },
+        select: { artist: { select: { userId: true } } },
+      });
+      const waitingUserIds = waiting.map((w) => w.artist.userId).filter(Boolean);
+      if (waitingUserIds.length) {
+        await this.notifications.deliver(waitingUserIds, {
+          kind: "application",
+          title: `Slot open again — ${booking.event.title}`,
+          body: `${previousSlot ?? "That slot"} at ${booking.event.title} is open again. The promoter is reviewing the other applications.`,
+          link: `${this.appUrl()}/gig-calendar`,
+          channels: ["inapp", "email"],
+        });
+      }
+    }
+
+    await this.notifications.deliver([booking.artist.userId], {
+      kind: booking.status === "confirmed" ? "confirmed" : "application",
+      title: `SLOT CHANGED — ${booking.event.title}`,
+      body: `The promoter moved your ${previousSlot ?? "set"} to ${slot.label} at ${booking.event.title}. Fee: R${slot.fee.toLocaleString()}.`,
+      link: `${this.appUrl()}/gig-calendar`,
+      channels: booking.status === "confirmed" ? ["inapp", "email", "telegram"] : ["inapp"],
+    });
+    return moved;
+  }
+
+  /**
    * Promoter's second confirmation: the gig was actually played.
    *
    * This is the invoice gate — a booking only becomes `completed` here, and only
@@ -301,7 +536,27 @@ export class DjBookingService {
       },
       include: {
         artist: { include: { user: { select: { name: true, email: true } } } },
-        event: { select: { title: true, date: true, budget: true } },
+        event: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            budget: true,
+            slots: {
+              orderBy: { startsAt: "asc" },
+              select: {
+                id: true,
+                label: true,
+                startsAt: true,
+                fee: true,
+                bookings: {
+                  where: { status: { not: "cancelled" } },
+                  select: { artistId: true, status: true },
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: { appliedAt: "desc" },
       take: 100,
@@ -327,10 +582,22 @@ export class DjBookingService {
       : [];
     const committedByEvent = new Map(committed.map((c) => [c.eventId, c._sum.performanceFee ?? 0]));
 
-    return bookings.map((b) => ({
-      ...b,
-      event: { ...b.event, committed: committedByEvent.get(b.eventId) ?? 0 },
-      note: byArtist.get(b.artistId) ?? null,
-    }));
+    const now = Date.now();
+    return bookings.map((b) => {
+      const { slots, ...event } = b.event;
+      // What the promoter may extend this DJ into: future, not already theirs,
+      // and not held by someone else. Pending applicants do not block it.
+      const extendableSlots = (slots ?? [])
+        .filter((slot) => slot.startsAt.getTime() > now)
+        .filter((slot) => !slot.bookings.some((row) => row.artistId === b.artistId))
+        .filter((slot) => !slot.bookings.some((row) => row.status === "confirmed" || row.status === "completed"))
+        .map(({ id, label, startsAt, fee }) => ({ id, label, startsAt, fee }));
+
+      return {
+        ...b,
+        event: { ...event, committed: committedByEvent.get(b.eventId) ?? 0, extendableSlots },
+        note: byArtist.get(b.artistId) ?? null,
+      };
+    });
   }
 }

@@ -51,6 +51,16 @@ class DecideDto {
   @IsOptional() @IsString() @MaxLength(500) reason?: string;
 }
 
+class ExtendSlotDto {
+  /** The open slot on the same event to add the DJ to. */
+  @IsString() slotId!: string;
+}
+
+class MoveSlotDto {
+  /** The open slot on the same event to move the booking to. */
+  @IsString() slotId!: string;
+}
+
 @Controller("artists")
 @UseGuards(SupabaseAuthGuard)
 export class ArtistsController {
@@ -189,6 +199,30 @@ export class ArtistsController {
   @Auth("promoter", "admin")
   decide(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: DecideDto) {
     return this.djBooking.decide(user, id, dto.confirm ?? false, dto.reason);
+  }
+
+  /** Artist: cancel a pending application and remove it from the promoter's queue. */
+  @Post("bookings/:id/withdraw")
+  @HttpCode(200)
+  @Auth("artist")
+  withdraw(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.djBooking.withdraw(user, id);
+  }
+
+  /** Promoter: deliberately add a confirmed DJ to one more open slot on the same event. */
+  @Post("bookings/:id/extend")
+  @HttpCode(200)
+  @Auth("promoter", "admin")
+  extend(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: ExtendSlotDto) {
+    return this.djBooking.extend(user, id, dto.slotId);
+  }
+
+  /** Promoter: move an application or confirmed booking to another slot on the same event. */
+  @Post("bookings/:id/move")
+  @HttpCode(200)
+  @Auth("promoter", "admin")
+  move(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: MoveSlotDto) {
+    return this.djBooking.move(user, id, dto.slotId);
   }
 
   /** Promoter/venue: the gig was played — the second confirmation that unlocks invoicing. */

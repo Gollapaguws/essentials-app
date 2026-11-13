@@ -60,6 +60,7 @@ export default function GigCalendar() {
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
   const [blackouts, setBlackouts] = useState<Blackout[]>([]);
   const [blackoutDate, setBlackoutDate] = useState("");
   const [blackoutReason, setBlackoutReason] = useState("");
@@ -87,6 +88,21 @@ export default function GigCalendar() {
       load();
     } catch (err) {
       setError(errorMessage(err));
+    }
+  };
+
+  const withdraw = async (id: string) => {
+    setError(null);
+    setMsg(null);
+    setCancelling(id);
+    try {
+      await api.post(`/artists/bookings/${id}/withdraw`);
+      setMsg("Application cancelled.");
+      load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setCancelling(null);
     }
   };
 
@@ -260,6 +276,16 @@ export default function GigCalendar() {
               </div>
               <div className="flex items-center gap-3">
                 <span className={statusClass(g.status)}>{g.status}</span>
+                {g.status === "pending" && (
+                  <button
+                    onClick={() => withdraw(g.id)}
+                    disabled={cancelling === g.id}
+                    className="border border-red-500 text-red-400 rounded-lg px-3 py-1 text-xs font-bold tracking-widest disabled:opacity-40"
+                    title="Remove this application from the promoter's queue"
+                  >
+                    {cancelling === g.id ? "CANCELLING…" : "CANCEL APPLICATION"}
+                  </button>
+                )}
                 {g.status === "completed" && !g.invoice && (
                   <button
                     onClick={() => invoice(g)}
