@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseGuards } from 
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import { LiveService } from "./live.service";
+import { LiveBookingService } from "./live-booking.service";
 import { SimulcastService } from "./simulcast.service";
 import { IsIn, IsOptional, IsString, MaxLength } from "class-validator";
 import { ConfigService } from "@nestjs/config";
@@ -18,9 +19,22 @@ class TargetDto {
   @IsOptional() @IsString() @MaxLength(80) label?: string;
 }
 
+class LiveBookingDto {
+  /** ISO timestamp for the start of the DJ's session. */
+  @IsString() startsAt!: string;
+  /** ISO timestamp for the end; must be after startsAt and at most 12 hours later. */
+  @IsString() endsAt!: string;
+  @IsOptional() @IsString() @MaxLength(80) title?: string;
+}
+
 @Controller("live")
 export class LiveController {
-  constructor(private live: LiveService, private simulcast: SimulcastService, private config: ConfigService) {}
+  constructor(
+    private live: LiveService,
+    private simulcast: SimulcastService,
+    private liveBookings: LiveBookingService,
+    private config: ConfigService,
+  ) {}
 
   /** Public status: is someone live? is a restream active? (front page player). */
   @Get("status")
@@ -62,13 +76,47 @@ export class LiveController {
   @Auth("admin")
   encoderSettings() {
     const key = this.config.get("MELD_STREAM_KEY") ?? "";
+    // 443 carries both HTTPS and plain RTMP (nginx stream ssl_preread), so an
+    // encoder that only fills in server + key lands on the MediaMTX path too.
+    const server = "rtmp://essentialsedm.com:443";
     return {
-      server: "rtmp://essentialsedm.com:443",
+      server,
       streamKey: key,
-      fullUrl: `rtmp://essentialsedm.com:1935/${key}`,
+      fullUrl: key ? `${server}/${key}` : server,
       viewerHls: "https://essentialsedm.com/hls/live.m3u8",
       viewerRtsp: `rtsp://essentialsedm.com:8554/${key}`,
     };
+  }
+
+  // ===== DJ live-session bookings =====
+
+  /** DJ: their upcoming live-session bookings, soonest first. */
+  @Get("bookings")
+  @Auth("artist", "admin")
+  bookings(@CurrentUser() user: JwtUser) {
+    return this.liveBookings.list(user);
+  }
+
+  /** DJ: the booking covering right now, and whether one is required (admins are exempt). */
+  @Get("bookings/active")
+  @Auth("artist", "admin")
+  activeBooking(@CurrentUser() user: JwtUser) {
+    return this.liveBookings.active(user);
+  }
+
+  /** DJ: book a stream window. Going live is refused outside it. */
+  @Post("bookings")
+  @HttpCode(200)
+  @Auth("artist", "admin")
+  createBooking(@CurrentUser() user: JwtUser, @Body() dto: LiveBookingDto) {
+    return this.liveBookings.create(user, dto);
+  }
+
+  /** DJ: cancel one of their own sessions. */
+  @Delete("bookings/:id")
+  @Auth("artist", "admin")
+  cancelBooking(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.liveBookings.cancel(user, id);
   }
 
   // ===== Simulcast targets (YouTube / TikTok / Mixcloud / Facebook / Instagram / custom) =====

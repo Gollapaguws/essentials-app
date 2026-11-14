@@ -10,6 +10,7 @@ import { SupabaseTokenService } from "./supabase-token.service";
 import { AuthUserService } from "./auth-user.service";
 import { DashboardSessionService } from "./dashboard-session.service";
 import { SKIP_MFA_KEY } from "../common/skip-mfa.decorator";
+import { ROLES_KEY } from "../common/roles.decorator";
 
 /** Roles that must present an aal2 (MFA-satisfied) session on data endpoints. */
 export const MFA_REQUIRED_ROLES: ReadonlySet<Role> = new Set<Role>(["promoter", "venue_manager", "admin"]);
@@ -45,7 +46,25 @@ export class SupabaseAuthGuard implements CanActivate {
       ctx.getClass(),
     ]);
 
-    if (!skipMfa && role && MFA_REQUIRED_ROLES.has(role) && session.aal !== "aal2") {
+    // Admin endpoints always need aal2: a per-account exemption must never let a
+    // password alone reach account administration, even if the row was edited by
+    // hand. Every other data route honours the exemption.
+    const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
+      ctx.getHandler(),
+      ctx.getClass(),
+    ]);
+    // "Admin route" means admin-only. `@Auth("promoter", "admin")` is a promoter
+    // screen that admins may also open; counting it as an admin route locked
+    // every exempt promoter out of their own applications, events and analytics.
+    const adminOnly =
+      Array.isArray(requiredRoles) &&
+      requiredRoles.length > 0 &&
+      requiredRoles.every((r) => r === "admin");
+    const exempt = Boolean(identity?.mfaDisabled) && !adminOnly;
+
+    // An admin can exempt one account from the role's two-step requirement; the
+    // exemption lives on the User row, so it applies to every client at once.
+    if (!skipMfa && !exempt && role && MFA_REQUIRED_ROLES.has(role) && session.aal !== "aal2") {
       throw new UnauthorizedException({ code: "MFA_REQUIRED", role });
     }
 
@@ -62,6 +81,7 @@ export class SupabaseAuthGuard implements CanActivate {
       authUid: session.sub,
       role,
       mustResetPassword: identity?.mustResetPassword ?? false,
+      mfaDisabled: identity?.mfaDisabled ?? false,
     };
     return true;
   }

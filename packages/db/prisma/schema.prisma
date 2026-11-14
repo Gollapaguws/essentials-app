@@ -88,6 +88,9 @@ model User {
   verifiedBadge     Boolean   @default(false)
   // Set when the account appears, cleared once its owner chooses a password.
   mustResetPassword Boolean   @default(false)
+  // Admin opt-out from mandatory two-step verification; honoured by the guard
+  // and reported as `mfaRequired: false` on /auth/me.
+  mfaDisabled       Boolean   @default(false)
   // Per-user Telegram DM target, bound by tapping a /start deep link once.
   telegramChatId    String?
   telegramLinkedAt  DateTime?
@@ -141,7 +144,8 @@ model Event {
   genres                  String[]        @default([])
   venueId                 String
   promoterId              String
-  title                   String
+  /// Capped at 50 characters; the API validates the same limit.
+  title                   String          @db.VarChar(50)
   description             String?
   date                    DateTime
   lineup                  Json            @default("[]") // [{artistName, slot}]
@@ -263,6 +267,8 @@ model Campaign {
   eventId       String?
   event         Event?         @relation(fields: [eventId], references: [id])
   subject       String
+  // Promoter-pasted HTML body. Empty means the flow's built-in template is used.
+  contentHtml   String?        @db.Text
   sentCount     Int            @default(0)
   createdAt     DateTime       @default(now())
   emailJobs     EmailJob[]
@@ -304,15 +310,21 @@ model EmailEvent {
   @@index([email, type])
 }
 
+/// Evidence of an email-marketing choice. A grant records the notice version
+/// the person agreed to; a revocation records when it was withdrawn. Account
+/// and event notices are transactional and do not depend on this record.
 model Consent {
-  id        String         @id @default(cuid())
-  userId    String?
-  email     String
-  channel   ConsentChannel @default(email)
-  status    ConsentStatus  @default(granted)
-  source    String // signup | preference_center
-  updatedAt DateTime       @updatedAt
-  User      User?          @relation(fields: [userId], references: [id])
+  id            String         @id @default(cuid())
+  userId        String?
+  email         String
+  channel       ConsentChannel @default(email)
+  status        ConsentStatus  @default(granted)
+  source        String // site_footer | signup | import_attested | preference_center | mailing_list_manager
+  policyVersion String         @default("2026-11-14")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  revokedAt     DateTime?
+  User          User?          @relation(fields: [userId], references: [id])
 
   @@unique([email, channel])
 }
@@ -389,8 +401,15 @@ model ArtistProfile {
   vehicleConsumptionLPer100km Float           @default(8)
   /// Platform-wide standard, set by admins only. DJs and promoters cannot edit it.
   travelRatePerKm             Float           @default(4.95)
+  // Payout account printed on the DJ's invoices. Private: never exposed to promoters.
+  bankAccountHolder           String?
+  bankName                    String?
+  bankAccountNumber           String?
+  bankBranchCode              String?
+  bankAccountType             String?
   user                        User            @relation(fields: [userId], references: [id])
   bookings                    ArtistBooking[]
+  liveBookings                LiveBooking[]
   invoices                    Invoice[]
   // Private promoter notes about this DJ; never shown to the DJ or other promoters.
   notes                       ArtistNote[]
@@ -411,7 +430,20 @@ model ArtistBlackout {
   @@index([artistId, date])
 }
 
-/// A promoter's own running note on a DJ. One row per promoter/DJ pair.
+/// A DJ-booked live-stream window. Go Live is refused outside an active one.
+model LiveBooking {
+  id          String        @id @default(cuid())
+  artistId    String
+  title       String?
+  startsAt    DateTime
+  endsAt      DateTime
+  /// Set when the DJ cancels; the row is kept so the calendar history survives.
+  cancelledAt DateTime?
+  createdAt   DateTime      @default(now())
+  artist      ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@index([artistId, startsAt])
+}
 model ArtistNote {
   id         String   @id @default(cuid())
   artistId   String
@@ -543,6 +575,14 @@ model SiteVisit {
 
   @@unique([visitorKey, path, day])
   @@index([day])
+}
+
+// ===== What's new (changelog) announcements =====
+// One row per changelog release mailed to members, keyed by its date.
+model WhatsNewBroadcast {
+  release   String   @id
+  sentCount Int      @default(0)
+  sentAt    DateTime @default(now())
 }
 
 // ===== Front-page content (admin editor) =====

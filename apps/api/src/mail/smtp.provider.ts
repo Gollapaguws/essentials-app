@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 import type { MailProvider, SendEmailInput } from "./mail-provider.interface";
+import { unsubscribeHeaders } from "./unsubscribe";
 
 /**
  * SMTP provider: sends via a local MTA (Postfix on the VPS, 127.0.0.1:25).
@@ -22,12 +23,8 @@ export class SmtpProvider implements MailProvider {
       to: input.to,
       subject: input.subject,
       html: input.html,
-      headers: input.unsubscribeUrl
-        ? {
-            "List-Unsubscribe": `<${input.unsubscribeUrl}>`,
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-          }
-        : undefined,
+      text: input.text,
+      headers: unsubscribeHeaders(input.unsubscribeUrl),
     });
     return { id: info.messageId ?? `smtp-${Date.now()}` };
   }

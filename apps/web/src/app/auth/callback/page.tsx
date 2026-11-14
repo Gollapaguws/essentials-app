@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DASHBOARD_ROLES, landingPath } from "@essentials/auth";
@@ -10,9 +10,17 @@ function CallbackInner() {
   const params = useSearchParams();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const code = params.get("code");
+  const type = params.get("type");
+  // Depend on the strings, not on the params object: a new object per render
+  // would re-run the exchange after every setError and hammer the API.
+  const handled = useRef<string | null>(null);
 
   useEffect(() => {
-    const code = params.get("code");
+    const key = `${code ?? ""}|${type ?? ""}`;
+    if (handled.current === key) return;
+    handled.current = key;
+
     if (!code) {
       setError("This link is incomplete or has expired.");
       return;
@@ -28,7 +36,7 @@ function CallbackInner() {
 
       // Recovery links sign the account in just to change the password: skip the
       // role gate and send them to the screen that owns that one job.
-      if (params.get("type") === "recovery") {
+      if (type === "recovery") {
         router.replace("/auth/password?recovery=1");
         return;
       }
@@ -45,7 +53,7 @@ function CallbackInner() {
         setError("Signed in, but the dashboard could not be loaded.");
       }
     })();
-  }, [params, router]);
+  }, [code, type, router]);
 
   return (
     <main className="min-h-screen grid place-items-center px-6">

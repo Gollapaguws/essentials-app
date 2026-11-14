@@ -48,7 +48,12 @@ export class ListmonkProvider implements MailProvider {
       body: JSON.stringify({
         subscriber_email: input.to,
         template_id: parseInt(process.env.LISTMONK_TX_TEMPLATE_ID ?? "1", 10),
-        data: { subject: input.subject, body_html: input.html, unsubscribe_url: input.unsubscribeUrl ?? "" },
+        data: {
+          subject: input.subject,
+          body_html: input.html,
+          body_text: input.text ?? "",
+          unsubscribe_url: input.unsubscribeUrl ?? "",
+        },
       }),
     });
     const tx = (await txRes.json().catch(() => null)) as { data?: { id?: number } } | null;

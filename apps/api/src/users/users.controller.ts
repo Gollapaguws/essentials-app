@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
-import { Auth } from "../common/auth.decorator";
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
+import { Auth, CurrentUser } from "../common/auth.decorator";
+import type { JwtUser } from "../common/roles.guard";
 import { UsersService } from "./users.service";
-import { CreateUserDto, SetRoleDto, UpdateProfileDto } from "./users.dto";
+import { CreateUserDto, SetMfaDto, SetRoleDto, UpdateProfileDto } from "./users.dto";
 
 /** Admin-only account administration: who is registered, and what they are. */
 @Controller("users")
@@ -18,6 +20,24 @@ export class UsersController {
   @Post()
   create(@Body() dto: CreateUserDto) {
     return this.users.create(dto);
+  }
+
+  /**
+   * Unlock a locked-out account: remove the lost authenticator, issue a temporary
+   * password and sign out every device. Returns the password once.
+   */
+  @Post(":id/auth-reset")
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  resetSignIn(@Param("id") id: string, @CurrentUser() actor: JwtUser) {
+    return this.users.resetSignIn(id, actor);
+  }
+
+  /** Grant or withdraw this account's exemption from mandatory two-step. */
+  @Patch(":id/mfa")
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  setMfa(@Param("id") id: string, @Body() dto: SetMfaDto, @CurrentUser() actor: JwtUser) {
+    return this.users.setMfaDisabled(id, dto.disabled, actor);
   }
 
   @Patch(":id/role")

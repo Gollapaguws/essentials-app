@@ -20,6 +20,7 @@ import AuthCallback from './pages/AuthCallback';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Privacy from './pages/Privacy';
+import WhatsNew from './pages/WhatsNew';
 
 /**
  * ESSENTIALS public site — marketing front page.
@@ -39,6 +40,7 @@ const PublicSite = () => (
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/privacy" element={<Privacy />} />
+      <Route path="/whats-new" element={<WhatsNew />} />
       <Route path="*" element={<Home />} />
     </Routes>
     <Toaster />

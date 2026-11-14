@@ -1,16 +1,39 @@
-import { Controller, Get, Post, Body, Param, Query, Res } from "@nestjs/common";
-import type { Response } from "express";
+import { Controller, Get, Post, Delete, Body, Param, Query, Res, Req, UploadedFile, UseInterceptors, BadRequestException } from "@nestjs/common";
+import type { Request, Response } from "express";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { ConfigService } from "@nestjs/config";
+import { extname } from "path";
 import { EmailEngineService } from "./email-engine.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
-import { IsString, IsOptional } from "class-validator";
+import { IsString, IsOptional, MaxLength, IsArray, ArrayMaxSize, IsEmail, IsBoolean } from "class-validator";
 import { Throttle } from "@nestjs/throttler";
 import { escapeHtml } from "../common/html";
 import { readUnsubscribeToken } from "../mail/unsubscribe";
+import { MAX_PROFILE_IMAGE_BYTES, storeImage } from "../common/media-storage";
 
 class SegmentDto {
   @IsString() name!: string;
   @IsOptional() filter?: object;
+}
+class EmailDto {
+  @IsString()
+  @IsEmail()
+  email!: string;
+}
+class ContactSelectionDto {
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5000)
+  @IsString({ each: true })
+  emails?: string[];
+  @IsOptional() @IsBoolean() allMatching?: boolean;
+  @IsOptional() @IsString() @MaxLength(320) q?: string;
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5000)
+  @IsString({ each: true })
+  excluded?: string[];
 }
 class CampaignDto {
   @IsString() name!: string;
@@ -18,11 +41,15 @@ class CampaignDto {
   @IsString() subject!: string;
   @IsOptional() @IsString() segmentId?: string;
   @IsOptional() @IsString() eventId?: string;
+  @IsOptional() @IsString() @MaxLength(500_000) html?: string;
 }
 
 @Controller("email")
 export class EmailEngineController {
-  constructor(private engine: EmailEngineService) {}
+  constructor(
+    private engine: EmailEngineService,
+    private config: ConfigService,
+  ) {}
 
   @Post("segments")
   @Auth("promoter")
@@ -34,6 +61,118 @@ export class EmailEngineController {
   @Auth("promoter")
   segments() {
     return this.engine.listSegments();
+  }
+
+  /** Paginated contacts for one imported mailing list. */
+  @Get("segments/:id/contacts")
+  @Auth("promoter")
+  contacts(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+    @Query("q") q?: string,
+  ) {
+    return this.engine.listSegmentContacts(user, id, Number(page) || 1, Number(pageSize) || 50, q ?? "");
+  }
+
+  /** Remove an address from a list without revoking consent or deleting the guest. */
+  @Delete("segments/:id/contacts")
+  @Auth("promoter")
+  removeContact(@CurrentUser() user: JwtUser, @Param("id") id: string, @Query("email") email?: string) {
+    if (!email) throw new BadRequestException("Email is required");
+    return this.engine.removeSegmentContact(user, id, email);
+  }
+
+  /** Remove several contacts from a list in one request. */
+  @Post("segments/:id/contacts/bulk-remove")
+  @Auth("promoter")
+  bulkRemoveContacts(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: ContactSelectionDto) {
+    return this.engine.removeSegmentContacts(user, id, dto);
+  }
+
+  /** Revoke email consent for selected contacts without removing them from the list. */
+  @Post("segments/:id/contacts/bulk-unsubscribe")
+  @Auth("promoter")
+  bulkUnsubscribeContacts(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() dto: ContactSelectionDto) {
+    return this.engine.unsubscribeContacts(user, id, dto);
+  }
+
+  /** Revoke email consent for one contact from the manager. */
+  @Post("consent/unsubscribe")
+  @Auth("promoter")
+  unsubscribeContact(@CurrentUser() user: JwtUser, @Body() dto: EmailDto) {
+    return this.engine.unsubscribeContact(user, dto.email);
+  }
+
+  /** Download a saved list as CSV (email, name, consent). */
+  @Get("segments/:id/export")
+  @Auth("promoter")
+  async exportSegment(@CurrentUser() user: JwtUser, @Param("id") id: string, @Res() res: Response) {
+    const { filename, csv } = await this.engine.exportSegmentCsv(user, id);
+    this.sendCsv(res, filename, csv);
+  }
+
+  /** Download only the selected contacts (or all contacts matching a search) as CSV. */
+  @Post("segments/:id/export")
+  @Auth("promoter")
+  async exportSelectedContacts(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() dto: ContactSelectionDto,
+    @Res() res: Response,
+  ) {
+    const { filename, csv } = await this.engine.exportSegmentCsv(user, id, dto);
+    this.sendCsv(res, filename, csv);
+  }
+
+  private sendCsv(res: Response, filename: string, csv: string) {
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(csv);
+  }
+
+  /** Delete a saved list. Campaigns keep their history; their segment reference is cleared. */
+  @Delete("segments/:id")
+  @Auth("promoter")
+  deleteSegment(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.engine.deleteSegment(user, id);
+  }
+
+  /**
+   * Import a CSV/TSV address list as consenting guests + a targetable segment.
+   * `attested` must be the string "true": the uploader confirms every contact
+   * opted in, and that confirmation is stored with the segment and consent rows.
+   */
+  @Post("segments/upload")
+  @Auth("promoter")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 2 * 1024 * 1024 } }))
+  uploadMailingList(
+    @CurrentUser() user: JwtUser,
+    @Body() body: { attested?: string },
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException("No file");
+    const ext = extname(file.originalname).toLowerCase();
+    if (![".csv", ".tsv", ".txt"].includes(ext)) {
+      throw new BadRequestException("Upload a CSV, TSV or TXT file");
+    }
+    return this.engine.importMailingList(user, file, body?.attested === "true");
+  }
+
+  /** Upload an image for pasted campaign HTML and return an absolute URL. */
+  @Post("upload")
+  @Auth("promoter")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: MAX_PROFILE_IMAGE_BYTES } }))
+  uploadImage(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Req() req: Request,
+  ) {
+    if (!file) throw new BadRequestException("No file");
+    const mediaDir = this.config.get<string>("MEDIA_DIR") ?? "/var/www/essentialsedm/media";
+    const publicBase = this.config.get<string>("PUBLIC_MEDIA_URL") ?? "/media";
+    const origin = (this.config.get<string>("SITE_URL") ?? `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
+    return { ok: true, ...storeImage(file, { mediaDir, publicBase, origin }) };
   }
 
   @Post("campaigns")

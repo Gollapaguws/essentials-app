@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TopNav } from "@/components/TopNav";
 import { DownloadButton } from "@/components/DownloadButton";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { ConsolePage } from "@/components/console/ConsolePage";
+import { PageHeader } from "@/components/console/PageHeader";
+import { Badge, bookingTone } from "@/components/console/Badge";
 
 interface OpenSlot {
   id: string;
@@ -48,9 +50,6 @@ const LEGACY_SLOTS = [
   { key: "evening", label: "EVENING (20:00–00:00)" },
   { key: "late-night", label: "LATE-NIGHT (00:00–06:00)" },
 ];
-
-const statusClass = (status: string) =>
-  status === "confirmed" || status === "completed" ? "text-neon" : status === "pending" ? "text-yellow-400" : "text-neutral-500";
 
 /** DJ flow: open events → choose a slot (time + fee) → apply → promoter confirms → invoice. */
 export default function GigCalendar() {
@@ -143,23 +142,25 @@ export default function GigCalendar() {
   };
 
   return (
-    <>
-      <TopNav />
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <h1 className="text-2xl font-black tracking-wide">DJ GIG CALENDAR</h1>
+    <ConsolePage size="md">
+      <PageHeader
+        eyebrow="Stage / Bookings"
+        title="DJ GIG CALENDAR"
+        description="Pick an open slot, keep your availability honest, and track every application through to the invoice."
+        actions={
           <DownloadButton
             path="/artists/gigs.ics"
             filename="essentials-gigs.ics"
             label="Download calendar (.ics)"
-            className="text-neon underline text-xs"
+            className="console-btn console-btn-secondary"
           />
-        </div>
-        {msg && <p className="text-neon text-sm">{msg}</p>}
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        }
+      />
+      {msg && <p className="text-neon text-sm">{msg}</p>}
+      {error && <p className="text-red-400 text-sm">{error}</p>}
 
-        <section className="border border-line bg-surface rounded-xl p-4">
-          <h2 className="font-bold text-neon uppercase text-sm tracking-wider mb-3">Open events — pick a slot</h2>
+      <section className="console-panel console-panel-body">
+        <h2 className="console-section-title mb-3">Open events — pick a slot</h2>
           {open.map((g) => (
             <div key={g.id} className="border-t border-line py-3 space-y-2">
               <p className="font-bold">{g.title} <span className="text-neutral-500 text-sm">@ {g.venue.name} · {new Date(g.date).toDateString()}</span></p>
@@ -212,8 +213,8 @@ export default function GigCalendar() {
           {!open.length && <p className="text-neutral-500 text-sm">No open events right now — you'll get a DJ call when new dates drop.</p>}
         </section>
 
-        <section className="border border-line bg-surface rounded-xl p-4 space-y-3">
-          <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Dates I can't play</h2>
+      <section className="console-panel console-panel-body space-y-3">
+        <h2 className="console-section-title">Dates I can't play</h2>
           <div className="flex flex-wrap items-end gap-2">
             <label className="text-xs text-neutral-400 space-y-1">
               <span>Date</span>
@@ -260,8 +261,8 @@ export default function GigCalendar() {
           )}
         </section>
 
-        <section className="border border-line bg-surface rounded-xl p-4">
-          <h2 className="font-bold text-neon uppercase text-sm tracking-wider mb-3">My applications & gigs</h2>
+      <section className="console-panel console-panel-body">
+        <h2 className="console-section-title mb-3">My applications & gigs</h2>
           {gigs.map((g) => (
             <div key={g.id} className="border-t border-line py-3 text-sm flex flex-wrap justify-between gap-2">
               <div>
@@ -275,7 +276,7 @@ export default function GigCalendar() {
                 <p className="text-neutral-500">fee R{g.performanceFee.toLocaleString()}</p>
               </div>
               <div className="flex items-center gap-3">
-                <span className={statusClass(g.status)}>{g.status}</span>
+                <Badge tone={bookingTone(g.status)}>{g.status}</Badge>
                 {g.status === "pending" && (
                   <button
                     onClick={() => withdraw(g.id)}
@@ -300,8 +301,7 @@ export default function GigCalendar() {
             </div>
           ))}
           {!gigs.length && <p className="text-neutral-500 text-sm">No applications yet.</p>}
-        </section>
-      </main>
-    </>
+      </section>
+    </ConsolePage>
   );
 }

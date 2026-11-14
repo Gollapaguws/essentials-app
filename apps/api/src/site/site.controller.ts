@@ -1,9 +1,10 @@
 import { Controller, Post, Body, HttpCode } from "@nestjs/common";
 import { SiteService } from "./site.service";
-import { IsEmail } from "class-validator";
+import { IsBoolean, IsEmail } from "class-validator";
 
 class SubscribeDto {
   @IsEmail() email!: string;
+  @IsBoolean() consent!: boolean;
 }
 
 /** Public (no auth) — used by the essentialsedm.com front page. */
@@ -14,6 +15,6 @@ export class SiteController {
   @Post("subscribe")
   @HttpCode(200)
   subscribe(@Body() dto: SubscribeDto) {
-    return this.site.subscribe(dto.email);
+    return this.site.subscribe(dto.email, dto.consent);
   }
 }

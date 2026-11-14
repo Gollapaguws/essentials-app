@@ -13,6 +13,7 @@ import { SkipMfa } from "../common/skip-mfa.decorator";
 interface RequestIdentity extends VerifiedSession {
   id?: string | null;
   mustResetPassword?: boolean;
+  mfaDisabled?: boolean;
 }
 
 @Controller("auth")
@@ -41,7 +42,10 @@ export class AuthController {
       },
       // This route skips the aal1 gate so a privileged account can still discover
       // its role; report the gate it is about to hit instead of a blanket false.
-      mfaRequired: Boolean(role && MFA_REQUIRED_ROLES.has(role) && session.aal !== "aal2"),
+      // An account an admin exempted is never sent to two-step setup.
+      mfaRequired: Boolean(
+        !session.mfaDisabled && role && MFA_REQUIRED_ROLES.has(role) && session.aal !== "aal2",
+      ),
       mustResetPassword,
     };
   }

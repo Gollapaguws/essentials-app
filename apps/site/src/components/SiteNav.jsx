@@ -9,6 +9,8 @@ const links = [
   { label: "EVENTS", note: "Next nights, doors and tickets", to: { pathname: "/", hash: "#lineup" } },
   { label: "THE COLLECTIVE", note: "What the room is for", to: { pathname: "/", hash: "#collective" } },
   { label: "CONTACT", note: "Join the mailing list", to: { pathname: "/", hash: "#contact" } },
+  { label: "WHAT'S NEW", note: "What has landed lately", to: { pathname: "/whats-new" }, member: true },
+  { label: "PRIVACY", note: "What we hold and your rights", to: { pathname: "/privacy" } },
 ];
 
 export default function SiteNav() {
@@ -43,6 +45,8 @@ export default function SiteNav() {
 
   const role = me?.user?.role ?? null;
   const hasDashboard = Boolean(role && role !== "guest");
+  // Member-only pages stay out of the menu for signed-out and guest accounts.
+  const visibleLinks = links.filter((link) => !link.member || hasDashboard);
 
   const out = async () => {
     await signOut();
@@ -96,7 +100,7 @@ export default function SiteNav() {
           </div>
 
           <nav className="noir-navlist">
-            {links.map((link) => (
+            {visibleLinks.map((link) => (
               <Link key={link.label} to={link.to} onClick={() => setOpen(false)} className="noir-navlink">
                 {link.label}
                 <span className="noir-navnote">{link.note}</span>

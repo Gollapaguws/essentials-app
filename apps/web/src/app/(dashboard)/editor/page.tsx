@@ -6,6 +6,7 @@ import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://essentialsedm.com/api";
+const MAX_UPLOAD = 120 * 1024 * 1024;
 
 interface FrontPageEvent { title: string; displayDate: string; city: string; venue: string; doors: string; price: string; status?: string }
 interface Visual { src: string; label: string }
@@ -16,6 +17,7 @@ interface FrontPage {
   footerLeft?: string; footerRight?: string;
   heroSlides?: string[];
   visuals?: Visual[];
+  idleLoop?: string;
   lineupPublishAt?: string;
 }
 
@@ -32,8 +34,12 @@ export default function FrontPageEditor() {
   }, []);
 
   const set = (patch: Partial<FrontPage>) => setC((p) => ({ ...p, ...patch }));
-  const uploadImage = async (file: File, cb: (url: string) => void) => {
+  const uploadMedia = async (file: File, cb: (url: string) => void) => {
     setError(null);
+    if (file.size > MAX_UPLOAD) {
+      setError(`"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB — the upload limit is 120 MB.`);
+      return;
+    }
     const fd = new FormData();
     fd.append("file", file);
     try {
@@ -43,8 +49,17 @@ export default function FrontPageEditor() {
         credentials: "include",
         body: fd,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? "Upload failed");
+      const raw = await res.text();
+      // nginx rejects oversized bodies with an HTML page, so never assume JSON.
+      let data: { url?: string; message?: string | string[] } = {};
+      try { data = raw ? JSON.parse(raw) : {}; } catch { /* keep the status message below */ }
+      if (!res.ok) {
+        const detail = Array.isArray(data.message) ? data.message.join(", ") : data.message;
+        throw new Error(detail ?? (res.status === 413
+          ? "Upload is too large — the limit is 120 MB."
+          : `Upload failed (${res.status}).`));
+      }
+      if (!data.url) throw new Error("Upload failed — no file URL returned.");
       cb(data.url);
     } catch (err) { setError(errorMessage(err)); }
   };
@@ -134,7 +149,7 @@ export default function FrontPageEditor() {
             </div>
           ))}
           <div className="flex gap-2">
-            <input type="file" accept="image/*" className="text-xs" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) uploadImage(f, (url) => set({ heroSlides: [...(c.heroSlides ?? []), url] })); }} />
+            <input type="file" accept="image/*" className="text-xs" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) uploadMedia(f, (url) => set({ heroSlides: [...(c.heroSlides ?? []), url] })); }} />
           </div>
           <h2 className="font-bold text-neon uppercase text-sm tracking-wider pt-2">Vault visuals</h2>
           {(c.visuals ?? []).map((v, i) => (
@@ -146,10 +161,30 @@ export default function FrontPageEditor() {
             </div>
           ))}
           <div className="flex gap-2 items-center">
-            <input type="file" accept="image/*" className="text-xs" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) uploadImage(f, (url) => set({ visuals: [...(c.visuals ?? []), { src: url, label: "NEW VISUAL" }] })); }} />
+            <input type="file" accept="image/*" className="text-xs" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) uploadMedia(f, (url) => set({ visuals: [...(c.visuals ?? []), { src: url, label: "NEW VISUAL" }] })); }} />
           </div>
           <div><span className={label}>Publish lineup at (scheduled drop, blank = live)</span>
             <input type="datetime-local" className={`${input} mt-1`} value={c.lineupPublishAt ?? ""} onChange={(e) => set({ lineupPublishAt: e.target.value })} /></div>
+        </section>
+
+        <section className="border border-line bg-surface rounded-xl p-4 space-y-3">
+          <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Room loop</h2>
+          <p className="text-neutral-500 text-xs">
+            Video looped in the front-page room box while nothing is live. MP4 or WebM,
+            up to 120 MB. Leave it empty to show the standby slate.
+          </p>
+          {c.idleLoop ? (
+            <div className="flex items-center gap-2">
+              <video src={c.idleLoop} muted loop autoPlay playsInline className="w-32 aspect-video object-cover rounded" />
+              <input className={`${input} flex-1 font-mono text-xs`} value={c.idleLoop}
+                onChange={(ev) => set({ idleLoop: ev.target.value })} />
+              <button onClick={() => set({ idleLoop: "" })} className="text-red-400 font-bold px-2">×</button>
+            </div>
+          ) : (
+            <p className="text-neutral-500 text-sm">No loop — the standby slate shows instead.</p>
+          )}
+          <input type="file" accept="video/mp4,video/webm,video/quicktime" className="text-xs"
+            onChange={(ev) => { const f = ev.target.files?.[0]; if (f) uploadMedia(f, (url) => set({ idleLoop: url })); }} />
         </section>
 
         <section className="border border-line bg-surface rounded-xl p-4 grid md:grid-cols-2 gap-3">

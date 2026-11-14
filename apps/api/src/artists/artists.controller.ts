@@ -17,6 +17,12 @@ class ProfileDto {
   /** Absolute http(s) URL of the profile image. Empty string clears it. */
   @IsOptional() @IsString() @MaxLength(500) imageUrl?: string;
   @IsOptional() @IsNumber() @Min(1) vehicleConsumptionLPer100km?: number;
+  /** Payout details printed on the DJ's invoices. Empty strings clear a field. */
+  @IsOptional() @IsString() @MaxLength(120) bankAccountHolder?: string;
+  @IsOptional() @IsString() @MaxLength(120) bankName?: string;
+  @IsOptional() @IsString() @MaxLength(34) bankAccountNumber?: string;
+  @IsOptional() @IsString() @MaxLength(20) bankBranchCode?: string;
+  @IsOptional() @IsString() @MaxLength(40) bankAccountType?: string;
   // travelRatePerKm is deliberately absent: it is the platform standard, set by
   // an admin (PATCH /artists/travel-rate), never by the DJ.
 }
@@ -207,6 +213,14 @@ export class ArtistsController {
   @Auth("artist")
   withdraw(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.djBooking.withdraw(user, id);
+  }
+
+  /** Admin: cancel an active DJ slot, including after a promoter confirmed it. */
+  @Post("bookings/:id/cancel")
+  @HttpCode(200)
+  @Auth("admin")
+  cancelBooking(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.djBooking.cancelAsAdmin(user, id);
   }
 
   /** Promoter: deliberately add a confirmed DJ to one more open slot on the same event. */

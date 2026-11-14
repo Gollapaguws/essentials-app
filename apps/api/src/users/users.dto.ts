@@ -102,6 +102,12 @@ export class CreateUserDto {
   venueLng?: number;
 }
 
+/** Admin switch for the per-account exemption from mandatory two-step. */
+export class SetMfaDto {
+  @IsBoolean()
+  disabled!: boolean;
+}
+
 /**
  * Post-assignment edits: rename or clear a DJ stage name / venue without
  * touching the role. `clear*` flags are explicit so an empty string can never

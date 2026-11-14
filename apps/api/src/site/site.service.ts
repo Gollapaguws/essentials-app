@@ -1,7 +1,8 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { prisma, ConsentStatus } from "@essentials/db";
 import { MailService } from "../mail/mail.service";
 import { emailTemplates } from "../mail/templates";
+import { PRIVACY_POLICY_VERSION } from "../common/privacy";
 
 /** Public marketing-site endpoints (essentialsedm.com front page). */
 @Injectable()
@@ -10,8 +11,13 @@ export class SiteService {
 
   constructor(private mail: MailService) {}
 
-  /** Newsletter signup from the front page footer. */
-  async subscribe(email: string) {
+  /**
+   * Newsletter signup from the front page footer. Marketing consent must be the
+   * person's own affirmative choice, so a missing/false consent flag is refused
+   * rather than inferred from the email address.
+   */
+  async subscribe(email: string, consent: boolean) {
+    if (!consent) throw new BadRequestException("Marketing consent is required");
     email = email.toLowerCase().trim();
     const existing = await prisma.consent.findUnique({ where: { email_channel: { email, channel: "email" } } });
     if (existing?.status === ConsentStatus.granted) return { ok: true, already: true };
@@ -22,8 +28,19 @@ export class SiteService {
 
     await prisma.consent.upsert({
       where: { email_channel: { email, channel: "email" } },
-      update: { status: "granted", source: "signup" },
-      create: { email, userId, status: "granted", source: "signup" },
+      update: {
+        status: "granted",
+        source: "site_footer",
+        policyVersion: PRIVACY_POLICY_VERSION,
+        revokedAt: null,
+      },
+      create: {
+        email,
+        userId,
+        status: "granted",
+        source: "site_footer",
+        policyVersion: PRIVACY_POLICY_VERSION,
+      },
     });
     await prisma.emailEvent.create({ data: { email, userId, type: "delivered", meta: { source: "site_subscribe" } } });
 

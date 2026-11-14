@@ -43,10 +43,22 @@ export class LiveService implements OnModuleDestroy {
       "ffmpeg",
       [
         "-hide_banner", "-loglevel", "error",
-        "-fflags", "+genpts+discardcorrupt",
+        // The browser's live WebM has unreliable per-frame timestamps, which
+        // made ffmpeg invent a ~1000 fps stream that pegged the CPU and stalled
+        // HLS playback. Stamp frames from the wall clock instead.
+        "-fflags", "+discardcorrupt",
+        "-use_wallclock_as_timestamps", "1",
         "-i", "pipe:0",
-        "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
-        "-pix_fmt", "yuv420p", "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "5000k",
+        // 360p @ 25 fps: the feed still stuttered at 480p on weak phones, so
+        // trade detail for smooth, cheap playback.
+        "-vf", "scale=w='min(640,iw)':h='min(360,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",
+        "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
+        // Lock output to a sane 30 fps CFR so timestamps stay monotonic.
+        "-r", "25", "-vsync", "cfr",
+        // A keyframe every 2s lines up HLS segments and lets a player recover fast.
+        // 1s keyframes: MediaMTX cuts HLS segments on keyframes, so this yields
+        // 1s segments and a much finer-grained live window for the player.
+        "-pix_fmt", "yuv420p", "-g", "25", "-b:v", "600k", "-maxrate", "750k", "-bufsize", "1200k",
         "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "96k",
         "-muxdelay", "0",
         "-f", "rtsp", "-rtsp_transport", "tcp",
@@ -150,6 +162,7 @@ export class LiveService implements OnModuleDestroy {
   }
 
   status() {
+    const live = !!(this.ingestProc && !this.ingestProc.killed);
     // studio (Meld/OBS) broadcast = live.m3u8 freshly written by mediamtx runOnReady
     let studioLive = false;
     try {
@@ -157,13 +170,19 @@ export class LiveService implements OnModuleDestroy {
       studioLive = Date.now() - m.mtimeMs < 30_000;
     } catch {}
     return {
-      live: !!(this.ingestProc && !this.ingestProc.killed),
+      live,
       studioLive,
       simulcast: this.simulcast?.states() ?? {},
       rtspUrl: `rtsp://${RTSP_HOST}/${RTSP_PATH}`,
       source: this.sourceUrl,
       sourceUp: !!(this.sourceProc && !this.sourceProc.killed),
-      hls: this.sourceUrl ? "https://essentialsedm.com/hls/stream.m3u8" : null,
+      // A browser Go Live is published to MediaMTX, whose HLS is proxied at
+      // /live-hls/. An admin restream still renders its own /hls/stream.m3u8.
+      hls: live
+        ? `https://essentialsedm.com/live-hls/${RTSP_PATH}/index.m3u8`
+        : this.sourceUrl
+          ? "https://essentialsedm.com/hls/stream.m3u8"
+          : null,
     };
   }
 

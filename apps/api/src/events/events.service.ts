@@ -308,6 +308,7 @@ export class EventsService {
     const created = await prisma.event.create({
       data: {
         ...eventData,
+        title: data.title.trim(),
         date,
         promoterId: user.sub,
         lineup: (data.lineup ?? []) as object,

@@ -2,6 +2,7 @@ import { ExecutionContext, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Role } from "@prisma/client";
 import { SupabaseAuthGuard } from "./supabase-auth.guard";
+import { ROLES_KEY } from "../common/roles.decorator";
 import type { AuthUserService } from "./auth-user.service";
 import type { DashboardSessionService } from "./dashboard-session.service";
 import type { SupabaseTokenService, VerifiedSession } from "./supabase-token.service";
@@ -41,7 +42,12 @@ type Guard = ReturnType<typeof build>;
 
 function allow(
   g: Guard,
-  identity: { id: string; role: Role; mustResetPassword?: boolean } | null = {
+  identity: {
+    id: string;
+    role: Role;
+    mustResetPassword?: boolean;
+    mfaDisabled?: boolean;
+  } | null = {
     id: "user-1",
     role: "artist",
   },
@@ -105,6 +111,45 @@ describe("SupabaseAuthGuard", () => {
     g.tokens.verify.mockResolvedValue(session({ role: "promoter", aal: "aal2" }));
 
     await expect(g.guard.canActivate(ctx({ headers: { authorization: "Bearer jwt-1" } }))).resolves.toBe(true);
+  });
+
+  it("lets an exempt account through at aal1", async () => {
+    const g = build();
+    allow(g, { id: "user-1", role: "promoter", mfaDisabled: true });
+    g.tokens.verify.mockResolvedValue(session({ role: "promoter" }));
+
+    await expect(
+      g.guard.canActivate(ctx({ headers: { authorization: "Bearer jwt-1" } })),
+    ).resolves.toBe(true);
+  });
+
+  it("never exempts an admin endpoint from aal2", async () => {
+    const g = build();
+    allow(g, { id: "user-1", role: "admin", mfaDisabled: true });
+    g.tokens.verify.mockResolvedValue(session({ role: "admin" }));
+    g.reflector.getAllAndOverride.mockImplementation((key: string) =>
+      key === ROLES_KEY ? ["admin"] : false,
+    );
+
+    await expect(
+      g.guard.canActivate(ctx({ headers: { authorization: "Bearer jwt-1" } })),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it("keeps an exempt promoter on a screen that also admits admins", async () => {
+    // `@Auth("promoter", "admin")` is a promoter screen, not account
+    // administration: the exemption has to hold or an exempt promoter cannot see
+    // her own DJ applications, events or analytics.
+    const g = build();
+    allow(g, { id: "user-1", role: "promoter", mfaDisabled: true });
+    g.tokens.verify.mockResolvedValue(session({ role: "promoter" }));
+    g.reflector.getAllAndOverride.mockImplementation((key: string) =>
+      key === ROLES_KEY ? ["promoter", "admin"] : false,
+    );
+
+    await expect(
+      g.guard.canActivate(ctx({ headers: { authorization: "Bearer jwt-1" } })),
+    ).resolves.toBe(true);
   });
 
   it("honours @SkipMfa for the endpoints that bootstrap MFA", async () => {

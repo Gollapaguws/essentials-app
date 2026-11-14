@@ -3,7 +3,6 @@ import {
   createDecipheriv,
   createHash,
   randomBytes,
-  timingSafeEqual,
 } from "node:crypto";
 import { Injectable, Logger, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -249,8 +248,7 @@ export class DashboardSessionService {
   }
 
   /** Revoke one of this account's sessions; revoking the caller's own signs it out. */
-  async revokeDevice(req: Request, res: Response, id: string): Promise<void> {
-    const { row } = await this.resolve(req);
+  async revokeDevice(req: Request, res: Response, id: string): Promise<void> {    const { row } = await this.resolve(req);
     // Scoped to the caller's user id: an id from another account matches nothing.
     const target = await prisma.dashboardSession.findFirst({ where: { id, userId: row.userId } });
     if (!target) throw new NotFoundException("That device is not signed in.");
@@ -260,6 +258,20 @@ export class DashboardSessionService {
     await this.endUpstreamSession(target);
     await prisma.dashboardSession.deleteMany({ where: { id: target.id } });
     if (target.id === row.id) res.clearCookie(SESSION_COOKIE, { path: "/" });
+  }
+
+  /**
+   * Sign the account out everywhere (admin credential reset). Both halves are
+   * ended: the dashboard rows and the upstream Supabase sessions behind them,
+   * otherwise a browser holding an old cookie would keep working.
+   */
+  async revokeAllForUser(userId: string): Promise<number> {
+    const rows = await prisma.dashboardSession.findMany({ where: { userId } });
+    for (const row of rows) {
+      await this.endUpstreamSession(row);
+      await prisma.dashboardSession.deleteMany({ where: { id: row.id } });
+    }
+    return rows.length;
   }
 
   /**

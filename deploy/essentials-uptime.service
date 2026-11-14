@@ -1,0 +1,11 @@
+[Unit]
+Description=ESSENTIALS uptime watch (site + API health)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/essentials/app
+EnvironmentFile=/opt/essentials/app/.env
+StateDirectory=essentials-uptime
+ExecStart=/usr/bin/node scripts/uptime-watch.mjs

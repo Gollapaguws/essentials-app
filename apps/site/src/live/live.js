@@ -58,7 +58,8 @@ export async function startScreenIngest() {
     throw new Error("Screen capture is not supported in this browser (use Chrome or Edge)");
   }
   const stream = await navigator.mediaDevices.getDisplayMedia({
-    video: { frameRate: { ideal: 30, max: 30 } },
+    // 720p keeps the server's single transcoder within budget.
+    video: { width: { max: 1280 }, height: { max: 720 }, frameRate: { ideal: 30, max: 30 } },
     audio: { echoCancellation: true, noiseSuppression: true },
   });
   if (!stream.getVideoTracks().length) {
@@ -74,7 +75,7 @@ export async function startScreenIngest() {
   });
   await closeCode.catch(() => { throw new Error("Connection refused by server (admin + MFA required)"); });
 
-  const rec = new MediaRecorder(stream, { mimeType: pickMimeType(), videoBitsPerSecond: 4_000_000, audioBitsPerSecond: 128_000 });
+  const rec = new MediaRecorder(stream, { mimeType: pickMimeType(), videoBitsPerSecond: 800_000, audioBitsPerSecond: 96_000 });
   const queue = [];
   let closed = false;
 

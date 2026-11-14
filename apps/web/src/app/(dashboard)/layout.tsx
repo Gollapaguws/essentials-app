@@ -52,10 +52,10 @@ export default function DashboardLayout({ children }: { children: import("react"
   if (!authenticated) return null;
 
   return (
-    <>
-      {children}
+    <div className="console-shell min-h-screen">
+      <div className="min-h-screen lg:pl-[17rem]">{children}</div>
       <WhatsNew />
       <CommandPalette />
-    </>
+    </div>
   );
 }

@@ -84,16 +84,30 @@ export default function EventDetail() {
                 </a>
               </div>
 
-              {event.lineup?.length > 0 && (
+              {event.artists?.length > 0 ? (
                 <>
-                  <span className="noir-micro noir-lbl-block">LINEUP</span>
-                  {event.lineup.map((act, i) => (
-                    <p key={`${act.artistName ?? act.name ?? i}`} className="noir-note" style={{ marginTop: 10 }}>
-                      {act.artistName ?? act.name}
-                      {act.slot ? ` · ${act.slot}` : ""}
-                    </p>
-                  ))}
+                  <span className="noir-micro noir-lbl-block">CONFIRMED DJS</span>
+                  <span className="noir-djs" style={{ maxWidth: 420, marginTop: 10 }}>
+                    {event.artists.map((dj, i) => (
+                      <span className="noir-dj" key={`${dj.name}-${i}`}>
+                        <span className="noir-dj-name">{dj.name}</span>
+                        {dj.time && <span className="noir-dj-time">{dj.time}</span>}
+                      </span>
+                    ))}
+                  </span>
                 </>
+              ) : (
+                event.lineup?.length > 0 && (
+                  <>
+                    <span className="noir-micro noir-lbl-block">LINEUP</span>
+                    {event.lineup.map((act, i) => (
+                      <p key={`${act.artistName ?? act.name ?? i}`} className="noir-note" style={{ marginTop: 10 }}>
+                        {act.artistName ?? act.name}
+                        {act.slot ? ` · ${act.slot}` : ""}
+                      </p>
+                    ))}
+                  </>
+                )
               )}
 
               {event.description && <p className="noir-note">{event.description}</p>}

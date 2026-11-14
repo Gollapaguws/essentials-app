@@ -9,7 +9,9 @@ import { MediaCleanupService } from "./media-cleanup.service";
 import { LiveChatController } from "./live-chat.controller";
 import { LiveChatService } from "./live-chat.service";
 import { PublicEventsService } from "./public-events.service";
+import { ChangelogService } from "./changelog.service";
+import { WhatsNewMailerService } from "./whats-new-mailer.service";
 
-@Module({ controllers: [SiteController, SiteContentController, LiveChatController], providers: [SiteService, SiteContentService, SiteStatsService, RetentionService, MediaCleanupService, LiveChatService, PublicEventsService],
+@Module({ controllers: [SiteController, SiteContentController, LiveChatController], providers: [SiteService, SiteContentService, SiteStatsService, RetentionService, MediaCleanupService, LiveChatService, PublicEventsService, ChangelogService, WhatsNewMailerService],
   exports: [RetentionService] })
 export class SiteModule {}

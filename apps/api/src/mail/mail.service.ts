@@ -4,7 +4,8 @@ import type { MailProvider, SendEmailInput } from "./mail-provider.interface";
 import { ConsoleMailProvider } from "./console.provider";
 import { ListmonkProvider } from "./listmonk.provider";
 import { SmtpProvider } from "./smtp.provider";
-import { wrapTemplate } from "./templates";
+import { htmlToText, wrapTemplate } from "./templates";
+import { unsubscribeHeaders } from "./unsubscribe";
 import { Resend } from "resend";
 
 @Injectable()
@@ -29,7 +30,9 @@ export class MailService implements MailProvider {
 
   async send(input: SendEmailInput) {
     try {
-      return await this.provider.send({ ...input });
+      const html = input.unsubscribeUrl ? wrapTemplate(input.html, input.unsubscribeUrl) : input.html;
+      const text = input.text ?? htmlToText(html);
+      return await this.provider.send({ ...input, html, text });
     } catch (err) {
       this.logger.error(`mail send failed to ${input.to}: ${(err as Error).message}`);
       throw err;
@@ -51,7 +54,9 @@ class ResendProvider implements MailProvider {
       from: process.env.MAIL_FROM ?? "ESSENTIALS <hello@essentials.example>",
       to: input.to,
       subject: input.subject,
-      html: wrapTemplate(input.html, input.unsubscribeUrl),
+      html: input.html,
+      text: input.text,
+      headers: unsubscribeHeaders(input.unsubscribeUrl),
     });
     return { id: data?.id ?? "" };
   }

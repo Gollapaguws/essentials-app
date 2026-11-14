@@ -5,6 +5,8 @@ export interface ResolvedIdentity {
   id: string;
   role: Role;
   mustResetPassword: boolean;
+  /** Admin exemption from the role's two-step requirement. */
+  mfaDisabled: boolean;
 }
 
 interface CacheEntry extends ResolvedIdentity {
@@ -58,11 +60,21 @@ export class AuthUserService {
   async resolveUser(sub: string, email: string): Promise<ResolvedIdentity | null> {
     const hit = this.cache.get(sub);
     if (hit && hit.exp > Date.now()) {
-      return { id: hit.id, role: hit.role, mustResetPassword: hit.mustResetPassword };
+      return {
+        id: hit.id,
+        role: hit.role,
+        mustResetPassword: hit.mustResetPassword,
+        mfaDisabled: hit.mfaDisabled,
+      };
     }
     try {
       const user = await this.ensureUser(sub, email);
-      return { id: user.id, role: user.role, mustResetPassword: user.mustResetPassword };
+      return {
+        id: user.id,
+        role: user.role,
+        mustResetPassword: user.mustResetPassword,
+        mfaDisabled: user.mfaDisabled,
+      };
     } catch {
       return null;
     }
@@ -99,11 +111,15 @@ export class AuthUserService {
     }
   }
 
-  private remember(sub: string, user: Pick<User, "id" | "role" | "mustResetPassword">): void {
+  private remember(
+    sub: string,
+    user: Pick<User, "id" | "role" | "mustResetPassword" | "mfaDisabled">,
+  ): void {
     this.cache.set(sub, {
       id: user.id,
       role: user.role,
       mustResetPassword: user.mustResetPassword,
+      mfaDisabled: user.mfaDisabled,
       exp: Date.now() + this.TTL_MS,
     });
   }

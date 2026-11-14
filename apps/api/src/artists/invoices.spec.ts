@@ -9,7 +9,7 @@ jest.mock("@essentials/db", () => ({
   prisma: {
     artistProfile: { findUnique: jest.fn() },
     artistBooking: { findMany: jest.fn() },
-    invoice: { create: jest.fn() },
+    invoice: { create: jest.fn(), findUnique: jest.fn() },
   },
   InvoiceStatus: { draft: "draft", sent: "sent", paid: "paid", overdue: "overdue" },
   PaymentStatus: { pending: "pending", paid: "paid", failed: "failed" },
@@ -17,7 +17,7 @@ jest.mock("@essentials/db", () => ({
 
 const profiles = (prisma as unknown as { artistProfile: { findUnique: jest.Mock } }).artistProfile;
 const bookings = (prisma as unknown as { artistBooking: { findMany: jest.Mock } }).artistBooking;
-const invoices = (prisma as unknown as { invoice: { create: jest.Mock } }).invoice;
+const invoices = (prisma as unknown as { invoice: { create: jest.Mock; findUnique: jest.Mock } }).invoice;
 
 const artist: JwtUser = { sub: "user-1", email: "dj@example.com", role: "artist" };
 
@@ -39,11 +39,25 @@ function completed(over: Record<string, unknown> = {}) {
   };
 }
 
+const bank = {
+  bankAccountHolder: "Nandi Mokoena",
+  bankName: "Capitec",
+  bankAccountNumber: "1234567890",
+  bankBranchCode: "470010",
+  bankAccountType: "Savings",
+};
+
 beforeEach(() => {
   profiles.findUnique.mockReset();
   bookings.findMany.mockReset();
   invoices.create.mockReset();
-  profiles.findUnique.mockResolvedValue({ id: "artist-1", stageName: "Nandi", travelRatePerKm: 4.95 });
+  invoices.findUnique.mockReset();
+  profiles.findUnique.mockResolvedValue({
+    id: "artist-1",
+    stageName: "Nandi",
+    travelRatePerKm: 4.95,
+    ...bank,
+  });
   invoices.create.mockImplementation(({ data }) => Promise.resolve({ id: "inv-1", ...data }));
 });
 
@@ -94,5 +108,45 @@ describe("InvoicesService.generate", () => {
 
     await expect(service().generate(artist)).rejects.toThrow(/no agreed fee/);
     expect(invoices.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses to invoice until the DJ has a complete bank account", async () => {
+    profiles.findUnique.mockResolvedValue({
+      id: "artist-1",
+      stageName: "Nandi",
+      travelRatePerKm: 4.95,
+      ...bank,
+      bankBranchCode: "  ",
+    });
+
+    await expect(service().generate(artist)).rejects.toThrow(/bank account details.*branch code/i);
+    expect(bookings.findMany).not.toHaveBeenCalled();
+    expect(invoices.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("InvoicesService.renderHtml", () => {
+  it("prints the artist's bank account on the invoice", async () => {
+    invoices.findUnique.mockResolvedValue({
+      id: "inv-1",
+      number: "ESS-2027-ABC123",
+      status: "sent",
+      total: 750,
+      items: [{ label: "Deep End — performance", amount: 750 }],
+      artist: {
+        stageName: "Nandi",
+        user: { name: "Nandi M", email: "dj@example.com" },
+        ...bank,
+      },
+    });
+
+    const html = await service().renderHtml(artist, "inv-1");
+
+    expect(html).toContain("Payment details");
+    expect(html).toContain("Account holder:</strong> Nandi Mokoena");
+    expect(html).toContain("Bank:</strong> Capitec");
+    expect(html).toContain("Account number:</strong> 1234567890");
+    expect(html).toContain("Branch code:</strong> 470010");
+    expect(html).toContain("Please quote ESS-2027-ABC123 as the reference");
   });
 });

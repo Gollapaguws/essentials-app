@@ -4,40 +4,80 @@ import {
 } from "@nestjs/common";
 import { WebSocketServer, WebSocket, RawData } from "ws";
 import type { IncomingMessage, Server } from "http";
+import type { Request } from "express";
+import type { Role } from "@prisma/client";
 import { LiveService } from "./live.service";
+import { LiveBookingService } from "./live-booking.service";
 import { SupabaseTokenService } from "../auth/supabase-token.service";
 import { AuthUserService } from "../auth/auth-user.service";
+import { DashboardSessionService } from "../auth/dashboard-session.service";
+
+/** Artists broadcast from the dashboard; admins keep the front-page screen share. */
+const BROADCAST_ROLES: readonly Role[] = ["artist", "admin"];
 
 /**
- * Raw-WS ingest endpoint (admin screen → RTSP).
+ * Raw-WS ingest endpoint (browser → RTSP).
  * The browser streams a live WebM container (VP8/VP9 + Opus, MediaRecorder)
  * as plain binary frames; ffmpeg re-encodes and pushes to MediaMTX.
- * The Supabase token arrives via ?token= on connect; admin + MFA required.
+ * DJs authenticate with the dashboard's httpOnly session cookie (sent on the
+ * WS handshake); the public site still passes its Supabase token via ?token=.
+ * Admins additionally need aal2, as before.
+ * Only one broadcast can run at a time, so the ffmpeg input is stopped when the
+ * last broadcaster disconnects.
  */
 @Injectable()
 export class LiveGateway {
   private readonly logger = new Logger(LiveGateway.name);
   private wss: WebSocketServer | null = null;
+  private ingestClients = 0;
 
   constructor(
     private live: LiveService,
+    private liveBookings: LiveBookingService,
     private tokens: SupabaseTokenService,
     private users: AuthUserService,
+    private sessions: DashboardSessionService,
   ) {}
+
+  /** Cookie session or bearer token → a role allowed to broadcast, plus its account id. */
+  private async authorize(req: IncomingMessage, token: string): Promise<{ role: Role; userId: string | null }> {
+    const session = token
+      ? await this.tokens.verify(token)
+      : (await this.sessions.resolve(req as unknown as Request)).session;
+    const identity = await this.users.resolveUser(session.sub, session.email);
+    const role = (identity?.role ?? session.role ?? null) as Role;
+    if (!BROADCAST_ROLES.includes(role)) throw new Error("DJ or admin account required");
+    // DJs are not MFA-enrolled; admins keep the stricter front-page rule.
+    if (role === "admin" && session.aal !== "aal2") throw new Error("MFA required");
+    return { role, userId: identity?.id ?? null };
+  }
+
+  private clientGone() {
+    this.ingestClients = Math.max(0, this.ingestClients - 1);
+    if (this.ingestClients === 0) this.live.stopIngest();
+  }
 
   /** Called from main.ts once the HTTP server is listening. */
   attach(server: Server) {
     this.wss = new WebSocketServer({ server, path: "/live/ingest" });
     this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
       const token = new URL(req.url ?? "", "https://essentialsedm.com").searchParams.get("token") ?? "";
-      this.logger.log(`ingest connect: token len ${token.length}, url ${req.url?.slice(0, 40)}`);
+      this.logger.log(`ingest connect: token ${token ? "present" : "absent"}, cookie ${req.headers.cookie ? "present" : "absent"}`);
+      // Without this, a broken frame would emit 'error' with no listener.
+      ws.on("error", (e) => {
+        this.logger.warn(`ingest socket: ${e.message}`);
+        try { ws.close(); } catch {}
+      });
       (async () => {
-        if (!token) throw new Error("missing token");
-        const session = await this.tokens.verify(token);
-        const role = session.role ?? (await this.users.resolveRole(session.sub, session.email));
-        if (role !== "admin") throw new Error("admin only");
-        if (session.aal !== "aal2") throw new Error("MFA required");
-        this.live.startIngest();
+        const { role, userId } = await this.authorize(req, token);
+        // A DJ may only broadcast inside a booked live session.
+        if (role === "artist" && (!userId || !(await this.liveBookings.hasActiveSession(userId)))) {
+          throw new Error("No live session is booked for right now");
+        }
+        // startIngest is idempotent but single-broadcast: another live DJ owns it.
+        if (!this.live.startIngest()) throw new Error("A broadcast is already live");
+        this.ingestClients += 1;
+        this.logger.log(`ingest accepted (${role})`);
         ws.on("message", (data: RawData) => {
           const buf = Buffer.isBuffer(data)
             ? data
@@ -46,6 +86,7 @@ export class LiveGateway {
               );
           if (buf.length) this.live.writeIngest(buf);
         });
+        ws.on("close", () => this.clientGone());
       })().catch((e) => {
         this.logger.warn(`ingest rejected: ${(e as Error).message}`);
         try { ws.close(4401, String((e as Error).message).slice(0, 100)); } catch {}

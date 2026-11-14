@@ -68,7 +68,7 @@ export default tseslint.config(
 
   // Plain JS next to the TS sources (configs, scripts) is still Node code.
   {
-    files: ["apps/{api,web,mobile}/**/*.{js,cjs,mjs}"],
+    files: ["apps/{api,web,mobile}/**/*.{js,cjs,mjs}", "scripts/**/*.{js,cjs,mjs}"],
     languageOptions: { globals: { ...globals.node } },
   },
 

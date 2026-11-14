@@ -83,18 +83,38 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
+  get: <T>(path: string, init?: RequestInit) => request<T>(path, init),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
   del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
-  /** Multipart upload (images, files); the server answers with the stored URL. */
-  upload: <T>(path: string, file: UploadFile, field = "file") => {
+  /** Multipart upload (images, files), with optional non-file form fields. */
+  upload: <T>(
+    path: string,
+    file: UploadFile,
+    field = "file",
+    fields?: Record<string, string>,
+  ) => {
     const body = new FormData();
+    for (const [key, value] of Object.entries(fields ?? {})) body.append(key, value);
     // React Native accepts a file descriptor here; the DOM accepts a Blob.
     body.append(field, file as unknown as Blob);
     return request<T>(path, { method: "POST", body });
+  },
+  /** POST a JSON body and read a file response, such as a filtered CSV export. */
+  download: async (path: string, body?: unknown): Promise<{ blob: Blob; filename: string | null }> => {
+    const init: RequestInit = { method: "POST", body: JSON.stringify(body ?? {}) };
+    let token = await currentToken();
+    let res = await send(path, init, token);
+    if (res.status === 401 && tokenProvider) {
+      token = await currentToken();
+      if (token) res = await send(path, init, token);
+    }
+    if (!res.ok) throw await toError(res);
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    const filename = /filename="?([^";]+)"?/i.exec(disposition)?.[1] ?? null;
+    return { blob: await res.blob(), filename };
   },
 };
 

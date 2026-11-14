@@ -9,6 +9,7 @@ import { join, extname } from "path";
 import { SiteContentService, FrontPageContent } from "./site-content.service";
 import { SiteStatsService } from "./site-stats.service";
 import { PublicEventsService } from "./public-events.service";
+import { ChangelogService } from "./changelog.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { IsString, MaxLength } from "class-validator";
@@ -29,11 +30,18 @@ export class SiteContentController {
     private siteStats: SiteStatsService,
     private config: ConfigService,
     private publicEvents: PublicEventsService,
+    private changelog: ChangelogService,
   ) {}
 
   @Get("content")
   get() {
     return this.content.get();
+  }
+
+  /** Release notes for the site's what's-new page, read from CHANGELOG.md. */
+  @Get("changelog")
+  changelogNotes() {
+    return this.changelog.get();
   }
 
   /** Public event pages and the links inside guest emails. No session. */
@@ -62,20 +70,28 @@ export class SiteContentController {
     return this.content.reset();
   }
 
-  /** Admin image upload for the front-page editor (slides, visuals). Max 10 MB. */
+  /** Admin image/video upload for the front-page editor (slides, visuals, room loop). */
   @Post("media")
   @UseGuards(SupabaseAuthGuard)
   @Auth("admin")
-  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 120 * 1024 * 1024 } }))
   upload(@UploadedFile() file?: Express.Multer.File) {
     if (!file) throw new BadRequestException("No file");
-    const allowed = [".jpg", ".jpeg", ".png", ".webp", ".avif"];
-    if (!allowed.includes(extname(file.originalname).toLowerCase()) || !file.mimetype.startsWith("image/")) {
-      throw new BadRequestException("Only jpg/png/webp/avif");
+    const ext = extname(file.originalname).toLowerCase();
+    const isImage = [".jpg", ".jpeg", ".png", ".webp", ".avif"].includes(ext) && file.mimetype.startsWith("image/");
+    const isVideo = [".mp4", ".webm", ".mov"].includes(ext) && file.mimetype.startsWith("video/");
+    if (!isImage && !isVideo) {
+      throw new BadRequestException("Only jpg/png/webp/avif images or mp4/webm/mov video");
+    }
+    if (isImage && file.size > 10 * 1024 * 1024) {
+      throw new BadRequestException("Images must be 10 MB or smaller");
+    }
+    if (isVideo && file.size > 120 * 1024 * 1024) {
+      throw new BadRequestException("Video must be 120 MB or smaller");
     }
     const mediaDir = this.config.get("MEDIA_DIR") ?? "/var/www/essentialsedm/media";
     mkdirSync(mediaDir, { recursive: true });
-    const name = `${Date.now()}-${randomBytes(4).toString("hex")}${extname(file.originalname).toLowerCase()}`;
+    const name = `${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
     writeFileSync(join(mediaDir, name), file.buffer);
     const publicBase = this.config.get("PUBLIC_MEDIA_URL") ?? "/media";
     return { ok: true, url: `${publicBase}/${name}` };

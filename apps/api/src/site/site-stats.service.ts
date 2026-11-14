@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { prisma } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
+import { PRIVACY_POLICY_VERSION } from "../common/privacy";
 
 /** Public analytics beacon + privacy data export support. */
 @Injectable()
@@ -29,7 +30,7 @@ export class SiteStatsService {
     return rows.map((r) => ({ day: r.day, views: r._sum.views ?? 0, uniqueVisitors: r._count.visitorKey }));
   }
 
-  /** POPIA data export: everything we hold about the authenticated user. */
+  /** POPIA/GDPR data export: the authenticated person's account and activity record. */
   async myData(user: JwtUser) {
     const u = await prisma.user.findUnique({
       where: { id: user.sub },
@@ -38,9 +39,31 @@ export class SiteStatsService {
         loyaltyVisits: true,
         referralsGiven: { select: { refereeEmail: true, rewardIssued: true, createdAt: true } },
         consentRecords: true,
+        artistProfile: {
+          include: {
+            bookings: {
+              include: {
+                event: { select: { title: true, date: true } },
+                invoice: { include: { items: true, payments: true } },
+              },
+            },
+            liveBookings: true,
+            invoices: {
+              include: {
+                items: true,
+                payments: true,
+                venue: { select: { name: true } },
+              },
+            },
+          },
+        },
       },
     });
     if (!u) throw new BadRequestException("No account");
-    return u;
+    return {
+      exportedAt: new Date().toISOString(),
+      privacyPolicyVersion: PRIVACY_POLICY_VERSION,
+      ...u,
+    };
   }
 }

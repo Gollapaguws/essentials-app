@@ -52,7 +52,8 @@ export class EventToolsService {
       data: {
         venueId: event.venueId,
         promoterId: event.promoterId,
-        title: `${event.title} (copy)`,
+        // Titles are capped at 50 characters; keep the suffix even when the original fills the cap.
+        title: `${event.title.slice(0, 43).trimEnd()} (copy)`,
         description: event.description,
         date,
         lineup: event.lineup ?? [],

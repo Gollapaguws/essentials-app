@@ -3,12 +3,17 @@ import { prisma } from "@essentials/db";
 import { PublicEventsService } from "./public-events.service";
 
 jest.mock("@essentials/db", () => ({
-  prisma: { event: { findMany: jest.fn(), findFirst: jest.fn() } },
+  prisma: {
+    event: { findMany: jest.fn(), findFirst: jest.fn() },
+    artistBooking: { findMany: jest.fn() },
+  },
   EventStatus: { approved: "approved", live: "live", draft: "draft" },
+  ArtistBookingStatus: { confirmed: "confirmed" },
 }));
 
 const db = prisma as unknown as {
   event: { findMany: jest.Mock; findFirst: jest.Mock };
+  artistBooking: { findMany: jest.Mock };
 };
 
 function event(over: Record<string, unknown> = {}) {
@@ -31,6 +36,7 @@ function event(over: Record<string, unknown> = {}) {
 beforeEach(() => {
   db.event.findMany.mockReset().mockResolvedValue([event()]);
   db.event.findFirst.mockReset().mockResolvedValue(event());
+  db.artistBooking.findMany.mockReset().mockResolvedValue([]);
 });
 
 describe("PublicEventsService", () => {
@@ -53,6 +59,7 @@ describe("PublicEventsService", () => {
     expect(row).not.toHaveProperty("budget");
     expect(Object.keys(row).sort()).toEqual(
       [
+        "artists",
         "capacity",
         "date",
         "description",
@@ -66,6 +73,24 @@ describe("PublicEventsService", () => {
         "venue",
       ].sort(),
     );
+  });
+
+  it("shows confirmed DJs on the public event card", async () => {
+    db.artistBooking.findMany.mockResolvedValue([
+      { eventId: "event-1", slot: "22:00-23:00", slotRef: { label: "22:00–23:00" }, artist: { stageName: "Nova" } },
+      { eventId: "event-1", slot: "legacy label", slotRef: null, artist: { stageName: "Kes" } },
+    ]);
+
+    const [row] = await service().list();
+
+    expect(row.artists).toEqual([
+      { name: "Nova", time: "22:00–23:00" },
+      { name: "Kes", time: "legacy label" },
+    ]);
+    expect(db.artistBooking.findMany.mock.calls[0][0].where).toEqual({
+      eventId: { in: ["event-1"] },
+      status: "confirmed",
+    });
   });
 
   it("serves a single announced night", async () => {

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { prisma, EventStatus } from "@essentials/db";
+import { prisma, ArtistBookingStatus, EventStatus } from "@essentials/db";
 
 /**
  * The one event surface a guest can read without a session. Email CTAs and the
@@ -19,7 +19,7 @@ export class PublicEventsService {
       orderBy: { date: "asc" },
       take: 50,
     });
-    return events.map((e) => this.shape(e));
+    return this.withArtists(events.map((e) => this.shape(e)));
   }
 
   async detail(id: string) {
@@ -31,7 +31,38 @@ export class PublicEventsService {
       },
     });
     if (!event) throw new NotFoundException("Event not found");
-    return this.shape(event);
+    return (await this.withArtists([this.shape(event)]))[0];
+  }
+
+  /**
+   * A confirmed DJ is public: the set time on the card and the artist name.
+   * Read at request time, so a confirmation shows up on the next page load
+   * without anyone editing the event.
+   */
+  private async withArtists<T extends { id: string }>(
+    rows: T[],
+  ): Promise<(T & { artists: { name: string; time: string | null }[] })[]> {
+    const ids = rows.map((r) => r.id);
+    if (!ids.length) return rows.map((r) => ({ ...r, artists: [] }));
+
+    const bookings = await prisma.artistBooking.findMany({
+      where: { eventId: { in: ids }, status: ArtistBookingStatus.confirmed },
+      select: {
+        eventId: true,
+        slot: true,
+        slotRef: { select: { label: true } },
+        artist: { select: { stageName: true } },
+      },
+      orderBy: { startAt: "asc" },
+    });
+
+    const byEvent = new Map<string, { name: string; time: string | null }[]>();
+    for (const b of bookings) {
+      const list = byEvent.get(b.eventId) ?? [];
+      list.push({ name: b.artist.stageName, time: b.slotRef?.label ?? b.slot ?? null });
+      byEvent.set(b.eventId, list);
+    }
+    return rows.map((r) => ({ ...r, artists: byEvent.get(r.id) ?? [] }));
   }
 
   /** Only what a guest may see: no promoter, no guest list, no fees. */

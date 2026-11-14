@@ -85,6 +85,29 @@ describe("ArtistsService.artistDetail", () => {
     expect(artist.note).toBeNull();
   });
 
+  it("does not expose the DJ's bank details to a promoter", async () => {
+    profiles.findUnique.mockResolvedValue({
+      id: "artist-1",
+      stageName: "Nandi",
+      bankAccountHolder: "Nandi Mokoena",
+      bankName: "Capitec",
+      bankAccountNumber: "1234567890",
+      bankBranchCode: "470010",
+      bankAccountType: "Savings",
+      user: { name: null, email: "nandi@example.com" },
+      bookings: [],
+    });
+    notes.findUnique.mockResolvedValue(null);
+
+    const artist = await service().artistDetail(promoter, "artist-1");
+
+    expect(artist).not.toHaveProperty("bankAccountHolder");
+    expect(artist).not.toHaveProperty("bankName");
+    expect(artist).not.toHaveProperty("bankAccountNumber");
+    expect(artist).not.toHaveProperty("bankBranchCode");
+    expect(artist).not.toHaveProperty("bankAccountType");
+  });
+
   it("threads the promoter's own note into the profile", async () => {
     profiles.findUnique.mockResolvedValue({
       id: "artist-1",

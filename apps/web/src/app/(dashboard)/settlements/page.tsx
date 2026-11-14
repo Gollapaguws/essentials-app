@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { ConsolePage } from "@/components/console/ConsolePage";
+import { PageHeader } from "@/components/console/PageHeader";
+import { Panel } from "@/components/console/Panel";
+import { Badge } from "@/components/console/Badge";
 
 interface Gig {
   id: string;
@@ -60,28 +63,26 @@ export default function Settlements() {
   const totals = data?.totals;
 
   return (
-    <>
-      <TopNav />
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        <div>
-          <h1 className="text-2xl font-black tracking-wide">SETTLEMENTS</h1>
-          <p className="text-neutral-500 text-xs mt-1">
-            DJ fees you have agreed per night, what the DJs have invoiced the venue, what has been
-            paid, and what is still outstanding.
-          </p>
-        </div>
+    <ConsolePage size="lg">
+      <PageHeader
+        eyebrow="Night ops / Money"
+        title="SETTLEMENTS"
+        description="DJ fees you have agreed per night, what the DJs have invoiced the venue, what has been paid, and what is still outstanding."
+        actions={<Badge tone="info">{totals?.nights ?? 0} nights</Badge>}
+      />
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-red-400 text-sm">{error}</p>}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Stat label="Committed" value={rand(totals?.committed ?? 0)} />
-          <Stat label="Invoiced" value={rand(totals?.invoiced ?? 0)} />
-          <Stat label="Paid" value={rand(totals?.paid ?? 0)} />
-          <Stat label="Outstanding" value={rand(totals?.outstanding ?? 0)} />
-        </div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat label="Committed" value={rand(totals?.committed ?? 0)} />
+        <Stat label="Invoiced" value={rand(totals?.invoiced ?? 0)} />
+        <Stat label="Paid" value={rand(totals?.paid ?? 0)} />
+        <Stat label="Outstanding" value={rand(totals?.outstanding ?? 0)} />
+      </div>
 
-        <div className="border border-line rounded-xl overflow-x-auto">
-          <table className="w-full text-sm">
+      <Panel flush>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-sm">
             <thead className="bg-surface text-neutral-400 uppercase text-xs">
               <tr>
                 <th className="text-left px-4 py-3">Night</th>
@@ -132,7 +133,7 @@ export default function Settlements() {
             </tbody>
           </table>
         </div>
-      </main>
-    </>
+      </Panel>
+    </ConsolePage>
   );
 }

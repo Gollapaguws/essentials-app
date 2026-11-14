@@ -15,7 +15,7 @@ export default function Home() {
       <SiteNav />
       <main>
         <HeroCinema />
-        <LivePanel />
+        <LivePanel idleLoop={content.idleLoop} />
         <LiveChat />
         <LineupStrip events={content.events} />
         <ManifestoQuote />

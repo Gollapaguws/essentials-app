@@ -18,10 +18,10 @@ const nextConfig = {
     // Dashboard pages used to live in `app/dashboard`, one segment below the base
     // path, so their real URLs were /dashboard/dashboard/*. They now sit in a
     // route group (`app/(dashboard)`), which adds no segment: /dashboard/*.
-    // basePath is prefixed to both sides of a redirect, so this rule turns
-    // /dashboard/dashboard/<page> into /dashboard/<page>, keeping bookmarks and
-    // notification links sent before the move working.
-    return [{ source: "/dashboard/:path*", destination: "/:path*", permanent: false }];
+    // basePath is prefixed to both sides automatically. `:path+` (at least one
+    // segment) keeps the app root out of the rule: matching /dashboard itself
+    // produced an empty location, and the browser looped on a blank page.
+    return [{ source: "/dashboard/:path+", destination: "/:path*", permanent: false }];
   },
 };
 

@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { TopNav } from "@/components/TopNav";
 import { useAuth } from "@/components/AuthProvider";
 import { Stat } from "@/components/Stat";
 import { OverviewCharts } from "@/components/OverviewCharts";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { ConsolePage } from "@/components/console/ConsolePage";
+import { PageHeader } from "@/components/console/PageHeader";
+import { Badge } from "@/components/console/Badge";
 
 interface PacingRow { eventId: string; title: string; rsvps: number; previousRsvps: number | null; ratio: number | null; alert: boolean }
 interface Overview {
@@ -47,11 +49,19 @@ export default function Dashboard() {
   }, [me]);
 
   return (
-    <>
-      <TopNav />
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
-        <h1 className="text-2xl font-black tracking-wide">ANALYTICS OVERVIEW</h1>
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+    <ConsolePage size="xl">
+      <PageHeader
+        eyebrow="Night ops / Overview"
+        title="ANALYTICS OVERVIEW"
+        description="Tonight's pace, guest behaviour and the signals worth acting on before the doors open."
+        actions={
+          <Badge tone="success">
+            <span className="h-1.5 w-1.5 rounded-full bg-neon shadow-[0_0_8px_rgba(0,255,102,0.5)]" />
+            LIVE CONSOLE
+          </Badge>
+        }
+      />
+      {error && <p className="text-red-400 text-sm">{error}</p>}
         {data && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -73,7 +83,6 @@ export default function Dashboard() {
             <OverviewCharts perEvent={data.perEvent} />
           </>
         )}
-      </main>
-    </>
+    </ConsolePage>
   );
 }

@@ -2,11 +2,14 @@
 
 import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
-import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 import { useAuth } from "@/components/AuthProvider";
 import { DownloadButton } from "@/components/DownloadButton";
+import { ConsolePage } from "@/components/console/ConsolePage";
+import { PageHeader } from "@/components/console/PageHeader";
+import { Panel } from "@/components/console/Panel";
+import { Badge } from "@/components/console/Badge";
 
 interface EventSlotRow {
   id: string;
@@ -232,7 +235,7 @@ export default function EventManager() {
     setAppsLoading(true);
     setAppsError(null);
     try {
-      setApps(await api.get<ApplicationRow[]>(`/artists/applications?eventId=${eventId}`));
+      setApps(await api.get<ApplicationRow[]>(`/artists/applications?eventId=${eventId}`, { cache: "no-store" }));
     } catch (err) {
       setAppsError(errorMessage(err));
     } finally {
@@ -293,16 +296,27 @@ export default function EventManager() {
   const editTotal = editFee * slots.slotCount;
 
   return (
-    <>
-      <TopNav />
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
-        <h1 className="text-2xl font-black tracking-wide">EVENT MANAGER</h1>
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-        {notice && <p className="text-neon text-sm">{notice}</p>}
+    <ConsolePage size="xl">
+      <PageHeader
+        eyebrow="Night ops / Calendar"
+        title="EVENT MANAGER"
+        description="Plan the night, price the slots and keep the booking pipeline moving."
+        actions={<Badge tone="info">{events.length} nights</Badge>}
+      />
+      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {notice && <p className="text-neon text-sm">{notice}</p>}
 
-        <form onSubmit={create} className="space-y-3 border border-line bg-surface rounded-xl p-4">
+      <form onSubmit={create} className="console-panel console-panel-body space-y-3">
           <div className="grid md:grid-cols-4 gap-3 items-end">
-            <input required className={field} placeholder="Event title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <label className="text-xs text-neutral-400 space-y-1">
+              <span className="flex items-center justify-between gap-2">
+                <span>Event title</span>
+                <span className={`tabular-nums ${form.title.length >= 50 ? "text-yellow-400" : "text-neutral-500"}`}>
+                  {form.title.length}/50
+                </span>
+              </span>
+              <input required maxLength={50} className={`${field} w-full`} placeholder="Event title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            </label>
             <select required className={field} value={form.venueId} onChange={(e) => pickVenue(e.target.value)}>
               <option value="">Pick a venue</option>
               {venues.map((v) => (
@@ -378,8 +392,9 @@ export default function EventManager() {
           </button>
         </form>
 
-        <div className="border border-line rounded-xl overflow-x-auto">
-          <table className="w-full text-sm">
+      <Panel flush>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-sm">
             <thead className="bg-surface text-neutral-400 uppercase text-xs">
               <tr>
                 <th className="text-left px-4 py-3">Event</th>
@@ -587,7 +602,7 @@ export default function EventManager() {
             </tbody>
           </table>
         </div>
-      </main>
-    </>
+      </Panel>
+    </ConsolePage>
   );
 }

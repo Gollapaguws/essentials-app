@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { DASHBOARD_ROLES } from "@essentials/auth";
 import { supabase } from "@/lib/supabase";
@@ -15,11 +15,19 @@ export default function AuthCallback() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [error, setError] = useState(null);
+  // useSearchParams() hands back a fresh object on every render, so the effect
+  // must depend on the plain strings instead. Depending on the object re-ran the
+  // exchange after each setError, which fired /auth/me in a loop until the API
+  // rate-limited it — and the page then reported "account could not be loaded".
+  const code = params.get("code");
+  const type = params.get("type");
+  const providerError = params.get("error_description");
+  const handled = useRef(null);
 
   useEffect(() => {
-    const code = params.get("code");
-    const type = params.get("type");
-    const providerError = params.get("error_description");
+    const key = `${code ?? ""}|${type ?? ""}|${providerError ?? ""}`;
+    if (handled.current === key) return;
+    handled.current = key;
 
     if (providerError) {
       setError(providerError);
@@ -70,7 +78,7 @@ export default function AuthCallback() {
       }
       navigate("/", { replace: true });
     })();
-  }, [params, navigate]);
+  }, [code, type, providerError, navigate]);
 
   return (
     <div className="noir" style={style}>

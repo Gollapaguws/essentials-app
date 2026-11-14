@@ -22,7 +22,38 @@ const KIND_CLASS: Record<string, string> = {
   role_change: "text-yellow-400",
   mfa_enrolled: "text-neon",
   mfa_escalated: "text-red-400",
+  mfa_reset: "text-yellow-300",
+  mfa_disabled: "text-yellow-300",
+  mfa_reenabled: "text-neon",
 };
+
+const KIND_LABEL: Record<string, string> = {
+  sign_in: "sign in",
+  lazy_link: "account linked",
+  role_change: "role change",
+  mfa_enrolled: "MFA enrolled",
+  mfa_escalated: "MFA verified",
+  mfa_reset: "MFA reset (admin)",
+  mfa_disabled: "2FA disabled (admin)",
+  mfa_reenabled: "2FA required again",
+};
+
+/** A reset row is readable at a glance: what was removed, who was signed out. */
+function describeReset(meta: Record<string, unknown>): string {
+  const factors = Array.isArray(meta.factors)
+    ? meta.factors.length
+    : meta.factorType
+      ? 1
+      : 0;
+  const sessions = typeof meta.sessionsRevoked === "number" ? meta.sessionsRevoked : null;
+  const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
+  return [
+    `${plural(factors, "authenticator")} removed`,
+    sessions === null ? null : `${plural(sessions, "session")} ended`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
 
 /** Admin: who signed in, whose role changed, who enrolled MFA — newest first. */
 export default function Audit() {
@@ -74,7 +105,7 @@ export default function Audit() {
                     {new Date(r.createdAt).toLocaleString()}
                   </td>
                   <td className={`px-4 py-3 font-bold text-xs ${KIND_CLASS[r.kind] ?? "text-neutral-300"}`}>
-                    {r.kind.replace(/_/g, " ")}
+                    {KIND_LABEL[r.kind] ?? r.kind.replace(/_/g, " ")}
                   </td>
                   <td className="px-4 py-3 text-xs">
                     {r.email ?? "—"}
@@ -82,7 +113,15 @@ export default function Audit() {
                   </td>
                   <td className="px-4 py-3 text-neutral-500 text-xs">{r.ip ?? "—"}</td>
                   <td className="px-4 py-3 text-neutral-500 text-xs break-all">
-                    {Object.keys(r.meta ?? {}).length ? JSON.stringify(r.meta) : "—"}
+                    {r.kind === "mfa_reset"
+                      ? describeReset(r.meta ?? {})
+                      : r.kind === "mfa_disabled"
+                        ? `password-only sign-in · ${Number(r.meta?.factorsRemoved) || 0} authenticator${
+                            (Number(r.meta?.factorsRemoved) || 0) === 1 ? "" : "s"
+                          } removed`
+                        : Object.keys(r.meta ?? {}).length
+                          ? JSON.stringify(r.meta)
+                          : "—"}
                   </td>
                 </tr>
               ))}

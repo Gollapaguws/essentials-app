@@ -16,6 +16,8 @@ const SCREENS: Record<string, string> = {
   "/promotions": "Promotions",
   "/artist": "Artist Portal",
   "/artist/profile": "My Profile",
+  "/bookings": "Live Calendar",
+  "/go-live": "Go Live",
   "/insights": "Insights",
   "/editor": "Front Page",
   "/mailboxes": "Mailboxes",

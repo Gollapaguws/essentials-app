@@ -223,6 +223,71 @@ export class DjBookingService {
     return cancelled;
   }
 
+  /**
+   * Admin: cancel an active booking, including one the promoter already confirmed.
+   *
+   * A confirmed slot is a promise, so this is admin-only. It frees the slot and
+   * tells the DJ, the promoter and anyone still waiting on that slot. Completed
+   * gigs are left alone because they are already payable.
+   */
+  async cancelAsAdmin(user: JwtUser, bookingId: string) {
+    if (user.role !== "admin") throw new ForbiddenException("Only an admin can cancel a confirmed slot");
+
+    const booking = await prisma.artistBooking.findUnique({
+      where: { id: bookingId },
+      include: {
+        event: { select: { id: true, title: true, promoterId: true } },
+        artist: { select: { stageName: true, userId: true } },
+      },
+    });
+    if (!booking) throw new NotFoundException("Booking not found");
+    if (booking.status === "completed") {
+      throw new BadRequestException("A completed gig cannot be cancelled — it is already payable");
+    }
+    if (booking.status === "cancelled") return booking;
+
+    const wasConfirmed = booking.status === "confirmed";
+    const cancelled = await prisma.artistBooking.update({
+      where: { id: bookingId },
+      data: { status: "cancelled" },
+    });
+
+    await this.notifications.deliver([booking.artist.userId], {
+      kind: wasConfirmed ? "declined" : "application",
+      title: `SLOT CANCELLED — ${booking.event.title}`,
+      body: `An Essentials admin cancelled your ${wasConfirmed ? "confirmed " : ""}${booking.slot ?? "slot"} at ${booking.event.title}.${wasConfirmed ? " The slot is open again." : ""} Contact the promoter if you need details.`,
+      link: `${this.appUrl()}/gig-calendar`,
+      channels: ["inapp", "email", "telegram"],
+    });
+
+    await this.notifications.deliver([booking.event.promoterId], {
+      kind: "application",
+      title: `Admin cancelled a slot — ${booking.event.title}`,
+      body: `${booking.artist.stageName}'s ${booking.slot ?? "slot"} was cancelled by an Essentials admin.${wasConfirmed ? " The slot is open again." : ""}`,
+      link: `${this.appUrl()}/applications`,
+      channels: ["inapp", "email"],
+    });
+
+    if (booking.slotId) {
+      const waiting = await prisma.artistBooking.findMany({
+        where: { slotId: booking.slotId, id: { not: booking.id }, status: "pending" },
+        select: { artist: { select: { userId: true } } },
+      });
+      const waitingUserIds = waiting.map((w) => w.artist.userId).filter(Boolean);
+      if (waitingUserIds.length) {
+        await this.notifications.deliver(waitingUserIds, {
+          kind: "application",
+          title: `Slot open again — ${booking.event.title}`,
+          body: `${booking.slot ?? "That slot"} at ${booking.event.title} is open again after an admin cancellation. The promoter is reviewing the other applications.`,
+          link: `${this.appUrl()}/gig-calendar`,
+          channels: ["inapp", "email"],
+        });
+      }
+    }
+
+    return cancelled;
+  }
+
   /** Step 4 — promoter confirms (or declines) an application. */
   async decide(user: JwtUser, bookingId: string, confirm: boolean, reason?: string) {
     const booking = await prisma.artistBooking.findUnique({

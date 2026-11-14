@@ -45,9 +45,58 @@ describe("SiteContentService.get", () => {
 
     expect(events.map((e) => e.title)).toEqual(["Deep End", "Hand-written announcement"]);
     const where = db.event.findMany.mock.calls[0][0].where;
-    expect(where.id.in.sort()).toEqual(["deleted-1", "live-1"]);
     expect(where.status.in).toEqual(["approved", "live"]);
     expect(where.date.gte).toBeInstanceOf(Date);
+  });
+
+  it("puts a newly confirmed event on the front page without anyone curating it", async () => {
+    db.event.findMany.mockResolvedValue([
+      {
+        id: "event-9",
+        title: "SALT",
+        date: new Date("2026-12-05T20:00:00.000Z"),
+        status: "approved",
+        venue: { name: "The Vault", address: "12 Albert Rd, Woodstock, Cape Town, 8001" },
+      },
+    ]);
+    db.artistBooking.findMany.mockResolvedValue([
+      { eventId: "event-9", slot: "22:00-23:00", slotRef: { label: "22:00–23:00" }, artist: { stageName: "Nova" } },
+    ]);
+
+    const content = await service().get();
+    const [card] = (content.events ?? []) as unknown as Record<string, unknown>[];
+
+    expect(card).toMatchObject({
+      eventId: "event-9",
+      title: "SALT",
+      city: "Cape Town",
+      venue: "The Vault",
+      doors: "22:00",
+      status: "ANNOUNCED",
+    });
+    // 20:00 UTC is 22:00 in Cape Town.
+    expect(card.displayDate).toContain("5");
+    expect(card.artists).toEqual([{ name: "Nova", time: "22:00–23:00" }]);
+  });
+
+  it("does not list the same event twice when it is also curated", async () => {
+    db.siteContent.findUnique.mockResolvedValue(
+      row({ events: [{ title: "Deep End", eventId: "event-9" }] }),
+    );
+    db.event.findMany.mockResolvedValue([
+      {
+        id: "event-9",
+        title: "Deep End",
+        date: new Date("2026-12-05T20:00:00.000Z"),
+        status: "approved",
+        venue: { name: "The Vault", address: null },
+      },
+    ]);
+
+    const content = await service().get();
+
+    expect(content.events).toHaveLength(1);
+    expect((content.events ?? [])[0]).toMatchObject({ title: "Deep End" });
   });
 
   it("shows confirmed DJs with the time they play", async () => {
@@ -85,13 +134,12 @@ describe("SiteContentService.get", () => {
     expect(content.events).toHaveLength(1);
   });
 
-  it("does not query events when every entry is hand-written", async () => {
+  it("keeps hand-written announcements ahead of the confirmed events", async () => {
     db.siteContent.findUnique.mockResolvedValue(row({ events: [{ title: "DATES TBA" }] }));
 
     const content = await service().get();
 
     expect(content.events).toEqual([{ title: "DATES TBA" }]);
-    expect(db.event.findMany).not.toHaveBeenCalled();
   });
 
   it("keeps a scheduled drop hidden without querying events", async () => {
@@ -108,10 +156,10 @@ describe("SiteContentService.get", () => {
     expect(db.event.findMany).not.toHaveBeenCalled();
   });
 
-  it("returns empty content when nothing has been saved", async () => {
+  it("returns an empty lineup when nothing has been saved or confirmed", async () => {
     const content = await service().get();
 
-    expect(content).toEqual({ updatedAt: null });
-    expect(db.event.findMany).not.toHaveBeenCalled();
+    expect(content).toEqual({ events: [], updatedAt: null });
+    expect(db.event.findMany).toHaveBeenCalledTimes(1);
   });
 });

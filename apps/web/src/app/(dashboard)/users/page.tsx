@@ -12,6 +12,7 @@ interface RegisteredUser {
   name: string | null;
   role: string;
   verifiedBadge: boolean;
+  mfaDisabled: boolean;
   linked: boolean;
   telegram: boolean;
   createdAt: string;
@@ -57,6 +58,11 @@ export default function Users() {
   const [newRole, setNewRole] = useState<"guest" | "artist" | "promoter" | "venue_manager" | "admin">("guest");
   const [creating, setCreating] = useState(false);
   const [provisioned, setProvisioned] = useState<{ email: string; password: string } | null>(null);
+  const [resetResult, setResetResult] = useState<{
+    email: string;
+    password: string;
+    factorsRemoved: number;
+  } | null>(null);
 
   const load = useCallback(async (search: string) => {
     setError(null);
@@ -117,6 +123,65 @@ export default function Users() {
       setError(errorMessage(err) ?? "Could not create the account.");
     } finally {
       setCreating(false);
+    }
+  };
+
+  /**
+   * Unlock someone who lost their authenticator or password: the API removes
+   * their second factor, sets a temporary password and signs out every device.
+   */
+  const resetSignIn = async (user: RegisteredUser) => {
+    const confirmed = window.confirm(
+      `Reset sign-in for ${user.email}? This removes their authenticator, sets a temporary ` +
+        "password and signs out every device.",
+    );
+    if (!confirmed) return;
+    setBusyId(user.id);
+    setError(null);
+    setNotice(null);
+    setResetResult(null);
+    try {
+      const result = await api.post<{
+        user: RegisteredUser;
+        temporaryPassword: string;
+        factorsRemoved: number;
+      }>(`/users/${user.id}/auth-reset`, {});
+      replace(result.user);
+      setResetResult({
+        email: result.user.email,
+        password: result.temporaryPassword,
+        factorsRemoved: result.factorsRemoved,
+      });
+    } catch (err) {
+      setError(errorMessage(err) ?? "Could not reset sign-in.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  /** Exempt an account from mandatory two-step, or put it back under the policy. */
+  const toggleMfa = async (user: RegisteredUser) => {
+    const disabling = !user.mfaDisabled;
+    if (
+      disabling &&
+      !window.confirm(
+        `Turn off two-step verification for ${user.email}? They will sign in with just a password.`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(user.id);
+    setError(null);
+    setNotice(null);
+    setResetResult(null);
+    try {
+      const updated = await api.patch<RegisteredUser>(`/users/${user.id}/mfa`, { disabled: disabling });
+      replace(updated);
+      setNotice(`${updated.email} — two-step verification ${disabling ? "is off" : "is required again"}.`);
+    } catch (err) {
+      setError(errorMessage(err) ?? "Could not change two-step verification.");
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -277,6 +342,32 @@ export default function Users() {
         {notice && <p className="text-neon text-sm">{notice}</p>}
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
+        {resetResult && (
+          <div className="border border-yellow-500/40 rounded-xl p-4">
+            <p className="text-yellow-300 text-sm">Sign-in reset for {resetResult.email}.</p>
+            <p className="text-neutral-400 text-xs mt-1">
+              {resetResult.factorsRemoved} authenticator
+              {resetResult.factorsRemoved === 1 ? "" : "s"} removed and every device signed out.
+              Temporary password — shown once, changed by them at first sign-in:
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <code className="bg-bg border border-line rounded px-2 py-1 text-sm">
+                {resetResult.password}
+              </code>
+              <button
+                type="button"
+                onClick={() => navigator.clipboard.writeText(resetResult.password)}
+                className="text-[11px] tracking-widest text-neutral-400 hover:text-neon"
+              >
+                COPY
+              </button>
+            </div>
+            <p className="text-neutral-500 text-xs mt-2">
+              They sign in with this password, choose a new one, then set up a new authenticator.
+            </p>
+          </div>
+        )}
+
         <div className="border border-line rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -301,6 +392,7 @@ export default function Users() {
                         <span className={u.telegram ? "text-neon/80" : "text-neutral-600"}>
                           {u.telegram ? "telegram linked" : "no telegram"}
                         </span>
+                        {u.mfaDisabled && <span className="text-yellow-400"> · 2FA off</span>}
                       </p>
                       {u.stageName && <p className="text-neon/80 text-[11px] mt-1">DJ · {u.stageName}</p>}
                       {u.venue && (
@@ -338,6 +430,36 @@ export default function Users() {
                             {ROLE_LABEL[option].toUpperCase()}
                           </button>
                         ))}
+                        <button
+                          disabled={busyId === u.id || u.role === "admin"}
+                          onClick={() => toggleMfa(u)}
+                          title={
+                            u.role === "admin"
+                              ? "Admin accounts must keep two-step verification"
+                              : u.mfaDisabled
+                              ? "Require two-step verification again at next sign-in"
+                              : "Sign in with a password only; removes any authenticator"
+                          }
+                          className={
+                            u.mfaDisabled
+                              ? "rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest border border-neon/60 text-neon hover:bg-neon/10 disabled:opacity-40"
+                              : "rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest text-neutral-500 hover:text-neutral-200 disabled:opacity-40"
+                          }
+                        >
+                          {u.mfaDisabled ? "TURN ON 2FA" : "TURN OFF 2FA"}
+                        </button>
+                        <button
+                          disabled={busyId === u.id || !u.linked}
+                          title={
+                            u.linked
+                              ? "Remove their authenticator and issue a temporary password"
+                              : "They have not signed in yet, so there is nothing to reset"
+                          }
+                          onClick={() => resetSignIn(u)}
+                          className="rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest border border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 disabled:opacity-40"
+                        >
+                          RESET SIGN-IN
+                        </button>
                         {hasProfile && (
                           <button
                             disabled={busyId === u.id}

@@ -58,3 +58,12 @@ export function unsubscribeLink(email: string, siteUrl: string): string {
   const base = siteUrl.replace(/\/$/, "");
   return `${base}/api/email/unsubscribe?token=${encodeURIComponent(createUnsubscribeToken(email))}`;
 }
+
+/** RFC 8058 one-click unsubscribe headers for bulk mail. */
+export function unsubscribeHeaders(url?: string): Record<string, string> | undefined {
+  if (!url) return undefined;
+  return {
+    "List-Unsubscribe": `<${url}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}

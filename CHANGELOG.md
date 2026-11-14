@@ -2,6 +2,149 @@
 
 Notable changes to ESSENTIALS. Dates are UTC.
 
+## 2026-11-14
+
+### Booking desk
+
+- **An admin can cancel a confirmed slot.** DJ Applications now shows
+  `CANCEL SLOT` on pending and confirmed rows for admin accounts. Cancelling
+  frees the slot, reopens it to the other applicants, and tells the DJ, the
+  promoter and anyone still waiting on that slot. A completed gig is refused
+  because it is already payable, and cancelling twice sends no duplicate
+  notices.
+- The DJ still withdraws their own pending application, and the promoter still
+  declines, moves or extends bookings. The admin cancel is the override for the
+  case neither side can resolve after a slot is confirmed.
+
+### Email
+
+- **Bulk mail now includes a plain-text alternative and one-click unsubscribe
+  headers.** Campaigns, taste-match and post-event retention mail, and the
+  What's new announcement all go through the same bulk-mail preparation: one
+  HTML wrapper, a readable `text/plain` version generated from the final HTML,
+  and RFC 8058 `List-Unsubscribe` / `List-Unsubscribe-Post` headers. SMTP and
+  Resend send both parts; Listmonk receives the text body as well.
+- **The mail server now identifies itself as `mail.essentialsedm.com`.** Postfix
+  previously advertised a Tailscale hostname that did not match the public
+  sending IP. The HELO now matches the existing PTR record; the missing
+  `mail.essentialsedm.com` A record is still required for forward-confirmed
+  reverse DNS.
+
+### Privacy and marketing
+
+- **The public privacy notice is now a full POPIA/GDPR notice.** `/privacy`
+  names the responsible party and Information Officer contact, explains what is
+  collected and why, the lawful bases, sharing and cross-border safeguards,
+  retention, security, children, PAIA requests and the Information Regulator
+  complaint route. It also covers the CPA/ECTA opt-in rule for electronic
+  marketing and the additional GDPR/UK GDPR rights where they apply.
+- **Newsletter consent is separate and explicit.** The footer now has an
+  unticked consent box linked to the notice, and `POST /api/site/subscribe`
+  refuses an address without `consent: true`. Consent rows record the policy
+  version, source and grant/revocation times; later notice changes do not
+  silently re-opt anyone in.
+- **Mailing-list imports require an opt-in attestation.** A promoter must
+  confirm every contact opted in before uploading a list. The attestation, policy
+  version and import time are stored with the segment and new consent rows;
+  addresses that already unsubscribed stay unsubscribed.
+- **Signed-in people can download their own data.** The privacy page calls the
+  existing `GET /api/site/my-data` export and downloads a JSON file with account,
+  event, consent, referral, artist, booking and invoice records. Correction,
+  deletion and objection requests remain available at
+  `privacy@essentialsedm.com`.
+- The compliance map and the remaining operational gaps (operator agreements,
+  PAIA manual, retention automation, deletion queue, DPIA and breach runbook)
+  are in `docs/privacy-compliance.md`.
+
+### Control room
+
+- **The console has a permanent control-room rail.** The old top tab strip is
+  gone. Analytics, events, applications, the gig calendar, artists and
+  settlements sit under Night Ops; campaigns and guest tools under Audience; DJ
+  tools under Stage; account and platform tools in their own groups. The rail
+  keeps the active page in view, carries search and the signed-in role, and
+  becomes a drawer on small screens.
+- **The core screens share one page language.** DJ Applications, Analytics,
+  Events, Artists, Settlements, Gig Calendar and Email now use the same page
+  frame, headings, panels, badges and empty states. Tables and headings across
+  the rest of the console inherit the same treatment, so a screen no longer
+  looks like a separate product.
+
+## 2026-11-12
+
+### Front page
+
+- **A confirmed event puts itself on the lineup.** `GET /api/site/content` now
+  merges every `approved`/`live` event with a future date into the curated
+  lineup, so confirming a night in the dashboard is enough for it to appear on
+  essentialsedm.com — no front-page edit. Curated entries keep their wording
+  and order; dates, doors, status and city (the venue address tail, postal code
+  dropped) come from the event, in `Africa/Johannesburg` time. The scheduled
+  drop still hides the whole lineup until its publish time, and an event listed
+  twice is shown once.
+- **Confirmed DJs appear on the card.** The front-page lineup card and the
+  `/events` page now list each `confirmed` booking with the artist's stage name
+  and slot label. Both read bookings at request time, so a confirmation or
+  cancellation shows on the next page load.
+- Public events now carry an `artists` array alongside the planned `lineup`
+  JSON, so a guest sees who is actually confirmed, not who was proposed.
+
+### What's new page
+
+- `/whats-new` on the public site shows the release notes themselves. The page
+  has no copy of its own to keep up to date: `GET /api/site/changelog` parses
+  `CHANGELOG.md` on request — dated `##` headings become releases, `###` become
+  sections, bullets become items — and re-reads the file whenever it changes, so
+  a deploy of the changelog is enough. The three newest releases are shown.
+- The page is members only: signed-out visitors are sent to `/login`, and a
+  `guest` account sees a members-only notice instead of the notes. The menu
+  entry is hidden for both; the guard reads the canonical role from
+  `/api/auth/me`.
+- **A new release is mailed to members once.** Every role except `guest` gets
+  the notes, minus anyone whose email consent is revoked, with the usual signed
+  unsubscribe link. `WhatsNewBroadcast` records the release date, so a restart,
+  a redeploy or a second instance cannot send the same notes twice; editing an
+  existing release sends nothing. The 2026-11-12 release shipped with this
+  feature and is recorded as already announced.
+- The Help manuals (DJ, promoter, venue manager, admin) and
+  `docs/chatbot-manual.md` gained a What's new section, plus the fact that an
+  approved future event now adds itself to the front-page lineup.
+
+### Live stream
+
+- Ingest lowered to 640×360 at 25 fps and 600 kbps video (max 750k), with 1 s
+  keyframes so MediaMTX cuts 1 s HLS segments instead of 2 s ones.
+- Browser capture uploads at 800 kbps instead of 2 Mbps, which leaves headroom
+  on a phone uplink.
+- **Playback was the choppiness, not the bitrate.** The player sat 6 segments
+  (12 s) behind live on a 7-segment window and chased the edge at 1.2× speed.
+  It now sits 3 segments behind at 1×, with a 6-segment ceiling. Measured on the
+  live front page: 0 dropped frames and 0 stalls over 60 s, buffer steady at
+  2.7–3.9 s.
+
+### Fixes
+
+- **A promoter could not see their DJ applications.** A promoter account that
+  support had exempted from two-step verification was told by `/api/auth/me`
+  that no second factor was needed, so the dashboard let them in — but every
+  route written `@Auth("promoter", "admin")` counted as an *admin* route and
+  answered `401 MFA_REQUIRED`, because the exemption was skipped whenever
+  `admin` appeared in the role list. That silently emptied DJ Applications (and
+  the promoter's events, venues and analytics). Only an admin-**only** route now
+  overrides the exemption, which is what it was meant to protect: account
+  administration.
+- **Sign-in loop.** The site's auth callback depended on the object returned by
+  `useSearchParams()`, which is new on every render, so the code exchange and
+  `/api/auth/me` re-ran after each error state — 4 requests a second until the
+  API rate-limited the browser, which the page then reported as "your account
+  could not be loaded". The effect now keys on the parsed strings and runs once
+  per link; the dashboard callback had the same defect and the same guard.
+- **Blank `/dashboard`.** The legacy `/dashboard/dashboard/*` redirect matched
+  the bare `/dashboard` URL and answered with an empty `Location`, so the
+  browser looped between `/dashboard` and `/dashboard/` with no HTML. The rule
+  now requires at least one segment, and old doubled links still redirect to
+  their flattened URL.
+
 ## 2026-11-08
 
 ### Security

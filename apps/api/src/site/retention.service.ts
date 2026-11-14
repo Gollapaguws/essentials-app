@@ -1,7 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { prisma, ConsentStatus } from "@essentials/db";
 import { MailService } from "../mail/mail.service";
-import { wrapTemplate } from "../mail/templates";
 import { unsubscribeLink } from "../mail/unsubscribe";
 import { escapeHtml } from "../common/html";
 
@@ -49,7 +48,7 @@ export class RetentionService {
         <p>${escapeHtml(guest.name ?? "there")}, these upcoming rooms match what you actually listen to (${escapeHtml(guest.musicTastes.join(", "))}):</p>
         ${matches.map((e) => `<p style="font-size:16px"><strong>${escapeHtml(e.title)}</strong><br/>${escapeHtml(e.venue.name)} · ${e.date.toDateString()} · <a href="${siteUrl}/events/${e.id}" style="color:#00FF66">RSVP →</a></p>`).join("")}`;
       try {
-        await this.mail.send({ to: guest.email, subject: "Events picked for your taste", html: wrapTemplate(html, unsub), unsubscribeUrl: unsub });
+        await this.mail.send({ to: guest.email, subject: "Events picked for your taste", html, unsubscribeUrl: unsub });
         sent++;
       } catch (e) {
         this.logger.warn(`taste match mail failed for ${guest.email}: ${(e as Error).message}`);
@@ -91,7 +90,7 @@ export class RetentionService {
         const html = `<h1 style="color:#00FF66;letter-spacing:2px;font-size:22px">SEE YOU IN THE ROOM</h1>
           <p>${escapeHtml(gl.user.name ?? "there")}, thanks for being on the floor at <strong>${escapeHtml(event.title)}</strong>.</p>${next}`;
         try {
-          await this.mail.send({ to: gl.user.email, subject: `See you at the next one — ${event.title}`, html: wrapTemplate(html, unsub), unsubscribeUrl: unsub });
+          await this.mail.send({ to: gl.user.email, subject: `See you at the next one — ${event.title}`, html, unsubscribeUrl: unsub });
           sent++;
         } catch (e) {
           this.logger.warn(`post-event mail failed for ${gl.user.email}: ${(e as Error).message}`);

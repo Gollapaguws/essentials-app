@@ -33,7 +33,7 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
     title: "DJ manual",
     summary:
       "How a DJ profile, slots, gigs and invoices fit together — and what to do when a screen looks empty.",
-    screens: "My Profile · Artist Portal · Gig Calendar · Earnings · Notifications · Account",
+    screens: "My Profile · Live Calendar · Go Live · Artist Portal · Gig Calendar · Earnings · Notifications · Account",
     topics: [
       {
         title: "Start with My Profile",
@@ -53,6 +53,30 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
           "DJ Applications (inside the Artist Portal) shows each application as pending, confirmed or declined.",
           "A decline may include the promoter's reason. The reason is optional — if it is blank, ask the promoter.",
           "Once confirmed, the fee for that slot is locked and you appear on the public lineup with your set time.",
+        ],
+      },
+      {
+        title: "Booking a live session",
+        intro:
+          "A DJ can only broadcast inside a session booked on the Live Calendar, so book the window before your set starts.",
+        points: [
+          "Live Calendar shows a month grid; pick a day, enter a start and end time, and book the session. A dot marks days that already have one.",
+          "A session can be up to 12 hours, and two of your sessions cannot overlap. An end time earlier than the start is treated as the next day, so 20:00–02:00 works.",
+          "Cancel a session you no longer need. An active or upcoming session is listed under Your sessions; Go Live is refused outside its window.",
+          "Live sessions need a DJ profile. Without one, create it on My Profile first.",
+        ],
+      },
+      {
+        title: "Going live without OBS",
+        intro:
+          "Go Live turns this browser into the encoder: camera or shared screen plus one audio input, previewed before anything is sent.",
+        points: [
+          "Pick your camera (or share a screen) and the input your mixer is plugged into, press Start preview, then Go live. No OBS, stream key or extra software is involved.",
+          "Go Live only unlocks during a booked live session. With no booking covering the moment, the button is refused and the server rejects the stream.",
+          "Browsers hide device names until you allow access: if the camera or microphone list is empty, preview once and grant permission.",
+          "Echo cancellation, noise suppression and auto gain are switched off on purpose — they pump and duck a music mix.",
+          "Only one broadcast can run at a time. If someone else is already live, starting is refused until that broadcast ends.",
+          "Keep the tab open. Closing it or pressing End broadcast stops the stream, and the public front page and enabled restream targets follow it automatically.",
         ],
       },
       {
@@ -92,6 +116,16 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         ],
       },
       {
+        title: "What's new",
+        intro:
+          "The site's What's new page is the release notes, read straight from the changelog — nobody edits it by hand.",
+        points: [
+          "What's new (/whats-new) lists every change that shipped, newest first. It is built from the release notes on each visit, so it cannot fall behind the app.",
+          "It is members only. A guest account sees a members-only notice instead of the notes, and the menu entry does not appear.",
+          "A new release is mailed to members once. Notes already published are never mailed again, and unsubscribing from any ESSENTIALS mail stops these too.",
+        ],
+      },
+      {
         title: "When something looks wrong",
         points: [
           "Sent back to a password screen? The account was created for you and has never chosen its own password. Setting one is the last step before the dashboard opens.",
@@ -125,6 +159,7 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
           "Statuses run draft → pending venue approval → approved → live → completed. Cancelled events can be reopened.",
           "Cancel keeps the guest list, door check-ins and DJ bookings. Delete removes the event and everything hanging off it. Use cancel for a night that is off, delete for a mistake.",
           "Clone copies a past night's venue, slot plan, fees and budget. Repeat weekly creates up to 12 dated drafts.",
+          "Approving a night puts it on the front page lineup by itself, and confirming a DJ adds their name and set time to that night's card. Nobody edits the lineup by hand.",
         ],
       },
       {
@@ -161,6 +196,17 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
           "Promotions are per-event codes — discount, free entry or bottle upgrade — with a use cap and optional expiry.",
           "Insights covers guest lifetime value and cohort retention; Analytics shows RSVPs, check-ins and pacing for the next night.",
           "Social Hub generates copy, queues posts per platform and can publish immediately.",
+        ],
+      },
+      {
+        title: "What's new",
+        intro:
+          "The site's What's new page is the release notes, read straight from the changelog — nobody edits it by hand.",
+        points: [
+          "What's new (/whats-new) lists every change that shipped, newest first, and builds itself from the release notes — so the page and the dashboard cannot disagree.",
+          "It is members only: promoters, DJs, venue managers and admins get in; a guest account sees a members-only notice and the menu entry is hidden.",
+          "A new release lands one email to members. Notes already published are not re-sent, and an unsubscribe stops these along with the rest of the mail.",
+          "It is about what changed, not how to run a night — the manuals above stay the place for that.",
         ],
       },
       {
@@ -216,6 +262,16 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         ],
       },
       {
+        title: "What's new",
+        intro:
+          "The site's What's new page lists every change that shipped, built from the release notes rather than written by hand.",
+        points: [
+          "What's new (/whats-new) is members only: a guest account sees a members-only notice, and the menu entry is hidden for guests and signed-out visitors.",
+          "A new release is mailed to members once. Published notes are never re-sent, and an unsubscribe stops these with the rest of the mail.",
+          "Nothing in this manual changes without a line there, so when a screen looks different, check What's new first.",
+        ],
+      },
+      {
         title: "When something looks wrong",
         points: [
           "No venues listed? The account is not linked to a room yet — an admin does that.",
@@ -264,9 +320,10 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
       {
         title: "Content and delivery",
         points: [
-          "Front Page edits the public lineup, broadcasts and site copy; media uploads are capped at 10 MB and must be real images.",
+          "Front Page edits the curated lineup, broadcasts and site copy; media uploads are capped at 10 MB and must be real images. Approved events with a future date are added to the lineup automatically, after the curated entries.",
+          "What's new on the site is read from CHANGELOG.md on every request, and a new release date mails members once — see the What's new topic above before changing the file.",
           "Mailboxes lists the inboxes the API watches for replies, with their passwords.",
-          "Streaming shows restream targets and their status; the public broadcast and room chat sit on the front page.",
+          "Streaming shows restream targets and their status; the public broadcast and room chat sit on the front page. Room chat clears every day at midnight, South African time.",
           "Notifications test sends through the real delivery path — bell, email, Telegram — and reports what each channel reached.",
         ],
       },
@@ -274,9 +331,20 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         title: "What support hands over",
         points: [
           "Money, roles, refunds, disputed fees, failed payments and bugs go to " + CONTACT + ", with the account email, the event or gig and what was expected.",
-          "Data exports, deletions and privacy questions go to privacy@essentialsedm.com.",
+          "Download your own data from the public privacy page, or send access, correction, deletion and objection requests to privacy@essentialsedm.com. The notice covers POPIA, GDPR/UK GDPR, CPA marketing and ECTA.",
           "No reply time is ever promised to a customer, so keep it that way when you answer.",
           "The support agent answers from docs/chatbot-manual.md. When a screen or rule changes, that file changes with it — otherwise the bot keeps describing the old app.",
+        ],
+      },
+      {
+        title: "What's new and the release notes",
+        points: [
+          "The site's /whats-new page is built from CHANGELOG.md. The API parses the file on every request and re-reads it when it changes, so a new dated section shows up as soon as the file is deployed — no site rebuild and no API restart.",
+          "Only dated `## YYYY-MM-DD` headings open a release; the `###` headings become sections and the bullets become items. The page shows the three newest releases.",
+          "The page is members only: signed-out visitors are sent to sign-in, guest accounts see a members-only notice, and the entry is hidden from both in the menu.",
+          "When a new release date appears, every member (every role except guest, minus unsubscribes) is mailed once. WhatsNewBroadcast records the release, so a restart, a redeploy or a second instance cannot send it twice.",
+          "Editing an existing release does not mail anyone — only a new date does. The release that shipped with the feature is recorded as already announced.",
+          "If CHANGELOG.md cannot be found, the page shows an empty state and no mail goes out; the API logs a warning at boot.",
         ],
       },
       {

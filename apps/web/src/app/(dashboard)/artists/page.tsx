@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { ConsolePage } from "@/components/console/ConsolePage";
+import { PageHeader } from "@/components/console/PageHeader";
+import { Panel } from "@/components/console/Panel";
 
 interface UpcomingGig {
   id: string;
@@ -34,19 +36,17 @@ export default function ArtistRoster() {
   }, []);
 
   return (
-    <>
-      <TopNav />
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-black tracking-wide">ARTISTS</h1>
-          <p className="text-neutral-500 text-sm">
-            Every DJ on the roster, with their travel rate and the gigs they are already locked into.
-          </p>
-        </div>
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+    <ConsolePage size="xl">
+      <PageHeader
+        eyebrow="Night ops / Roster"
+        title="ARTISTS"
+        description="Every DJ on the roster, with their travel rate and the gigs they are already locked into."
+      />
+      {error && <p className="text-red-400 text-sm">{error}</p>}
 
-        <div className="border border-line rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+      <Panel flush>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-sm">
             <thead className="bg-surface text-neutral-400 uppercase text-xs">
               <tr>
                 <th className="text-left px-4 py-3">DJ</th>
@@ -104,7 +104,7 @@ export default function ArtistRoster() {
             </tbody>
           </table>
         </div>
-      </main>
-    </>
+      </Panel>
+    </ConsolePage>
   );
 }

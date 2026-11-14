@@ -12,6 +12,24 @@ interface Profile {
   imageUrl: string | null;
   vehicleConsumptionLPer100km: number;
   travelRatePerKm: number;
+  bankAccountHolder: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankBranchCode: string | null;
+  bankAccountType: string | null;
+}
+
+interface ProfileForm {
+  stageName: string;
+  bio: string;
+  imageUrl: string;
+  vehicleConsumptionLPer100km: number;
+  travelRatePerKm: number;
+  bankAccountHolder: string;
+  bankName: string;
+  bankAccountNumber: string;
+  bankBranchCode: string;
+  bankAccountType: string;
 }
 
 interface Gig { id: string; status: string; performanceFee: number }
@@ -26,13 +44,18 @@ export default function ArtistProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [form, setForm] = useState<Profile>({
+  const [form, setForm] = useState<ProfileForm>({
     stageName: "",
     bio: "",
     imageUrl: "",
     vehicleConsumptionLPer100km: 8,
     // Displayed only: the travel rate is the admin-set platform standard.
     travelRatePerKm: 4.95,
+    bankAccountHolder: "",
+    bankName: "",
+    bankAccountNumber: "",
+    bankBranchCode: "",
+    bankAccountType: "",
   });
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -65,7 +88,20 @@ export default function ArtistProfilePage() {
       .get<Profile | null>("/artists/me")
       .then((p) => {
         setProfile(p);
-        if (p) setForm({ ...p, bio: p.bio ?? "", imageUrl: p.imageUrl ?? "" });
+        if (p) {
+          setForm({
+            stageName: p.stageName,
+            bio: p.bio ?? "",
+            imageUrl: p.imageUrl ?? "",
+            vehicleConsumptionLPer100km: p.vehicleConsumptionLPer100km,
+            travelRatePerKm: p.travelRatePerKm,
+            bankAccountHolder: p.bankAccountHolder ?? "",
+            bankName: p.bankName ?? "",
+            bankAccountNumber: p.bankAccountNumber ?? "",
+            bankBranchCode: p.bankBranchCode ?? "",
+            bankAccountType: p.bankAccountType ?? "",
+          });
+        }
       })
       .catch((e) => setError(errorMessage(e)));
     api.get<Gig[]>("/artists/gigs").then(setGigs).catch(() => {});
@@ -86,9 +122,14 @@ export default function ArtistProfilePage() {
     try {
       const body = {
         stageName: form.stageName.trim(),
-        bio: form.bio ?? "",
-        imageUrl: (form.imageUrl ?? "").trim(),
+        bio: form.bio,
+        imageUrl: form.imageUrl.trim(),
         vehicleConsumptionLPer100km: form.vehicleConsumptionLPer100km,
+        bankAccountHolder: form.bankAccountHolder.trim(),
+        bankName: form.bankName.trim(),
+        bankAccountNumber: form.bankAccountNumber.trim(),
+        bankBranchCode: form.bankBranchCode.trim(),
+        bankAccountType: form.bankAccountType.trim(),
       };
       await api.post<Profile>("/artists/me", body);
       setSaved("Profile saved.");
@@ -100,7 +141,13 @@ export default function ArtistProfilePage() {
 
   const confirmed = gigs.filter((g) => g.status === "confirmed").length;
   const owed = invoices.reduce((sum, i) => sum + i.total, 0);
-  const bio = form.bio ?? "";
+  const bio = form.bio;
+  const bankComplete = Boolean(
+    form.bankAccountHolder.trim() &&
+      form.bankName.trim() &&
+      form.bankAccountNumber.trim() &&
+      form.bankBranchCode.trim(),
+  );
 
   return (
     <>
@@ -110,7 +157,7 @@ export default function ArtistProfilePage() {
           <div>
             <h1 className="text-2xl font-black tracking-wide">MY PROFILE</h1>
             <p className="text-neutral-500 text-xs mt-1">
-              What promoters and venues see, plus the travel costs your invoices are built from.
+              What promoters and venues see, plus the travel costs and bank account your invoices use.
             </p>
           </div>
           <Link href="/artist" className="text-xs tracking-widest text-neutral-400 hover:text-neon">
@@ -198,6 +245,81 @@ export default function ArtistProfilePage() {
               </p>
             </div>
 
+            <div className="border-t border-line pt-4 space-y-3">
+              <div>
+                <p className="text-xs font-bold tracking-widest text-neutral-400 uppercase">Bank account</p>
+                <p className="text-[11px] text-neutral-600 mt-1">
+                  Printed automatically on every invoice so the venue can pay you. Promoters never see these details.
+                </p>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <label className={label} htmlFor="bankAccountHolder">Account holder</label>
+                  <input
+                    id="bankAccountHolder"
+                    maxLength={120}
+                    className={`${field} mt-1`}
+                    placeholder="Name on the bank account"
+                    value={form.bankAccountHolder}
+                    onChange={(e) => setForm({ ...form, bankAccountHolder: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={label} htmlFor="bankName">Bank</label>
+                  <input
+                    id="bankName"
+                    maxLength={120}
+                    className={`${field} mt-1`}
+                    placeholder="Bank name"
+                    value={form.bankName}
+                    onChange={(e) => setForm({ ...form, bankName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={label} htmlFor="bankAccountType">Account type</label>
+                  <input
+                    id="bankAccountType"
+                    maxLength={40}
+                    className={`${field} mt-1`}
+                    placeholder="Cheque, savings…"
+                    value={form.bankAccountType}
+                    onChange={(e) => setForm({ ...form, bankAccountType: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={label} htmlFor="bankAccountNumber">Account number</label>
+                  <input
+                    id="bankAccountNumber"
+                    maxLength={34}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    className={`${field} mt-1 font-mono`}
+                    placeholder="Account number"
+                    value={form.bankAccountNumber}
+                    onChange={(e) => setForm({ ...form, bankAccountNumber: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={label} htmlFor="bankBranchCode">Branch code</label>
+                  <input
+                    id="bankBranchCode"
+                    maxLength={20}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    className={`${field} mt-1 font-mono`}
+                    placeholder="Branch code"
+                    value={form.bankBranchCode}
+                    onChange={(e) => setForm({ ...form, bankBranchCode: e.target.value })}
+                  />
+                </div>
+              </div>
+              <p className={`text-[11px] ${bankComplete ? "text-neutral-600" : "text-yellow-400"}`}>
+                {bankComplete
+                  ? "Your bank account is ready for invoices."
+                  : "Account holder, bank, account number and branch code are needed before you can invoice a venue."}
+              </p>
+            </div>
+
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className={label} htmlFor="consumption">Vehicle L/100km</label>
@@ -255,6 +377,12 @@ export default function ArtistProfilePage() {
               <p className="flex justify-between"><span className="text-neutral-500">Gigs</span><span>{gigs.length}</span></p>
               <p className="flex justify-between"><span className="text-neutral-500">Confirmed</span><span className="text-neon">{confirmed}</span></p>
               <p className="flex justify-between"><span className="text-neutral-500">Invoiced</span><span>R{owed.toLocaleString()}</span></p>
+              <p className="flex justify-between">
+                <span className="text-neutral-500">Bank details</span>
+                <span className={bankComplete ? "text-neon" : "text-yellow-400"}>
+                  {bankComplete ? "ready" : "missing"}
+                </span>
+              </p>
               {profile && (
                 <p className="flex justify-between">
                   <span className="text-neutral-500">Profile</span>

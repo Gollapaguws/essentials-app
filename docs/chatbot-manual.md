@@ -94,7 +94,7 @@ night. The website is essentialsedm.com; the dashboard is where the work happens
 
 | Role | Sees |
 | --- | --- |
-| `artist` (DJ) | Artist Portal, My Profile, Gig Calendar, Earnings, Notifications, Account |
+| `artist` (DJ) | Artist Portal, My Profile, Live Calendar, Go Live, Gig Calendar, Earnings, Notifications, Account |
 | `promoter` | Analytics, Events, Email Engine, Venue Portal, Artists, Promotions, Insights, DJ Applications, Door, Settlements, Social Hub, Notifications, Account |
 | `venue_manager` | Venue Portal, Door, Notifications, Account |
 | `admin` | Everything, plus Users, Audit, Settings, Mailboxes, Streaming, Front Page, Notifications test |
@@ -148,9 +148,19 @@ honest answer is that an admin sets the role.
 - A slot is a **queue**: several DJs can apply, but only one is confirmed.
   Declining a DJ frees the slot, and the other applicants are told it reopened.
 - Apply from the public event page or **Gig Calendar**. A DJ cannot apply for a
-  slot on a date they blocked.
+  slot on a date they blocked, and can only apply for **one slot per event**.
 - **Applications** shows what is pending, confirmed or declined. A decline may
-  carry the promoter's reason; if there is one, it is shown there.
+  carry the promoter's reason; if there is one, it is shown there. A decline or a
+  DJ's own cancellation frees them to apply again — including for a different
+  slot on the same event.
+- A DJ can cancel a pending application from **Gig Calendar**. The withdrawal
+  leaves the promoter's queue, but the booking row is kept as cancelled for the
+  record.
+- A promoter can **move** a pending or confirmed booking to another open slot on
+  the same event from **Applications**. The booking takes the new slot's time and
+  fee; a completed gig cannot be moved.
+- A promoter can deliberately **extend** a confirmed DJ into another open slot on
+  the same event; the DJ cannot apply for it themselves.
 - Once a promoter confirms, the slot's fee is locked — it is the amount that was
   agreed — and the DJ appears on the public lineup with their set time.
 
@@ -173,10 +183,41 @@ honest answer is that an admin sets the role.
   rate, not whatever the DJ typed.
 - **Export calendar** downloads confirmed and played gigs as `.ics`.
 
+### Booking a live session
+- **Live Calendar** is where a DJ books the windows they will broadcast in.
+  Pick a day, enter a start and end time, and book it. A dot marks days that
+  already have a session.
+- A session can be up to 12 hours and two of the DJ's sessions cannot overlap.
+  An end time earlier than the start is treated as the next day, so 20:00–02:00
+  works. Sessions can be cancelled from the list.
+- Live sessions need a DJ profile; without one the page points at **My Profile**.
+- A DJ cannot go live outside a booked session: the Go Live button is refused
+  when no booking covers the current time, and the ingest connection itself is
+  refused too.
+
+### Going live without OBS
+- **Go Live** broadcasts straight from the browser: pick the camera or a shared
+  screen plus one microphone/mixer input, preview, then press **Go live**. There
+  is no OBS, encoder install or stream key for DJs.
+- Go Live only unlocks inside a booked live session. If no booking covers the
+  moment, the page says so and the server rejects the stream.
+- The browser hides device names until access is granted, so the lists can be
+  empty on the first visit; previewing once and allowing access fills them.
+- Echo cancellation, noise suppression and auto gain are deliberately off so a
+  music mix is not pumped or ducked.
+- Only one broadcast runs at a time. If a broadcast is already live, a DJ's
+  connection is refused until it ends.
+- Closing the tab or pressing **End broadcast** stops the stream. The public
+  front page and every restream target enabled by an admin follow automatically.
+- Admins still use the same ingest from the front page, and manage restream
+  targets on **Streaming**.
+
 ### Alerts
 - The bell feed lives under **Notifications**. Telegram can be linked from the
   Account tab in the mobile app; once linked, gig alerts also arrive there.
   Email is used for the messages that matter outside the app.
+- A new release note is also emailed to members once, with a link to the site's
+  **What's new** page.
 
 ## 7. For promoters
 
@@ -271,9 +312,23 @@ honest answer is that an admin sets the role.
 
 - The home page shows upcoming events, the live room, the room chat and the
   lineup. Reading the chat is public; posting is throttled per IP.
+- The room chat clears every day at 00:00 South African time: the nightly sweep
+  deletes the messages, and only messages from today are shown, so yesterday's
+  conversation is gone even if the API was restarted at midnight.
 - Confirmed DJs appear on the lineup with their set times, read from the
   bookings at request time. Cancelled or finished events drop off, and an event
   never appears twice.
+- An approved event with a future date adds itself to the front-page lineup,
+  after the curated entries. Nobody edits the lineup by hand.
+- **What's new** (`/whats-new`) is built from `CHANGELOG.md`: the API parses the
+  file on every request and re-reads it when it changes, newest dated section
+  first, three releases shown. It is members only — a signed-out visitor is
+  sent to sign-in, a guest sees a members-only notice, and the menu entry is
+  hidden for both.
+- A new release date in the changelog mails every member once (every role
+  except guest, minus unsubscribes). The send is recorded per release in
+  `WhatsNewBroadcast`, so a restart or a redeploy cannot repeat it, and editing
+  an existing release sends nothing.
 - Guests RSVP from an event page; the door pass is issued to the signed-in guest.
 
 ## 11. Troubleshooting
@@ -316,7 +371,9 @@ honest answer is that an admin sets the role.
   **hello@essentialsedm.com**. Give the address and say what to include: the
   account email, the event or gig name, and what they expected to happen.
 - **Their data: an export, a deletion, a privacy question** →
-  **privacy@essentialsedm.com**, the address on the privacy page.
+  **privacy@essentialsedm.com**, the address on the privacy page. A signed-in
+  person can also download their own data from the **DOWNLOAD MY DATA** button
+  on `/privacy`.
 - Say plainly that the team reads that address and that you cannot promise how
   long a reply takes. Never give a deadline, a turnaround or an SLA.
 - If they are already angry, or it is a safety or legal matter, send them to
@@ -329,7 +386,7 @@ honest answer is that an admin sets the role.
 | "Can I get a refund?" | It is a human decision. Say what their screen shows (invoiced, unpaid, paid) and point them to hello@. Never say yes, no, or "probably". |
 | "The venue paid but the invoice still shows unpaid" | Only the payment provider clears an invoice. hello@ with the invoice number. |
 | "Cancel this event for me" / "Remove this DJ" | They can do it: **Cancel** keeps the guest list, door scans and bookings; **Delete** removes the night and its bookings. Say which one fits and let them choose. |
-| "Delete my account" / "Send me my data" | privacy@essentialsedm.com. No timeframe. |
+| "Delete my account" / "Send me my data" | privacy@essentialsedm.com. A signed-in person can download their own data on `/privacy`; deletion is handled by the team. No timeframe. |
 | "Make me a DJ" | An admin does it on Users, and the team decides. No promises. |
 | "How is travel charged?" | The platform travel rate, per kilometre, set by an admin on Settings; it is on the invoice. Do not quote a number from memory. |
 | "Why was my gig declined?" | The reason is optional and only the promoter knows it. They can ask the promoter. |

@@ -136,9 +136,17 @@ export class ArtistsService {
     });
     if (!profile) throw new NotFoundException("Artist not found");
 
-    const { bookings, ...artist } = profile;
+    const { bookings } = profile;
     return {
-      ...artist,
+      // Explicit allowlist: bank details are for invoices, not for promoters.
+      id: profile.id,
+      userId: profile.userId,
+      stageName: profile.stageName,
+      bio: profile.bio,
+      imageUrl: profile.imageUrl,
+      vehicleConsumptionLPer100km: profile.vehicleConsumptionLPer100km,
+      travelRatePerKm: profile.travelRatePerKm,
+      user: profile.user,
       note: await this.noteFor(user.sub, artistId),
       confirmedGigs: bookings.filter((b) => b.status === ArtistBookingStatus.confirmed).length,
       bookings: bookings.map((b) => ({
@@ -252,12 +260,32 @@ export class ArtistsService {
     return { travelRatePerKm: rate, artists: updated.count, mixed: false };
   }
 
-  async upsertProfile(user: JwtUser, data: { stageName: string; bio?: string; imageUrl?: string; vehicleConsumptionLPer100km?: number }, origin: string) {
+  async upsertProfile(
+    user: JwtUser,
+    data: {
+      stageName: string;
+      bio?: string;
+      imageUrl?: string;
+      vehicleConsumptionLPer100km?: number;
+      bankAccountHolder?: string;
+      bankName?: string;
+      bankAccountNumber?: string;
+      bankBranchCode?: string;
+      bankAccountType?: string;
+    },
+    origin: string,
+  ) {
     // An empty text field is a clear, not a missing one: store null so the UI hides it.
+    const clean = (value: string) => value.trim() || null;
     const patch = {
       ...data,
-      ...(data.bio !== undefined ? { bio: data.bio.trim() || null } : {}),
-      ...(data.imageUrl !== undefined ? { imageUrl: data.imageUrl.trim() || null } : {}),
+      ...(data.bio !== undefined ? { bio: clean(data.bio) } : {}),
+      ...(data.imageUrl !== undefined ? { imageUrl: clean(data.imageUrl) } : {}),
+      ...(data.bankAccountHolder !== undefined ? { bankAccountHolder: clean(data.bankAccountHolder) } : {}),
+      ...(data.bankName !== undefined ? { bankName: clean(data.bankName) } : {}),
+      ...(data.bankAccountNumber !== undefined ? { bankAccountNumber: clean(data.bankAccountNumber) } : {}),
+      ...(data.bankBranchCode !== undefined ? { bankBranchCode: clean(data.bankBranchCode) } : {}),
+      ...(data.bankAccountType !== undefined ? { bankAccountType: clean(data.bankAccountType) } : {}),
     };
     const existing = await prisma.artistProfile.findUnique({ where: { userId: user.sub } });
     if (existing) {

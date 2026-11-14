@@ -15,7 +15,7 @@ class RsvpDto {
 
 class CreateEventDto {
   @IsString() venueId!: string;
-  @IsString() title!: string;
+  @IsString() @MinLength(1) @MaxLength(50) title!: string;
   @IsOptional() @IsString() description?: string;
   @IsString() date!: string;
   @IsOptional() lineup?: unknown;
@@ -43,7 +43,7 @@ class DoorCheckInDto {
  * slots) instead of a free-form Prisma write.
  */
 class UpdateEventDto {
-  @IsOptional() @IsString() @MinLength(1) @MaxLength(140) title?: string;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(50) title?: string;
   @IsOptional() @IsString() @MaxLength(4000) description?: string;
   @IsOptional() @IsDateString() date?: string;
   @IsOptional() @IsArray() lineup?: unknown[];

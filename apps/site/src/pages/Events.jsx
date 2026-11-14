@@ -70,6 +70,16 @@ export default function Events() {
                     {event.venue?.name}
                     {event.venue?.address ? ` — ${event.venue.address}` : ""}
                   </span>
+                  {Array.isArray(event.artists) && event.artists.length > 0 && (
+                    <span className="noir-djs">
+                      {event.artists.map((dj, i) => (
+                        <span className="noir-dj" key={`${dj.name}-${i}`}>
+                          <span className="noir-dj-name">{dj.name}</span>
+                          {dj.time && <span className="noir-dj-time">{dj.time}</span>}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                   <span className="noir-frame-meta">
                     <span className="noir-micro">Going {event.going}</span>
                     <span className="noir-micro">{String(event.status ?? "").toUpperCase()}</span>

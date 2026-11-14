@@ -7,6 +7,8 @@ export interface SendEmailInput {
   to: string;
   subject: string;
   html: string;
+  /** Plain-text alternative. Generated from the HTML when omitted. */
+  text?: string;
   /** one-click unsubscribe URL (RFC 8058 ready) — required for bulk sends */
   unsubscribeUrl?: string;
 }

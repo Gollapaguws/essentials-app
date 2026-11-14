@@ -33,6 +33,7 @@ const db = prisma as unknown as {
 const deliver = jest.fn();
 const promoter: JwtUser = { sub: "promoter-1", email: "promoter@example.com", role: "promoter" };
 const artist: JwtUser = { sub: "artist-user-1", email: "dj@example.com", role: "artist" };
+const admin: JwtUser = { sub: "admin-1", email: "admin@example.com", role: "admin" };
 
 const service = () =>
   new DjBookingService(
@@ -117,6 +118,60 @@ describe("DjBookingService.withdraw", () => {
 
     await expect(service().withdraw(artist, "booking-1")).rejects.toThrow(/not your application/i);
     expect(db.artistBooking.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("DjBookingService.cancelAsAdmin", () => {
+  it("cancels a confirmed booking, tells both sides and reopens the slot", async () => {
+    db.artistBooking.findMany.mockResolvedValue([{ artist: { userId: "artist-user-2" } }]);
+
+    const result = await service().cancelAsAdmin(admin, "booking-1");
+
+    expect(db.artistBooking.update).toHaveBeenCalledWith({
+      where: { id: "booking-1" },
+      data: { status: "cancelled" },
+    });
+    expect(result).toEqual({ id: "booking-1", status: "cancelled" });
+    expect(deliver).toHaveBeenNthCalledWith(
+      1,
+      ["artist-user-1"],
+      expect.objectContaining({
+        title: expect.stringContaining("SLOT CANCELLED"),
+        body: expect.stringContaining("confirmed"),
+        channels: ["inapp", "email", "telegram"],
+      }),
+    );
+    expect(deliver).toHaveBeenNthCalledWith(
+      2,
+      ["promoter-1"],
+      expect.objectContaining({ title: expect.stringContaining("Admin cancelled a slot") }),
+    );
+    expect(deliver).toHaveBeenNthCalledWith(
+      3,
+      ["artist-user-2"],
+      expect.objectContaining({ title: expect.stringContaining("Slot open again") }),
+    );
+  });
+
+  it("refuses to cancel a completed gig", async () => {
+    db.artistBooking.findUnique.mockResolvedValue(booking({ status: "completed" }));
+
+    await expect(service().cancelAsAdmin(admin, "booking-1")).rejects.toThrow(/already payable/i);
+    expect(db.artistBooking.update).not.toHaveBeenCalled();
+  });
+
+  it("is admin-only", async () => {
+    await expect(service().cancelAsAdmin(promoter, "booking-1")).rejects.toThrow(/only an admin/i);
+    expect(db.artistBooking.update).not.toHaveBeenCalled();
+  });
+
+  it("does not notify twice when the booking is already cancelled", async () => {
+    db.artistBooking.findUnique.mockResolvedValue(booking({ status: "cancelled" }));
+
+    await service().cancelAsAdmin(admin, "booking-1");
+
+    expect(db.artistBooking.update).not.toHaveBeenCalled();
+    expect(deliver).not.toHaveBeenCalled();
   });
 });
 

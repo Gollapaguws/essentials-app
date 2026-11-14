@@ -2,12 +2,14 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { randomBytes } from "crypto";
 import { prisma, type Role } from "@essentials/db";
 import { AuthUserService } from "../auth/auth-user.service";
 import { SupabaseAdminService } from "../auth/supabase-admin.service";
+import { DashboardSessionService } from "../auth/dashboard-session.service";
 import { ArtistsService } from "../artists/artists.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { TelegramService } from "../telegram/telegram.service";
@@ -29,6 +31,7 @@ const USER_SELECT = {
   avatar: true,
   role: true,
   authUid: true,
+  mfaDisabled: true,
   verifiedBadge: true,
   telegramChatId: true,
   createdAt: true,
@@ -47,6 +50,7 @@ interface UserRow {
   avatar: string | null;
   role: Role;
   authUid: string | null;
+  mfaDisabled: boolean;
   verifiedBadge: boolean;
   telegramChatId: string | null;
   createdAt: Date;
@@ -66,14 +70,23 @@ function shape(row: UserRow) {
   };
 }
 
+/** Who performed an admin action; recorded on the account's security trail. */
+export interface AdminActor {
+  id?: string | null;
+  email: string;
+}
+
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly authUsers: AuthUserService,
     private readonly artists: ArtistsService,
     private readonly notifications: NotificationsService,
     private readonly telegram: TelegramService,
     private readonly admin: SupabaseAdminService,
+    private readonly sessions: DashboardSessionService,
   ) {}
 
   /**
@@ -140,6 +153,143 @@ export class UsersService {
       // Shown once, in the admin UI, so the admin can pass it on.
       temporaryPassword,
     };
+  }
+
+  /**
+   * Unlock an account that lost its authenticator or password: clear every
+   * second factor, set a temporary password, and sign the account out everywhere.
+   * The owner picks their own password and enrolls a new authenticator next time.
+   */
+  async resetSignIn(id: string, actor?: AdminActor) {
+    const existing = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, authUid: true },
+    });
+    if (!existing) throw new NotFoundException("User not found");
+    if (!existing.authUid) {
+      throw new BadRequestException(
+        `${existing.email} has never signed in, so it has no credentials to reset.`,
+      );
+    }
+
+    const temporaryPassword = randomBytes(9).toString("base64url");
+    const factors = await this.admin.listFactors(existing.authUid);
+
+    // Password first: if a factor cannot be removed, the admin can retry and the
+    // account is still no worse off than before. A partial reset never strands
+    // someone with a lost authenticator and no way back in.
+    await this.admin.setPassword(existing.authUid, temporaryPassword);
+    for (const factor of factors) await this.admin.deleteFactor(existing.authUid, factor.id);
+
+    // Recovery codes are second-factor credentials too: leaving them behind would
+    // let a code issued before the reset still satisfy MFA afterwards.
+    const recoveryCodesRemoved = await prisma.mfaRecoveryCode.count({ where: { userId: id } });
+    await prisma.$transaction([
+      prisma.user.update({ where: { id }, data: { mustResetPassword: true } }),
+      prisma.mfaRecoveryCode.deleteMany({ where: { userId: id } }),
+    ]);
+    const sessionsRevoked = await this.sessions.revokeAllForUser(id);
+    this.authUsers.invalidate(existing.authUid);
+
+    await prisma.authEvent
+      .create({
+        data: {
+          kind: "mfa_reset",
+          userId: existing.id,
+          email: existing.email,
+          meta: {
+            reason: "admin sign-in reset",
+            factors: factors.map((f) => f.factor_type ?? "unknown"),
+            recoveryCodesRemoved,
+            sessionsRevoked,
+            temporaryPassword: true,
+            actor: actor?.email ?? "unknown admin",
+            actorId: actor?.id ?? null,
+          },
+        },
+      })
+      .catch((err: unknown) =>
+        this.logger.warn(`mfa_reset audit event was not stored: ${(err as Error).message}`),
+      );
+
+    return {
+      user: shape(await prisma.user.findUniqueOrThrow({ where: { id }, select: USER_SELECT })),
+      // Shown once, in the admin UI, so it can be passed on out of band.
+      temporaryPassword,
+      factorsRemoved: factors.length,
+      sessionsRevoked,
+    };
+  }
+
+  /**
+   * Grant or withdraw a per-account exemption from mandatory two-step.
+   * Turning it off also deletes enrolled factors and recovery codes, so no stale
+   * credential can still challenge the account.
+   */
+  async setMfaDisabled(id: string, disabled: boolean, actor?: AdminActor) {
+    const existing = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, role: true, authUid: true, mfaDisabled: true },
+    });
+    if (!existing) throw new NotFoundException("User not found");
+
+    // Admin access is the highest privilege on the platform, so its second factor
+    // is never optional — not even for the admin performing the exemption.
+    if (disabled && existing.role === "admin") {
+      throw new BadRequestException(
+        "Admins must keep two-step verification. Use RESET SIGN-IN instead.",
+      );
+    }
+
+    if (existing.mfaDisabled === disabled) {
+      return shape(await prisma.user.findUniqueOrThrow({ where: { id }, select: USER_SELECT }));
+    }
+
+    // Write the exemption first: if deleting upstream factors fails afterwards,
+    // the account is already usable at aal1 instead of losing its only factor and
+    // staying locked out — the failure mode this feature exists to fix.
+    await prisma.$transaction([
+      prisma.user.update({ where: { id }, data: { mfaDisabled: disabled } }),
+      ...(disabled ? [prisma.mfaRecoveryCode.deleteMany({ where: { userId: id } })] : []),
+    ]);
+    this.authUsers.invalidate(existing.authUid);
+
+    let factorsRemoved = 0;
+    let factorRemovalFailed = false;
+    if (disabled && existing.authUid) {
+      try {
+        const factors = await this.admin.listFactors(existing.authUid);
+        for (const factor of factors) {
+          await this.admin.deleteFactor(existing.authUid, factor.id);
+          factorsRemoved++;
+        }
+      } catch (err) {
+        factorRemovalFailed = true;
+        this.logger.warn(
+          `exemption set for ${existing.email}, but a factor could not be removed: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    await prisma.authEvent
+      .create({
+        data: {
+          kind: disabled ? "mfa_disabled" : "mfa_reenabled",
+          userId: id,
+          email: existing.email,
+          meta: {
+            factorsRemoved,
+            factorRemovalFailed,
+            actor: actor?.email ?? "unknown admin",
+            actorId: actor?.id ?? null,
+          },
+        },
+      })
+      .catch((err: unknown) =>
+        this.logger.warn(`MFA exemption audit event was not stored: ${(err as Error).message}`),
+      );
+
+    return shape(await prisma.user.findUniqueOrThrow({ where: { id }, select: USER_SELECT }));
   }
 
   /** Every registered account, newest first, optionally filtered by email/name. */

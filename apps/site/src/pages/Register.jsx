@@ -127,7 +127,11 @@ export default function Register() {
             </button>
           </form>
 
-          <p className="noir-auth-note">We use this email only for your door pass and account notices.</p>
+          <p className="noir-auth-note">
+            By creating an account you agree to our <Link to="/privacy">Privacy Notice</Link>. We use
+            your email for your door pass and account notices. Event and release emails are separate
+            and opt-in only.
+          </p>
         </div>
       )}
     </AuthLayout>

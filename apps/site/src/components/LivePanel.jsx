@@ -8,13 +8,14 @@ import { liveStatus, setLiveSource, stopLiveSource, startScreenIngest, viewerUrl
  * - restream: any RTSP/HTTP/HLS source set by an admin is played here (hls.js)
  * - GO LIVE: admin captures screen+audio → server FFmpeg → rtsp://essentialsedm.com:8554/essentials
  */
-export default function LivePanel() {
+export default function LivePanel({ idleLoop = "" }) {
   const [status, setStatus] = useState({ live: false, sourceUp: false, studioLive: false, hls: null, rtspUrl: "" });
   const [me, setMe] = useState(null);
   const [casting, setCasting] = useState(false);
   const [unmuted, setUnmuted] = useState(false);
   const [error, setError] = useState(null);
   const [srcUrl, setSrcUrl] = useState("");
+  const [idleMissing, setIdleMissing] = useState(false);
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
   const ingestRef = useRef(null);
@@ -29,19 +30,48 @@ export default function LivePanel() {
 
   const studioLive = !!status.studioLive;
   const hlsUrl = studioLive ? "https://essentialsedm.com/hls/live.m3u8" : status.hls;
+  const showIdleLoop = !!idleLoop && !idleMissing;
+
+  // A newly uploaded reel must get a fresh chance to load.
+  useEffect(() => setIdleMissing(false), [idleLoop]);
 
   // player: attach hls.js when a restream is active
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !hlsUrl) return;
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = hlsUrl;
-    } else if (Hls.isSupported()) {
-      const hls = new Hls({ lowLatencyMode: true, liveDurationInfinity: true });
+    // Prefer hls.js wherever MSE exists. Some Chromium builds answer "maybe"
+    // to canPlayType() but their native demuxer cannot parse MediaMTX's fMP4
+    // playlist (it 404s on the EXT-X-GAP filler), which left a black screen.
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        // Normal mode buffers whole segments instead of chasing 200ms parts:
+        // a few seconds behind live, but a short encoder or network hiccup is
+        // absorbed by the buffer instead of freezing the feed.
+        lowLatencyMode: false,
+        liveDurationInfinity: true,
+        // MediaMTX keeps a ~7 segment window, so staying 3 segments behind
+        // leaves headroom on both sides instead of hugging the evicted edge.
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 6,
+        maxBufferLength: 40,
+        backBufferLength: 30,
+        // 1x: never chase the live edge by speeding playback up, which is what
+        // makes the picture visibly stutter and jump.
+        maxLiveSyncPlaybackRate: 1,
+      });
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (!data.fatal) return;
+        // A live playlist can hiccup as the publisher starts; retry rather than
+        // freezing on the first network or media error.
+        if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+        else hls.startLoad();
+      });
       hls.loadSource(hlsUrl);
       hls.attachMedia(video);
       hlsRef.current = hls;
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = hlsUrl;
     }
     video.play().catch(() => {});
     return () => { if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; } };
@@ -94,6 +124,15 @@ export default function LivePanel() {
         <div className="noir-stream-screen">
           {showPlayer ? (
             <video ref={videoRef} muted playsInline />
+          ) : showIdleLoop ? (
+            <video
+              src={idleLoop}
+              autoPlay
+              loop
+              muted
+              playsInline
+              onError={() => setIdleMissing(true)}
+            />
           ) : (
             <div className="noir-stream-empty">
               <span className="noir-micro">{casting ? "LINKING" : "STANDING BY"}</span>
@@ -120,7 +159,7 @@ export default function LivePanel() {
 
         <figcaption className="noir-stream-foot">
           <span className="noir-micro">ESSENTIALS — ROOM FEED</span>
-          <span className="noir-micro">{showPlayer ? "MUTED BY DEFAULT" : "NO SIGNAL"}</span>
+          <span className="noir-micro">{showPlayer ? "MUTED BY DEFAULT" : showIdleLoop ? "REEL" : "NO SIGNAL"}</span>
         </figcaption>
       </figure>
 
