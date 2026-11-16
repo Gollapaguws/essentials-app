@@ -21,15 +21,21 @@
     },
     "android": {
       "package": "com.essentials.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0A0A0A"
       },
-      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
-    "plugins": ["expo-router"],
-    "experiments": { "typedRoutes": true },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
       "eas": {
         "projectId": "f6163aa1-d793-4be0-bc36-ea8f29a65ad9"

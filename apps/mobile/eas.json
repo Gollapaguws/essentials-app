@@ -17,6 +17,7 @@
     "production": {
       "autoIncrement": true,
       "credentialsSource": "remote",
+      "env": { "EXPO_PUBLIC_API_URL": "https://essentialsedm.com/api" },
       "android": { "buildType": "app-bundle" }
     }
   },

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -47,6 +47,9 @@ export default function DoorCheckIn() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  // Switching nights must never let a slower response from the previous list
+  // overwrite the one the door host is now looking at.
+  const guestRequest = useRef(0);
 
   const loadEvents = useCallback(async () => {
     try {
@@ -68,13 +71,19 @@ export default function DoorCheckIn() {
 
   const loadGuests = useCallback(async () => {
     if (!eventId) {
+      guestRequest.current += 1;
       setGuests([]);
       return;
     }
+    const request = (guestRequest.current += 1);
     try {
-      setGuests(await api.get<Guest[]>(`/events/${eventId}/guest-list`));
+      const rows = await api.get<Guest[]>(`/events/${eventId}/guest-list`);
+      if (request !== guestRequest.current) return;
+      setGuests(rows);
       setError(null);
     } catch (err) {
+      if (request !== guestRequest.current) return;
+      setGuests([]);
       setError(
         err instanceof ApiError && err.status === 403
           ? "This account cannot open the guest list for that night."
@@ -88,6 +97,7 @@ export default function DoorCheckIn() {
   }, [loadEvents]);
 
   useEffect(() => {
+    setGuests([]);
     loadGuests();
   }, [loadGuests]);
 

@@ -57,8 +57,15 @@ export default function Mfa() {
       setSecret(enrolled.totp.secret);
       setUri(enrolled.totp.uri);
 
-      const { data: challenge } = await supabase.auth.mfa.challenge({ factorId: enrolled.id });
-      setChallengeId(challenge?.id ?? null);
+      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId: enrolled.id,
+      });
+      if (challengeError || !challenge) {
+        setError("Couldn't start two-step verification. Try again.");
+        setBusy(false);
+        return;
+      }
+      setChallengeId(challenge.id);
       setBusy(false);
     })();
   }, []);
@@ -83,7 +90,7 @@ export default function Mfa() {
     try {
       const me = await api.get<MeResponse>("/auth/me");
       if (!me.mfaRequired) {
-        router.replace("/(tabs)/events");
+        router.replace(me.user.role === "door" ? "/(tabs)/door" : "/(tabs)/events");
         return;
       }
     } catch {

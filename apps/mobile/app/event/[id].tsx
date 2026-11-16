@@ -12,17 +12,12 @@ function mapsUrl(name: string, lat: number, lng: number) {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
 
-interface Match {
-  userId: string;
-  name: string | null;
-  sharedTastes: string[];
-  score: number;
-}
-
 /** `GET /events/:id`: the feed summary plus the guest's own RSVP and full venue. */
 interface EventDetailResponse extends EventSummary {
   status?: string;
   myRsvp?: { status: string };
+  /** False for staff and DJs, who can read the event but cannot RSVP. */
+  canRsvp?: boolean;
   venue: EventSummary["venue"] & { address?: string | null };
 }
 
@@ -31,21 +26,23 @@ export default function EventDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [event, setEvent] = useState<EventDetailResponse | null>(null);
   const [rsvpState, setRsvpState] = useState<string | null>(null);
-  const [matches, setMatches] = useState<Match[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
     try {
       const detail = await api.get<EventDetailResponse>(`/events/${id}`);
       setEvent(detail);
-      if (detail.myRsvp) setRsvpState(detail.myRsvp.status);
+      // Clear the previous event's RSVP when this one has none, or the door-pass
+      // button follows you from the last event you opened.
+      setRsvpState(detail.myRsvp?.status ?? null);
     } catch { setError("Couldn't load this event."); }
   };
-  useEffect(() => { load(); }, [id]);
-
   useEffect(() => {
-    api.get<Match[]>(`/social/events/${id}/matches`).then(setMatches).catch(() => {});
-  }, [id, rsvpState]);
+    setEvent(null);
+    setRsvpState(null);
+    setError(null);
+    load();
+  }, [id]);
 
   const rsvp = async () => {
     try {
@@ -70,6 +67,8 @@ export default function EventDetail() {
   };
 
   if (!event || !venue) return <View style={s.wrap}><Text style={{ color: colors.muted }}>{error ?? "Loading…"}</Text></View>;
+
+  const canRsvp = event.canRsvp !== false;
 
   return (
     <ScrollView style={s.wrap} contentContainerStyle={{ paddingBottom: 120 }}>
@@ -99,31 +98,20 @@ export default function EventDetail() {
       ))}
       {event.dressCode && <><Text style={[s.section, { color: colors.muted }]}>DRESS CODE</Text><Text style={{ color: colors.text }}>{event.dressCode}</Text></>}
 
-      <View style={{ marginTop: 24 }}>
-        {!rsvpState ? (
-          <Pressable style={[s.button]} onPress={rsvp}>
-            <Text style={s.buttonText}>RSVP</Text>
-          </Pressable>
-        ) : (
-          <Pressable style={[s.button, rsvpState === "waitlisted" && { backgroundColor: colors.border }]} onPress={() => router.push(`/event/${id}/pass`)} disabled={rsvpState === "waitlisted"}>
-            <Text style={s.buttonText}>{rsvpState === "waitlisted" ? "WAITLISTED" : "DOOR PASS"}</Text>
-          </Pressable>
-        )}
-      </View>
-      {error && <Text style={{ color: colors.danger, marginTop: 12 }}>{error}</Text>}
-
-      <Text style={[s.section, { color: colors.muted }]}>PEOPLE LIKE YOU ARE GOING</Text>
-      {(matches.length ? matches : []).map((m) => (
-        <View key={m.userId} style={s.matchRow}>
-          <Text style={{ color: colors.text, fontWeight: "700", flex: 1 }}>{m.name ?? "Guest"}</Text>
-          <Text style={{ color: colors.neon, fontSize: 12 }}>{m.sharedTastes.join(" \u00b7 ")}</Text>
+      {canRsvp && (
+        <View style={{ marginTop: 24 }}>
+          {!rsvpState ? (
+            <Pressable style={[s.button]} onPress={rsvp}>
+              <Text style={s.buttonText}>RSVP</Text>
+            </Pressable>
+          ) : (
+            <Pressable style={[s.button, rsvpState === "waitlisted" && { backgroundColor: colors.border }]} onPress={() => router.push(`/event/${id}/pass`)} disabled={rsvpState === "waitlisted"}>
+              <Text style={s.buttonText}>{rsvpState === "waitlisted" ? "WAITLISTED" : "DOOR PASS"}</Text>
+            </Pressable>
+          )}
         </View>
-      ))}
-      {!matches.length && <Text style={{ color: colors.muted }}>RSVP to see who else is going.</Text>}
-
-      <Pressable style={[s.button, { backgroundColor: colors.border, marginTop: 16 }]} onPress={() => router.push(`/event/${id}/chat`)}>
-        <Text style={[s.buttonText, { color: colors.neon }]}>EVENT CHAT</Text>
-      </Pressable>
+      )}
+      {error && <Text style={{ color: colors.danger, marginTop: 12 }}>{error}</Text>}
     </ScrollView>
   );
 }
@@ -136,7 +124,6 @@ const s = StyleSheet.create({
   mapButton: { marginTop: 12, borderWidth: 1, borderColor: colors.neon, borderRadius: 10, paddingVertical: 10, alignItems: "center" },
   mapButtonText: { color: colors.neon, fontWeight: "900", letterSpacing: 2, fontSize: 12 },
   lineupRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
-  matchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
   button: { backgroundColor: colors.neon, borderRadius: 10, padding: 16, alignItems: "center" },
   buttonText: { color: colors.bg, fontWeight: "900", letterSpacing: 2 },
 });

@@ -76,7 +76,7 @@ export default function Welcome() {
       />
       <FieldHint
         label="Which email?"
-        hint="The address on your ESSENTIALS account. A new email creates a guest account on its own; admin, promoter and venue roles are assigned by an admin afterwards."
+        hint="The address on your ESSENTIALS account. New guests create an account on the ESSENTIALS website first; admin, promoter and venue roles are assigned by an admin afterwards."
       />
       <TextInput
         style={s.input}
