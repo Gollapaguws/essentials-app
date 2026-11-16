@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { Tabs } from "expo-router";
-import { Briefcase, Calendar, Disc3, Ticket, User, Users } from "lucide-react-native";
+import { Briefcase, Calendar, Disc3, ScanLine, Ticket, User, Users } from "lucide-react-native";
 import { api } from "@essentials/api-client";
 import { colors } from "../../theme";
 
 /** Roles that own events; the API gates /events/manage/list the same way. */
 const STAFF_ROLES = ["promoter", "admin"];
+/** Roles that can work the door; the API gates guest-list/check-in the same way. */
+const DOOR_ROLES = ["promoter", "venue_manager", "door", "admin"];
 /** Roles that have a DJ profile; the gig endpoints gate the same way. */
 const DJ_ROLES = ["artist", "admin"];
 
@@ -23,6 +25,7 @@ export default function TabsLayout() {
 
   const staff = role !== null && STAFF_ROLES.includes(role);
   const dj = role !== null && DJ_ROLES.includes(role);
+  const door = role !== null && DOOR_ROLES.includes(role);
 
   return (
     <Tabs
@@ -51,6 +54,15 @@ export default function TabsLayout() {
         options={
           staff
             ? { title: "STAFF", tabBarIcon: ({ color }) => <Briefcase color={color} size={22} /> }
+            : { href: null }
+        }
+      />
+      {/* Check-in is a door surface: door staff, promoters, venue managers and admins. */}
+      <Tabs.Screen
+        name="door"
+        options={
+          door
+            ? { title: "CHECK-IN", tabBarIcon: ({ color }) => <ScanLine color={color} size={22} /> }
             : { href: null }
         }
       />

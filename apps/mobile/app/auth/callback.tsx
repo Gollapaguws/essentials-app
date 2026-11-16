@@ -34,7 +34,7 @@ export default function AuthCallback() {
       try {
         const me = await api.get<MeResponse>("/auth/me");
         if (me.mfaRequired) router.replace("/auth/mfa");
-        else router.replace("/(tabs)/events");
+        else router.replace(me.user.role === "door" ? "/(tabs)/door" : "/(tabs)/events");
       } catch {
         setError("Signed in, but your account could not be loaded.");
       }

@@ -34,7 +34,10 @@ export default function Welcome() {
     try {
       // MFA and role routing stay behind /auth/me, same as the deep-link route.
       const me = await api.get<MeResponse>("/auth/me");
-      router.replace(me.mfaRequired ? "/auth/mfa" : "/(tabs)/events");
+      // Door staff land on the check-in tab; everyone else starts at events.
+      router.replace(
+        me.mfaRequired ? "/auth/mfa" : me.user.role === "door" ? "/(tabs)/door" : "/(tabs)/events",
+      );
     } catch {
       setError("Signed in, but your account could not be loaded.");
     } finally {
@@ -87,7 +90,7 @@ export default function Welcome() {
       />
       <FieldHint
         label="Your password"
-        hint="At least 8 characters, chosen when the account was created. Staff accounts add their 6-digit authenticator code after signing in."
+        hint="At least 12 characters, chosen when the account was created. Staff accounts add their 6-digit authenticator code after signing in."
       />
       <Pressable
         style={s.button}
