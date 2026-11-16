@@ -21,6 +21,7 @@ export const ASSIGNABLE_ROLES: readonly Role[] = [
   "artist",
   "promoter",
   "venue_manager",
+  "door",
   "admin",
 ];
 
