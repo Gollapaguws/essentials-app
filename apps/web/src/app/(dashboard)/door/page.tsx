@@ -35,6 +35,9 @@ export default function Door() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [eventId, setEventId] = useState("");
   const [guests, setGuests] = useState<Guest[]>([]);
+  // Unfiltered list for the headline numbers: searching must not change the
+  // counts or what "recent entries" means.
+  const [allGuests, setAllGuests] = useState<Guest[]>([]);
   const [query, setQuery] = useState("");
   // Arriving from the palette: ?event= picks the night and ?q= pre-fills the search.
   const [requestedEvent, setRequestedEvent] = useState<string | null>(null);
@@ -77,6 +80,19 @@ export default function Door() {
     void load();
   }, [load]);
 
+  const loadAll = useCallback(async () => {
+    if (!eventId) return;
+    try {
+      setAllGuests(await api.get<Guest[]>(`/events/${eventId}/guest-list`));
+    } catch {
+      // The visible list already surfaces the error; this only feeds the summary.
+    }
+  }, [eventId]);
+
+  useEffect(() => {
+    void loadAll();
+  }, [loadAll]);
+
   const checkIn = async (guest: Guest) => {
     setBusyId(guest.id);
     setError(null);
@@ -91,6 +107,7 @@ export default function Door() {
           : `${res.guest ?? "Guest"} checked in.`,
       );
       await load();
+      await loadAll();
     } catch (e) {
       setError(errorMessage(e) ?? "Could not check that guest in.");
     } finally {
@@ -99,8 +116,18 @@ export default function Door() {
   };
 
   const selected = events.find((e) => e.id === eventId) ?? null;
-  const inside = guests.filter((g) => g.status === "checked_in");
-  const onList = guests.filter((g) => g.status !== "waitlisted");
+  const onList = allGuests.filter((g) => g.status !== "waitlisted");
+  const inside = allGuests.filter((g) => g.status === "checked_in");
+  // Party size is what the room sees, not the number of list entries.
+  const insidePeople = inside.reduce((n, g) => n + (g.headcount || 1), 0);
+  const today = new Date().toDateString();
+  const todayEntries = inside.filter(
+    (g) => g.checkedInAt && new Date(g.checkedInAt).toDateString() === today,
+  ).length;
+  const recent = [...inside]
+    .filter((g) => g.checkedInAt)
+    .sort((a, b) => +new Date(b.checkedInAt!) - +new Date(a.checkedInAt!))
+    .slice(0, 5);
 
   return (
     <>
@@ -137,10 +164,33 @@ export default function Door() {
         </label>
 
         {selected && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Stat label="On list" value={onList.length} />
-            <Stat label="Inside" value={inside.length} />
+            <Stat label="Inside" value={insidePeople} />
+            <Stat label="Today" value={todayEntries} />
             <Stat label="Capacity" value={selected.capacity} />
+          </div>
+        )}
+
+        {recent.length > 0 && (
+          <div className="border border-line rounded-xl px-4 py-3">
+            <p className="text-[11px] font-bold tracking-widest text-neutral-400">RECENT ENTRIES</p>
+            <ul className="mt-2 space-y-1 text-sm">
+              {recent.map((g) => (
+                <li key={g.id} className="flex items-baseline justify-between gap-3">
+                  <span className="truncate">
+                    {g.name ?? g.email}
+                    <span className="text-neutral-500 font-normal"> · {g.headcount}</span>
+                  </span>
+                  <span className="text-neutral-500 text-xs whitespace-nowrap">
+                    {new Date(g.checkedInAt!).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

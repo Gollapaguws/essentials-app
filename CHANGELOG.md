@@ -15,6 +15,9 @@ Notable changes to ESSENTIALS. Dates are UTC.
   account. They cannot create events, change fees, or open promoter pages.
 - The Night selector shows every approved, live or completed event rather than
   one promoter's catalogue, so a door team can work any night they are on.
+- **Door shows the night at a glance:** On list, Inside (party sizes added up),
+  Today's check-ins and Capacity, plus a Recent entries list of the last five
+  guests in. The counters cover the whole night, not the current search.
 - The Help section gains a door staff manual, and the support manual in
   `docs/chatbot-manual.md` documents the role.
 

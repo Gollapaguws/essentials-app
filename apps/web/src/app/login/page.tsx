@@ -24,7 +24,7 @@ export default function LoginPage() {
       return;
     }
     if (!DASHBOARD_ROLES.includes(me.user.role ?? "guest")) {
-      setError("Dashboard is for DJs, promoters, venue managers and admins.");
+      setError("Dashboard is for DJs, promoters, venue managers, door staff and admins.");
       return;
     }
     router.replace(me.mfaRequired ? "/auth/mfa" : landingPath(me.user.role));

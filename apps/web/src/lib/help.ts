@@ -3,12 +3,12 @@ import type { AuthRole } from "@essentials/auth";
 /**
  * The Help section, written per role.
  *
- * Only the four roles that actually have a dashboard get a manual — a guest has
- * no screens to document, so pointing them at an admin is the whole answer.
+ * Only the roles that actually have a dashboard get a manual — a guest has no
+ * screens to document, so pointing them at an admin is the whole answer.
  * Everything here is meant to stay true to the app; the same facts live in
  * `docs/chatbot-manual.md`, which is what the support agent answers from.
  */
-export type HelpRole = Extract<AuthRole, "artist" | "promoter" | "venue_manager" | "admin">;
+export type HelpRole = Extract<AuthRole, "artist" | "promoter" | "venue_manager" | "door" | "admin">;
 
 export interface HelpTopic {
   title: string;
@@ -221,6 +221,47 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
     ],
   },
 
+  door: {
+    role: "door",
+    title: "Door staff manual",
+    summary:
+      "Working the guest list on the night: picking the event, searching by name or email, and checking people in without a scanner.",
+    screens: "Door · Notifications · Account",
+    topics: [
+      {
+        title: "Working the door",
+        intro:
+          "Door is built for a phone at the entrance: one night, one search box, one action per guest.",
+        points: [
+          "The Night selector lists approved, live and completed events; the most recent is chosen for you. A pending event is not a door night yet.",
+          "Search by name or email — part of either is enough. Each row shows the guest, their party size and their status.",
+          "Tap CHECK IN once they are inside. A guest already checked in shows INSIDE instead of being counted twice, and every check-in is written to the door log against your account.",
+          "The counters are for the whole night, not the current search: On list is entries on the list, Inside is people (party sizes added up), Today is check-ins made today, and Capacity is the room's limit.",
+          "RECENT ENTRIES shows the last five guests in, with the time each was checked in.",
+          "The list covers the RSVPs and any guests the promoter added. A waitlisted guest is not checked in.",
+          "QR scanning at the door still works and logs to the same place.",
+          "Door staff sign in with email and password; two-step verification is not required for this role.",
+        ],
+      },
+      {
+        title: "When a guest is not on the list",
+        points: [
+          "Search by email instead — the name on the list may be spelled differently.",
+          "If they are still missing, the promoter adds them to the guest list; door staff cannot create entries.",
+          "A check-in cannot be undone from Door. Ask the promoter or an admin to correct a guest marked in by mistake.",
+        ],
+      },
+      {
+        title: "When something looks wrong",
+        points: [
+          "No events in the selector? Only approved, live and completed nights appear.",
+          "Forbidden right after a role change? Roles apply at the next sign-in; sign out and back in.",
+          "Still stuck? Email " + CONTACT + " with the event name, the guest and what you expected.",
+        ],
+      },
+    ],
+  },
+
   venue_manager: {
     role: "venue_manager",
     title: "Venue manager manual",
@@ -361,15 +402,22 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
 };
 
 /** Reading order in the Help index. */
-export const HELP_ORDER: HelpRole[] = ["artist", "promoter", "venue_manager", "admin"];
+export const HELP_ORDER: HelpRole[] = ["artist", "promoter", "venue_manager", "door", "admin"];
 
 export const HELP_LABELS: Record<HelpRole, string> = {
   artist: "DJ",
   promoter: "Promoter",
   venue_manager: "Venue manager",
+  door: "Door staff",
   admin: "Admin",
 };
 
 export function isHelpRole(role: string | null | undefined): role is HelpRole {
-  return role === "artist" || role === "promoter" || role === "venue_manager" || role === "admin";
+  return (
+    role === "artist" ||
+    role === "promoter" ||
+    role === "venue_manager" ||
+    role === "door" ||
+    role === "admin"
+  );
 }

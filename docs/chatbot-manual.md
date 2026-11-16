@@ -18,7 +18,7 @@ Keep it in step with the app: if a screen or rule changes, change it here too.
 - Do not open with the account summary or read the counts out unprompted. Use
   them when they answer a question the person actually asked; a DJ with no gigs
   does not want to be greeted with that number.
-- Check section 13 (known issues) before blaming the person's browser or device.
+- Check the known issues section before blaming the person's browser or device.
 - The dashboard has a **Help** section with a manual written for each role. If
   someone asks whether there is a guide, or wants to read rather than chat, send
   them there: Help sits in the navigation on every dashboard screen.
@@ -97,14 +97,15 @@ night. The website is essentialsedm.com; the dashboard is where the work happens
 | `artist` (DJ) | Artist Portal, My Profile, Live Calendar, Go Live, Gig Calendar, Earnings, Notifications, Account |
 | `promoter` | Analytics, Events, Email Engine, Venue Portal, Artists, Promotions, Insights, DJ Applications, Door, Settlements, Social Hub, Notifications, Account |
 | `venue_manager` | Venue Portal, Door, Notifications, Account |
+| `door` (door staff) | Door, Notifications, Account |
 | `admin` | Everything, plus Users, Audit, Settings, Mailboxes, Streaming, Front Page, Notifications test |
 | `guest` | Public site only; no dashboard. |
 
 Anyone else who reaches the dashboard is told it is for DJs, promoters, venue
-managers and admins. A guest at the dashboard needs an admin to change their
-role on the Users page.
+managers, door staff and admins. A guest at the dashboard needs an admin to
+change their role on the Users page.
 
-Each of these four roles has its own manual under **Help** in the dashboard. A
+Each of these five roles has its own manual under **Help** in the dashboard. A
 guest has no manual because there is nothing behind a dashboard for them — the
 honest answer is that an admin sets the role.
 
@@ -280,7 +281,26 @@ honest answer is that an admin sets the role.
 - **Clone** a past night to copy its venue, slot plan, fee and budget; **Repeat
   weekly** makes up to 12 dated drafts.
 
-## 8. For venue managers
+## 8. For door staff
+
+Door staff work the guest list at the entrance. The role reaches only **Door**
+(plus Notifications and Account): it cannot create or edit events, and it cannot
+open the promoter pages.
+
+- **Door** lists approved, live and completed events in the Night selector. Pick
+  the night, then search by name or email; part of either is enough.
+- **CHECK IN** marks a guest inside and writes the door log against that
+  account. A guest already inside shows `INSIDE`, so nobody is counted twice.
+- The summary counters cover the whole night, not the current search: On list,
+  Inside (people, with party sizes added up), Today (check-ins made today) and
+  Capacity. **Recent entries** lists the last five guests in with their times.
+- The list is the RSVPs plus guests the promoter added. Waitlisted guests are
+  not checked in, and a check-in cannot be undone from Door — ask the promoter
+  or an admin.
+- Door staff see every night with a door open, not one promoter's catalogue.
+- Door staff are not subject to two-step verification.
+
+## 9. For venue managers
 
 - **Venue Portal** lists your rooms. Editing a venue changes its address,
   coordinates, capacity and amenities.
@@ -289,7 +309,7 @@ honest answer is that an admin sets the role.
 - **Door logs** and **venue analytics** are per room.
 - Venue managers are subject to two-step verification.
 
-## 9. For admins
+## 10. For admins
 
 - **Users**: every account with role and email. New accounts can be created with
   a temporary password and a role; the password is shown once and the account
@@ -308,7 +328,7 @@ honest answer is that an admin sets the role.
   Telegram) to a chosen DJ and reports what each channel reached.
 - Admins are subject to two-step verification.
 
-## 10. Public site
+## 11. Public site
 
 - The home page shows upcoming events, the live room, the room chat and the
   lineup. Reading the chat is public; posting is throttled per IP.
@@ -331,7 +351,7 @@ honest answer is that an admin sets the role.
   an existing release sends nothing.
 - Guests RSVP from an event page; the door pass is issued to the signed-in guest.
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 | Symptom | What is actually happening | What to tell them |
 | --- | --- | --- |
@@ -354,7 +374,7 @@ honest answer is that an admin sets the role.
 | "The card was declined" | A failed payment does not cancel the invoice. | Retry the payment link on the invoice; if it keeps failing, hello@ with the invoice number. |
 | "I cancelled the event — do I still owe the DJ?" | A cancelled event keeps its bookings and door scans, so the fee already confirmed still stands. | Settle it with the DJ directly. A dispute is a human decision — hello@. |
 
-## 12. Limits and escalation
+## 13. Limits and escalation
 
 - You cannot see events, invoices, guests or messages. You only know the role,
   the counts and the states in the signed-in context.
@@ -391,7 +411,7 @@ honest answer is that an admin sets the role.
 | "How is travel charged?" | The platform travel rate, per kilometre, set by an admin on Settings; it is on the invoice. Do not quote a number from memory. |
 | "Why was my gig declined?" | The reason is optional and only the promoter knows it. They can ask the promoter. |
 
-## 13. Known issues
+## 14. Known issues
 
 Check this before blaming the person's browser. If the symptom is here, say
 what is happening in one sentence and that it is being worked on; offer no fix
@@ -410,7 +430,7 @@ them, and the date it started. Example format:
 - *"Door check-in spins forever"* — promoters and venue managers, since 4 Nov.
   Tell them to check guests in from the guest list instead; a fix is in.
 
-## 14. Wording guide
+## 15. Wording guide
 
 - Say "event" for a night, "slot" for the DJ's set, "booking" for the row that
   links a DJ to a slot.
