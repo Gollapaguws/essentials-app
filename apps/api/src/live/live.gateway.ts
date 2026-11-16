@@ -39,8 +39,46 @@ export class LiveGateway {
     private sessions: DashboardSessionService,
   ) {}
 
+  /** Browser origins that may open the ingest socket. */
+  private allowedOrigins(): string[] {
+    const values = [
+      process.env.CORS_ORIGINS,
+      process.env.SITE_URL,
+      process.env.APP_URL,
+      "https://essentialsedm.com",
+      "https://www.essentialsedm.com",
+    ];
+    const origins = new Set<string>();
+    for (const value of values) {
+      for (const part of (value ?? "").split(",")) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+        try {
+          origins.add(new URL(trimmed).origin);
+        } catch {
+          // Ignore a malformed env value; the explicit production origins above
+          // still apply.
+        }
+      }
+    }
+    return [...origins];
+  }
+
+  /**
+   * Cookie-authenticated WebSockets need an Origin check: browsers attach the
+   * dashboard cookie to the handshake, and without this another site could try
+   * to ride an open session. Native clients have no Origin and are allowed.
+   */
+  private assertOrigin(req: IncomingMessage): void {
+    const origin = req.headers.origin;
+    if (origin && !this.allowedOrigins().includes(origin)) {
+      throw new Error("Origin not allowed");
+    }
+  }
+
   /** Cookie session or bearer token → a role allowed to broadcast, plus its account id. */
   private async authorize(req: IncomingMessage, token: string): Promise<{ role: Role; userId: string | null }> {
+    this.assertOrigin(req);
     const session = token
       ? await this.tokens.verify(token)
       : (await this.sessions.resolve(req as unknown as Request)).session;
@@ -59,9 +97,18 @@ export class LiveGateway {
 
   /** Called from main.ts once the HTTP server is listening. */
   attach(server: Server) {
-    this.wss = new WebSocketServer({ server, path: "/live/ingest" });
+    this.wss = new WebSocketServer({
+      server,
+      path: "/live/ingest",
+      // The site sends ["bearer", <jwt>] so the token stays out of the URL and
+      // access logs. Dashboard browsers use the httpOnly cookie instead.
+      handleProtocols: (protocols) => (protocols.has("bearer") ? "bearer" : false),
+    });
     this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
-      const token = new URL(req.url ?? "", "https://essentialsedm.com").searchParams.get("token") ?? "";
+      const protocols = String(req.headers["sec-websocket-protocol"] ?? "")
+        .split(",")
+        .map((part) => part.trim());
+      const token = protocols[0] === "bearer" ? protocols[1] ?? "" : "";
       this.logger.log(`ingest connect: token ${token ? "present" : "absent"}, cookie ${req.headers.cookie ? "present" : "absent"}`);
       // Without this, a broken frame would emit 'error' with no listener.
       ws.on("error", (e) => {
@@ -71,11 +118,17 @@ export class LiveGateway {
       (async () => {
         const { role, userId } = await this.authorize(req, token);
         // A DJ may only broadcast inside a booked live session.
-        if (role === "artist" && (!userId || !(await this.liveBookings.hasActiveSession(userId)))) {
+        const active = role === "artist" && userId ? await this.liveBookings.activeForUser(userId) : null;
+        if (role === "artist" && !active) {
           throw new Error("No live session is booked for right now");
         }
         // startIngest is idempotent but single-broadcast: another live DJ owns it.
         if (!this.live.startIngest()) throw new Error("A broadcast is already live");
+        this.live.setBroadcaster(
+          role === "admin"
+            ? { bookingId: null, stageName: "ESSENTIALS", title: "Studio broadcast" }
+            : { bookingId: active!.id, stageName: active!.stageName, title: active!.title },
+        );
         this.ingestClients += 1;
         this.logger.log(`ingest accepted (${role})`);
         ws.on("message", (data: RawData) => {

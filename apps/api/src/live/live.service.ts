@@ -13,6 +13,13 @@ const RTSP_PUSH = `rtsp://publish:${process.env.RTSP_PUBLISH_PASS ?? ""}@127.0.0
 const HLS_DIR = process.env.HLS_DIR ?? "/var/www/essentialsedm/hls";
 const HLS_PLAYLIST = `${HLS_DIR}/stream.m3u8`;
 
+export interface LiveBroadcaster {
+  /** The booking whose window this broadcast runs inside; null for studio/admin. */
+  bookingId: string | null;
+  stageName: string;
+  title: string | null;
+}
+
 /**
  * Live media engine.
  * - INGEST (screen → RTSP): the site streams raw H.264 (annexb) + AAC (ADTS)
@@ -28,6 +35,7 @@ export class LiveService implements OnModuleDestroy {
   private ingestDead = false;
   private sourceProc: ChildProcess | null = null;
   private sourceUrl: string | null = null;
+  private broadcaster: LiveBroadcaster | null = null;
 
   constructor(simulcast: SimulcastService) {
     this.simulcast = simulcast;
@@ -80,7 +88,12 @@ export class LiveService implements OnModuleDestroy {
     });
     proc.on("exit", (code) => {
       this.ingestDead = true;
-      this.ingestProc = null;
+      // Only the process that is still current may clear the on-air identity:
+      // a superseded ffmpeg must not wipe the broadcaster of a newer session.
+      if (this.ingestProc === proc) {
+        this.ingestProc = null;
+        this.broadcaster = null;
+      }
       this.logger.log(`ingest ffmpeg exited: ${code}${errTail ? " — " + errTail : ""}`);
     });
     this.ingestProc = proc;
@@ -102,6 +115,7 @@ export class LiveService implements OnModuleDestroy {
   }
 
   stopIngest() {
+    this.broadcaster = null;
     if (this.ingestProc && !this.ingestProc.killed) {
       try { this.ingestProc.stdin?.end(); } catch {}
       this.ingestProc.kill("SIGTERM");
@@ -109,6 +123,15 @@ export class LiveService implements OnModuleDestroy {
       this.simulcast?.stopAll();
       this.logger.log("ingest ffmpeg stopped");
     }
+  }
+
+  /** Name the artist on air; the gateway sets this only after ingest starts. */
+  setBroadcaster(broadcaster: LiveBroadcaster | null) {
+    this.broadcaster = broadcaster;
+  }
+
+  currentBroadcaster(): LiveBroadcaster | null {
+    return this.broadcaster;
   }
 
   /** Start restreaming a source URL → HLS. "testsrc" generates a test pattern. */
@@ -176,6 +199,7 @@ export class LiveService implements OnModuleDestroy {
       rtspUrl: `rtsp://${RTSP_HOST}/${RTSP_PATH}`,
       source: this.sourceUrl,
       sourceUp: !!(this.sourceProc && !this.sourceProc.killed),
+      broadcaster: this.broadcaster,
       // A browser Go Live is published to MediaMTX, whose HLS is proxied at
       // /live-hls/. An admin restream still renders its own /hls/stream.m3u8.
       hls: live

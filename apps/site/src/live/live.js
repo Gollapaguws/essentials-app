@@ -16,6 +16,13 @@ export async function liveStatus() {
   return res.json();
 }
 
+/** Public schedule: who is on air, who is next, and the upcoming DJ windows. */
+export async function liveSchedule() {
+  const res = await fetch(`${API}/live/schedule`);
+  if (!res.ok) throw new Error("schedule");
+  return res.json();
+}
+
 export async function setLiveSource(url) {
   const res = await fetch(`${API}/live/source`, {
     method: "POST",
@@ -67,7 +74,12 @@ export async function startScreenIngest() {
     throw new Error("No video track — share a screen or window, not just a tab");
   }
 
-  const ws = new WebSocket(`${WS_BASE}/live/ingest?token=${encodeURIComponent(token())}`);
+  // Send the JWT as a WebSocket subprotocol, not a query parameter: URLs are
+  // written to nginx access logs and browser history, tokens should not be.
+  const bearer = token();
+  const ws = bearer
+    ? new WebSocket(`${WS_BASE}/live/ingest`, ["bearer", bearer])
+    : new WebSocket(`${WS_BASE}/live/ingest`);
   const closeCode = new Promise((resolve, reject) => {
     ws.onopen = () => resolve();
     ws.onerror = () => reject(new Error("WS connect failed (admin login + MFA required)"));

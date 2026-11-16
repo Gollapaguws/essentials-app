@@ -106,4 +106,22 @@ describe("LiveBookingService", () => {
     await expect(service().hasActiveSession("artist-user-1")).resolves.toBe(false);
     expect(db.liveBooking.findFirst).not.toHaveBeenCalled();
   });
+
+  it("returns who is on air and who is next without private fields", async () => {
+    const started = new Date(Date.now() - 60_000);
+    const ends = new Date(Date.now() + 60 * 60 * 1000);
+    const later = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    db.liveBooking.findMany.mockResolvedValue([
+      { id: "live", title: "Opening set", startsAt: started, endsAt: ends, artist: { stageName: "Nova" } },
+      { id: "next", title: null, startsAt: later, endsAt: new Date(later.getTime() + 3_600_000), artist: { stageName: "Kasi" } },
+    ]);
+
+    const schedule = await service().schedule("live");
+
+    expect(schedule.now).toMatchObject({ id: "live", stageName: "Nova", title: "Opening set" });
+    expect(schedule.next).toMatchObject({ id: "next", stageName: "Kasi" });
+    expect(schedule.upcoming).toHaveLength(2);
+    expect(schedule.upcoming[0]).not.toHaveProperty("artistId");
+    expect(schedule.upcoming[0]).not.toHaveProperty("artist");
+  });
 });

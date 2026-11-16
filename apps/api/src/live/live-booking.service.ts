@@ -11,6 +11,14 @@ export interface CreateLiveBookingInput {
   title?: string;
 }
 
+export interface ScheduledLiveSession {
+  id: string;
+  stageName: string;
+  title: string | null;
+  startsAt: Date;
+  endsAt: Date;
+}
+
 /**
  * The DJ's live booking calendar.
  *
@@ -96,20 +104,66 @@ export class LiveBookingService {
 
   /** Ingest gate: does this account have a session covering `at`? */
   async hasActiveSession(userId: string, at = new Date()): Promise<boolean> {
+    return Boolean(await this.activeForUser(userId, at));
+  }
+
+  /** The session covering `at`, with the DJ name the public schedule shows. */
+  async activeForUser(userId: string, at = new Date()): Promise<ScheduledLiveSession | null> {
     const profile = await prisma.artistProfile.findUnique({
       where: { userId },
-      select: { id: true },
+      select: { id: true, stageName: true },
     });
-    if (!profile) return false;
-    const hit = await prisma.liveBooking.findFirst({
+    if (!profile) return null;
+    const booking = await prisma.liveBooking.findFirst({
       where: {
         artistId: profile.id,
         cancelledAt: null,
         startsAt: { lte: at },
         endsAt: { gt: at },
       },
-      select: { id: true },
+      orderBy: { startsAt: "asc" },
+      select: { id: true, title: true, startsAt: true, endsAt: true },
     });
-    return Boolean(hit);
+    return booking ? { ...booking, stageName: profile.stageName } : null;
+  }
+
+  /**
+   * Every DJ's upcoming live window, for the shared calendar and the front page.
+   * Only the stage name and session title leave the API — never the account,
+   * bank details or which other DJs applied for an event.
+   */
+  async schedule(liveBookingId?: string | null): Promise<{
+    now: ScheduledLiveSession | null;
+    next: ScheduledLiveSession | null;
+    upcoming: ScheduledLiveSession[];
+  }> {
+    const now = new Date();
+    const rows = await prisma.liveBooking.findMany({
+      where: { cancelledAt: null, endsAt: { gt: now } },
+      orderBy: { startsAt: "asc" },
+      take: 100,
+      select: {
+        id: true,
+        title: true,
+        startsAt: true,
+        endsAt: true,
+        artist: { select: { stageName: true } },
+      },
+    });
+    const upcoming = rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      startsAt: row.startsAt,
+      endsAt: row.endsAt,
+      stageName: row.artist.stageName,
+    }));
+    // The broadcaster is the authority on who is live; a booking that merely
+    // covers "now" is only a fallback when the caller did not name one.
+    const live = liveBookingId ? upcoming.find((row) => row.id === liveBookingId) : null;
+    return {
+      now: live ?? upcoming.find((row) => row.startsAt <= now && row.endsAt > now) ?? null,
+      next: upcoming.find((row) => row.startsAt > now) ?? null,
+      upcoming,
+    };
   }
 }

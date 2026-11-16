@@ -42,6 +42,41 @@ export class LiveController {
     return { ...this.live.status(), simulcast: this.simulcast.states() };
   }
 
+  /**
+   * Public schedule: who is on air, who is next, and every DJ's upcoming live
+   * window. Only stage names, session titles and times are returned.
+   */
+  @Get("schedule")
+  async schedule() {
+    const broadcaster = this.live.currentBroadcaster();
+    const schedule = await this.liveBookings.schedule(broadcaster?.bookingId ?? null);
+    const status = this.live.status();
+    const live = status.live || status.studioLive;
+    return {
+      live,
+      now: live
+        ? (schedule.now ??
+          (broadcaster
+            ? {
+                id: broadcaster.bookingId ?? "studio",
+                stageName: broadcaster.stageName,
+                title: broadcaster.title,
+                startsAt: null,
+                endsAt: null,
+              }
+            : {
+                id: "studio",
+                stageName: "ESSENTIALS",
+                title: "Studio broadcast",
+                startsAt: null,
+                endsAt: null,
+              }))
+        : null,
+      next: schedule.next,
+      upcoming: schedule.upcoming,
+    };
+  }
+
   /** Admin: start restreaming a source (rtsp://… | https://… | m3u8 | "testsrc"). */
   @Post("source")
   @HttpCode(200)

@@ -14,6 +14,21 @@ interface Booking {
   endsAt: string;
 }
 
+interface SharedSession {
+  id: string;
+  stageName: string;
+  title: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+}
+
+interface Schedule {
+  live: boolean;
+  now: SharedSession | null;
+  next: SharedSession | null;
+  upcoming: SharedSession[];
+}
+
 interface Draft {
   date: string;
   start: string;
@@ -49,6 +64,7 @@ export default function BookingCalendar() {
   const role = me?.user.role ?? "guest";
 
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(true);
   const [noProfile, setNoProfile] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -63,6 +79,9 @@ export default function BookingCalendar() {
   const [draft, setDraft] = useState<Draft>(nextSlot);
 
   const load = useCallback(async () => {
+    // The shared schedule is public, so a failure here must not hide the DJ's
+    // own bookings or make the page look broken.
+    api.get<Schedule>("/live/schedule").then(setSchedule).catch(() => {});
     try {
       setBookings(await api.get<Booking[]>("/live/bookings"));
       setNoProfile(false);
@@ -171,7 +190,8 @@ export default function BookingCalendar() {
           <p className="text-neutral-500 text-xs mt-1">
             Book the windows you will broadcast in. <strong className="text-neutral-300">Go Live is
             refused outside a booked session</strong>, so create one before your set starts. Each
-            session can be up to 12 hours, and two of your sessions cannot overlap.
+            session can be up to 12 hours, and two of your sessions cannot overlap. The shared
+            schedule below shows every DJ&apos;s upcoming live windows.
           </p>
         </div>
 
@@ -392,6 +412,84 @@ export default function BookingCalendar() {
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
                     Loading…
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </section>
+
+        <section className="border border-line bg-surface rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-line flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wider">
+                All DJs — upcoming live sessions
+              </h2>
+              <p className="text-neutral-500 text-xs mt-1">
+                The shared calendar. Only stage names, session titles and times are visible — not
+                fees, bank details or anyone&apos;s applications.
+              </p>
+            </div>
+            {schedule?.live && (
+              <span className="text-red-400 font-bold text-xs tracking-widest">● ON AIR</span>
+            )}
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-widest text-neutral-500">
+                <th className="px-4 py-2">When</th>
+                <th className="px-4 py-2">DJ</th>
+                <th className="px-4 py-2">Session</th>
+                <th className="px-4 py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {schedule?.upcoming.map((session) => {
+                const isLive = schedule.now?.id === session.id;
+                const isNext = schedule.next?.id === session.id;
+                const start = session.startsAt ? new Date(session.startsAt) : null;
+                const hoursAway = start ? Math.max(1, Math.round((start.getTime() - now) / 3_600_000)) : null;
+                return (
+                  <tr key={session.id} className="border-t border-line align-top">
+                    <td className="px-4 py-3">
+                      <p className="font-bold">
+                        {session.startsAt ? dayLabel(session.startsAt) : "On air"}
+                      </p>
+                      {session.startsAt && session.endsAt && (
+                        <p className="text-neutral-500 text-xs">
+                          {timeLabel(session.startsAt)}–{timeLabel(session.endsAt)}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-neutral-200 font-bold">{session.stageName}</td>
+                    <td className="px-4 py-3 text-neutral-300">
+                      {session.title || <span className="text-neutral-600">Live session</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      {isLive ? (
+                        <span className="text-red-400 font-bold text-xs">● LIVE NOW</span>
+                      ) : isNext ? (
+                        <span className="text-neon font-bold text-xs">NEXT</span>
+                      ) : (
+                        <span className="text-neutral-500 text-xs">
+                          {hoursAway === null ? "Scheduled" : `in ${hoursAway}h`}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {!schedule && loading && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
+                    Loading shared schedule…
+                  </td>
+                </tr>
+              )}
+              {schedule && !schedule.upcoming.length && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
+                    No live sessions are booked yet. Be the first on the shared calendar.
                   </td>
                 </tr>
               )}

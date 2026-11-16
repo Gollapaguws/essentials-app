@@ -1,15 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { fetchMe } from "@/lib/auth";
-import { liveStatus, setLiveSource, stopLiveSource, startScreenIngest, viewerUrl } from "@/live/live";
+import { liveStatus, liveSchedule, setLiveSource, stopLiveSource, startScreenIngest, viewerUrl } from "@/live/live";
 
 /**
  * LIVE section on the front page:
  * - restream: any RTSP/HTTP/HLS source set by an admin is played here (hls.js)
  * - GO LIVE: admin captures screen+audio → server FFmpeg → rtsp://essentialsedm.com:8554/essentials
  */
+const scheduleWhen = (iso) => {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export default function LivePanel({ idleLoop = "" }) {
   const [status, setStatus] = useState({ live: false, sourceUp: false, studioLive: false, hls: null, rtspUrl: "" });
+  const [schedule, setSchedule] = useState(null);
   const [me, setMe] = useState(null);
   const [casting, setCasting] = useState(false);
   const [unmuted, setUnmuted] = useState(false);
@@ -22,7 +36,10 @@ export default function LivePanel({ idleLoop = "" }) {
 
   useEffect(() => {
     fetchMe().then(setMe);
-    const tick = () => liveStatus().then(setStatus).catch(() => {});
+    const tick = () => {
+      liveStatus().then(setStatus).catch(() => {});
+      liveSchedule().then(setSchedule).catch(() => {});
+    };
     tick();
     const id = setInterval(tick, 5000);
     return () => clearInterval(id);
@@ -162,6 +179,29 @@ export default function LivePanel({ idleLoop = "" }) {
           <span className="noir-micro">{showPlayer ? "MUTED BY DEFAULT" : showIdleLoop ? "REEL" : "NO SIGNAL"}</span>
         </figcaption>
       </figure>
+
+      <div className="noir-schedule" aria-live="polite">
+        <div className="noir-schedule-cell">
+          <span className="noir-micro">LIVE NOW</span>
+          <p className="noir-schedule-name">
+            {schedule?.now?.stageName ?? (status.live || status.studioLive ? "ON AIR" : "NOBODY ON AIR")}
+          </p>
+          <p className="noir-schedule-meta">
+            {schedule?.now?.title ?? (status.live || status.studioLive ? "Broadcasting now" : "The room is standing by")}
+          </p>
+        </div>
+        <div className="noir-schedule-cell">
+          <span className="noir-micro">NEXT UP</span>
+          <p className="noir-schedule-name">
+            {schedule?.next?.stageName ?? "NO SESSION BOOKED"}
+          </p>
+          <p className="noir-schedule-meta">
+            {schedule?.next
+              ? [scheduleWhen(schedule.next.startsAt), schedule.next.title].filter(Boolean).join(" · ")
+              : "Check back for the next live window"}
+          </p>
+        </div>
+      </div>
 
       {isAdmin && (
         <div style={{ maxWidth: 960, margin: "14px auto 0", display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>

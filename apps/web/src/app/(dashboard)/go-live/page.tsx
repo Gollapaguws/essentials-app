@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
 import { useAuth } from "@/components/AuthProvider";
@@ -59,7 +59,15 @@ function timeLabel(iso: string): string {
 }
 
 /** Input level for the preview and the broadcast, read from the mic track being sent. */
-function AudioMeter({ stream, live }: { stream: MediaStream | null; live: boolean }) {
+function AudioMeter({
+  stream,
+  live,
+  onLevel,
+}: {
+  stream: MediaStream | null;
+  live: boolean;
+  onLevel?: (db: number) => void;
+}) {
   const [level, setLevel] = useState(0);
   const [db, setDb] = useState(-Infinity);
 
@@ -91,6 +99,7 @@ function AudioMeter({ stream, live }: { stream: MediaStream | null; live: boolea
       // -60 dB counts as silence; 0 dB is full scale.
       setLevel(Math.max(0, Math.min(1, (decibels + 60) / 60)));
       setDb(decibels);
+      onLevel?.(decibels);
     };
     frame = requestAnimationFrame(tick);
     // Autoplay rules can leave a fresh context suspended until this call.
@@ -100,7 +109,7 @@ function AudioMeter({ stream, live }: { stream: MediaStream | null; live: boolea
       source.disconnect();
       void ctx.close().catch(() => undefined);
     };
-  }, [stream]);
+  }, [stream, onLevel]);
 
   const bars = 28;
   const clipping = db > -1;
@@ -177,6 +186,17 @@ export default function GoLive() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [gate, setGate] = useState<ActiveBookingResponse | null>(null);
+  const [signalSeen, setSignalSeen] = useState(false);
+  const signalSeenRef = useRef(false);
+
+  // The meter updates 20 times a second; only a state change when sound first
+  // appears is worth re-rendering the checklist.
+  const noteLevel = useCallback((db: number) => {
+    if (db > -45 && !signalSeenRef.current) {
+      signalSeenRef.current = true;
+      setSignalSeen(true);
+    }
+  }, []);
 
   // DJs need a live-session booking covering now; admins are exempt.
   useEffect(() => {
@@ -250,6 +270,11 @@ export default function GoLive() {
     setAudioReady(false);
   }
 
+  function resetSignal() {
+    signalSeenRef.current = false;
+    setSignalSeen(false);
+  }
+
   function showPreview(stream: MediaStream | null) {
     const el = videoRef.current;
     if (!el) return;
@@ -273,6 +298,7 @@ export default function GoLive() {
     }
     stopStream(previewRef);
     stopMic();
+    resetSignal();
     showPreview(null);
     setElapsed(0);
     setPhase("idle");
@@ -319,6 +345,7 @@ export default function GoLive() {
     if (!allowed) return;
     setError(null);
     setNotice(null);
+    resetSignal();
     if (!navigator.mediaDevices) {
       setError("This browser cannot capture audio and video. Use Chrome or Edge.");
       return;
@@ -479,6 +506,69 @@ export default function GoLive() {
   const restreamCount = Object.values(status?.simulcast ?? {}).filter(Boolean).length;
   const input = "w-full bg-bg border border-line rounded-lg px-3 py-2 text-sm disabled:opacity-50";
 
+  // Pre-flight is advisory, not a second gate: a visual set with no microphone
+  // is allowed, and only the booking and channel checks can refuse GO LIVE.
+  const videoReady = phase !== "idle";
+  const channelFree = status === null ? null : !status.live;
+  const checks: { label: string; state: "ok" | "warn" | "fail" | "wait"; detail: string }[] = [
+    {
+      label: "Camera / screen",
+      state: videoReady ? "ok" : "wait",
+      detail: videoReady
+        ? source === "screen"
+          ? "Screen shared"
+          : "Camera connected"
+        : "Start preview",
+    },
+    {
+      label: "Microphone",
+      state: audioReady ? "ok" : videoReady ? "warn" : "wait",
+      detail: audioReady
+        ? "Mixer input connected"
+        : videoReady
+          ? "No input — broadcast will be video only"
+          : "Start preview",
+    },
+    {
+      label: "Audio level",
+      state: !audioReady ? "wait" : signalSeen ? "ok" : "warn",
+      detail: !audioReady
+        ? "Waiting for a microphone"
+        : signalSeen
+          ? "Signal detected"
+          : "Play a track and watch the meter",
+    },
+    {
+      label: "Live session",
+      state: role === "admin" ? "ok" : gate === null ? "wait" : gate.booking ? "ok" : "fail",
+      detail:
+        role === "admin"
+          ? "Admin — no booking needed"
+          : gate === null
+            ? "Checking your sessions…"
+            : gate.booking
+              ? `Booked until ${timeLabel(gate.booking.endsAt)}`
+              : "Book a live session on the calendar",
+    },
+    {
+      label: "Broadcast channel",
+      state: channelFree === null ? "wait" : channelFree ? "ok" : "fail",
+      detail:
+        channelFree === null
+          ? "Checking…"
+          : channelFree
+            ? "Ready to go live"
+            : "Another broadcast is live",
+    },
+  ];
+  const readyCount = checks.filter((check) => check.state === "ok").length;
+  const dot = {
+    ok: "bg-neon",
+    warn: "bg-yellow-400",
+    fail: "bg-red-500",
+    wait: "bg-neutral-700",
+  } as const;
+
   return (
     <>
       <TopNav />
@@ -538,6 +628,48 @@ export default function GoLive() {
             A broadcast is already live. Only one can run at a time — going live will be refused
             until it ends.
           </p>
+        )}
+
+        {!live && (
+          <section
+            aria-label="Pre-flight checks"
+            className={`border rounded-xl p-4 ${
+              readyCount === checks.length ? "border-neon/40 bg-neon/5" : "border-line bg-surface"
+            }`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-black tracking-widest text-neutral-300">PRE-FLIGHT</span>
+              <span
+                className={`text-xs font-mono ${
+                  readyCount === checks.length ? "text-neon" : "text-neutral-500"
+                }`}
+              >
+                {readyCount}/{checks.length} READY
+              </span>
+            </div>
+            <ul className="mt-3 grid sm:grid-cols-2 gap-x-6 gap-y-2">
+              {checks.map((check) => (
+                <li key={check.label} className="flex items-start gap-2">
+                  <span
+                    className={`mt-1.5 size-2 rounded-full shrink-0 ${dot[check.state]}`}
+                    aria-hidden
+                  />
+                  <div className="min-w-0">
+                    <span className="text-neutral-300 text-xs font-bold">{check.label}</span>
+                    <span className="block text-neutral-600 text-[11px] leading-snug">
+                      {check.detail}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {phase === "preview" && !signalSeen && (
+              <p className="mt-3 text-[11px] text-yellow-400/90">
+                Audio level has not moved yet — play a track, or check the selected input before
+                going live.
+              </p>
+            )}
+          </section>
         )}
 
         <section className="border border-line bg-surface rounded-xl p-4 space-y-4">
@@ -635,7 +767,7 @@ export default function GoLive() {
           </div>
 
           {(phase === "preview" || phase === "connecting" || live) && (
-            <AudioMeter stream={meterStream} live={live} />
+            <AudioMeter stream={meterStream} live={live} onLevel={noteLevel} />
           )}
 
           <div className="flex flex-wrap gap-3">
@@ -651,12 +783,14 @@ export default function GoLive() {
             {phase === "preview" && (
               <button
                 type="button"
-                disabled={blocked}
+                disabled={blocked || status?.live === true}
                 onClick={() => void goLive()}
                 title={
                   blocked
                     ? "Book a live session on the Live Calendar first"
-                    : "Start broadcasting"
+                    : status?.live
+                      ? "Another broadcast is already live"
+                      : "Start broadcasting"
                 }
                 className="bg-neon text-bg font-black rounded-lg px-5 py-2 text-xs tracking-widest disabled:opacity-40"
               >
