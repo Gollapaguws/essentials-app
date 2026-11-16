@@ -51,6 +51,13 @@ export const session = {
 
   logout: () => call<void>("/auth/session", { method: "DELETE" }),
 
+  /** Swap a site Supabase session (e.g. Google) for the dashboard cookie. */
+  adopt: (accessToken: string, refreshToken?: string | null) =>
+    call<{ ok: true }>("/auth/session/token", {
+      method: "POST",
+      body: JSON.stringify({ accessToken, refreshToken: refreshToken ?? undefined }),
+    }),
+
   me: () => call<MeResponse>("/auth/me"),
 
   devices: () => call<{ sessions: DashboardDevice[] }>("/auth/sessions"),

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@essentials/api-client";
 import { DASHBOARD_ROLES, landingPath, type MeResponse } from "@essentials/auth";
 import { session } from "@/lib/session";
+import { siteAuth, siteAuthCallback, siteLoginUrl } from "@/lib/siteAuth";
 import { InfoTip, Tooltip } from "@/components/Tooltip";
 
 /** Sign-in for every dashboard role: email and password. */
@@ -15,6 +16,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
   const [mailDown, setMailDown] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const router = useRouter();
 
   const routeByRole = (me: MeResponse) => {
@@ -32,14 +35,63 @@ export default function LoginPage() {
 
   // Already signed in with a live session cookie? Go straight in.
   useEffect(() => {
-    session
-      .me()
-      .then(routeByRole)
-      .catch(() => {
-        // no session: stay on the form
-      });
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await session.me();
+        if (cancelled) return;
+        routeByRole(me);
+        setChecking(false);
+        return;
+      } catch {
+        // No dashboard cookie. This browser may still hold the site's Supabase
+        // session (Google accounts have no password to type here), so adopt it.
+      }
+      const supabase = siteAuth();
+      if (!supabase) {
+        if (!cancelled) setChecking(false);
+        return;
+      }
+      try {
+        const { data } = await supabase.auth.getSession();
+        const current = data.session;
+        if (!current) {
+          if (!cancelled) setChecking(false);
+          return;
+        }
+        await session.adopt(current.access_token, current.refresh_token);
+        const me = await session.me();
+        if (cancelled) return;
+        routeByRole(me);
+      } catch {
+        // A stale site session is not an error worth showing; the form is the fallback.
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const google = async () => {
+    setError(null);
+    const supabase = siteAuth();
+    if (!supabase) {
+      window.location.href = siteLoginUrl();
+      return;
+    }
+    setGoogleBusy(true);
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: siteAuthCallback() },
+    });
+    if (oauthError) {
+      setGoogleBusy(false);
+      setError("Google sign-in did not start. Try again.");
+    }
+  };
 
   // Say the relay is down before the click, not after: otherwise staff ask for a
   // reset link, get "sent", and wait for something that cannot arrive. A failed
@@ -109,6 +161,31 @@ export default function LoginPage() {
           </p>
         )}
 
+        {checking && (
+          <p className="mt-6 text-xs uppercase tracking-widest text-neutral-500">Checking your session…</p>
+        )}
+
+        {!checking && (
+          <>
+            <button
+              type="button"
+              onClick={google}
+              disabled={googleBusy}
+              className="mt-6 w-full rounded-lg border border-line bg-bg px-4 py-3 font-bold tracking-wide hover:border-neon disabled:opacity-50"
+            >
+              {googleBusy ? "OPENING GOOGLE…" : "Continue with Google"}
+            </button>
+            <p className="mt-2 text-xs text-neutral-500">
+              Uses the Google account already in this browser. After it returns, the dashboard signs itself in.
+            </p>
+            <div className="mt-5 flex items-center gap-3 text-[10px] uppercase tracking-widest text-neutral-600">
+              <span className="h-px flex-1 bg-line" />
+              or use your email
+              <span className="h-px flex-1 bg-line" />
+            </div>
+          </>
+        )}
+
         <form className="mt-6 space-y-4" onSubmit={submit}>
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
@@ -129,7 +206,7 @@ export default function LoginPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
               <label htmlFor="password">Password</label>
-              <InfoTip label="At least 8 characters, chosen when the account was created." />
+              <InfoTip label="At least 12 characters, chosen when the account was created." />
               <button
                 type="button"
                 onClick={sendReset}
