@@ -59,6 +59,11 @@ interface UserRow {
   managedVenues: { id: string; name: string; capacity: number }[];
 }
 
+/** A temporary password that satisfies the platform's upper/lower/digit rule. */
+function temporaryPassword(): string {
+  return `Aa1${randomBytes(9).toString("base64url")}`;
+}
+
 function shape(row: UserRow) {
   const { authUid, artistProfile, managedVenues, telegramChatId, ...rest } = row;
   return {
@@ -120,8 +125,8 @@ export class UsersService {
       });
     }
 
-    const temporaryPassword = dto.password?.trim() || randomBytes(9).toString("base64url");
-    const authUid = await this.admin.createUser(email, temporaryPassword);
+    const initialPassword = dto.password?.trim() || temporaryPassword();
+    const authUid = await this.admin.createUser(email, initialPassword);
 
     let userId: string;
     try {
@@ -152,7 +157,7 @@ export class UsersService {
     return {
       user: shape(await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: USER_SELECT })),
       // Shown once, in the admin UI, so the admin can pass it on.
-      temporaryPassword,
+      temporaryPassword: initialPassword,
     };
   }
 
@@ -173,13 +178,13 @@ export class UsersService {
       );
     }
 
-    const temporaryPassword = randomBytes(9).toString("base64url");
+    const initialPassword = temporaryPassword();
     const factors = await this.admin.listFactors(existing.authUid);
 
     // Password first: if a factor cannot be removed, the admin can retry and the
     // account is still no worse off than before. A partial reset never strands
     // someone with a lost authenticator and no way back in.
-    await this.admin.setPassword(existing.authUid, temporaryPassword);
+    await this.admin.setPassword(existing.authUid, initialPassword);
     for (const factor of factors) await this.admin.deleteFactor(existing.authUid, factor.id);
 
     // Recovery codes are second-factor credentials too: leaving them behind would
@@ -216,7 +221,7 @@ export class UsersService {
     return {
       user: shape(await prisma.user.findUniqueOrThrow({ where: { id }, select: USER_SELECT })),
       // Shown once, in the admin UI, so it can be passed on out of band.
-      temporaryPassword,
+      temporaryPassword: initialPassword,
       factorsRemoved: factors.length,
       sessionsRevoked,
     };
@@ -327,6 +332,14 @@ export class UsersService {
       select: { id: true, email: true, role: true, authUid: true },
     });
     if (!existing) throw new NotFoundException("User not found");
+
+    // Losing the last admin locks everyone out of account administration.
+    if (existing.role === "admin" && role !== "admin") {
+      const admins = await prisma.user.count({ where: { role: "admin" } });
+      if (admins <= 1) {
+        throw new BadRequestException("The last admin cannot be demoted — promote another admin first.");
+      }
+    }
 
     // Validate and normalise everything before writing, so a rejected request
     // cannot leave a half-applied profile behind.

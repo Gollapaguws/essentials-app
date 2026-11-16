@@ -1,8 +1,9 @@
-import { ExecutionContext, UnauthorizedException } from "@nestjs/common";
+import { ExecutionContext, ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Role } from "@prisma/client";
 import { SupabaseAuthGuard } from "./supabase-auth.guard";
 import { ROLES_KEY } from "../common/roles.decorator";
+import { SKIP_PASSWORD_RESET_KEY } from "../common/skip-password-reset.decorator";
 import type { AuthUserService } from "./auth-user.service";
 import type { DashboardSessionService } from "./dashboard-session.service";
 import type { SupabaseTokenService, VerifiedSession } from "./supabase-token.service";
@@ -159,6 +160,37 @@ describe("SupabaseAuthGuard", () => {
     g.reflector.getAllAndOverride.mockReturnValue(true);
 
     await expect(g.guard.canActivate(ctx({ headers: { authorization: "Bearer jwt-1" } }))).resolves.toBe(true);
+  });
+
+  it("fails closed when the Prisma identity cannot be resolved", async () => {
+    const g = build();
+    g.tokens.verify.mockResolvedValue(session({ role: "admin", aal: "aal2" }));
+    g.authUsers.resolveUser.mockResolvedValue(null);
+
+    await expect(
+      g.guard.canActivate(ctx({ headers: { authorization: "Bearer jwt-1" } })),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it("blocks data routes until a provisioned account chooses a password", async () => {
+    const g = build();
+    allow(g, { id: "user-1", role: "artist", mustResetPassword: true });
+
+    await expect(
+      g.guard.canActivate(ctx({ headers: { authorization: "Bearer jwt-1" } })),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it("lets the password screen through the first-login gate", async () => {
+    const g = build();
+    allow(g, { id: "user-1", role: "artist", mustResetPassword: true });
+    g.reflector.getAllAndOverride.mockImplementation((key: string) =>
+      key === SKIP_PASSWORD_RESET_KEY ? true : false,
+    );
+
+    await expect(
+      g.guard.canActivate(ctx({ headers: { authorization: "Bearer jwt-1" } })),
+    ).resolves.toBe(true);
   });
 
   it("treats a signed-in guest as unprivileged rather than failing them", async () => {

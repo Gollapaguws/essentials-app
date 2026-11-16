@@ -253,6 +253,37 @@ async function main() {
       remaining.status === 200 && remaining.body?.remaining === 9 && remaining.body?.total === 10,
       remaining.body,
     );
+
+    // A second sign-in is back at aal1 even though the account now has a verified
+    // factor. That is the session an attacker with only the password holds, so it
+    // must not be able to mint recovery codes or enrol another authenticator.
+    const secondLogin = await fetch(`${API}/auth/session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const secondCookie = (secondLogin.headers.get("set-cookie") ?? "").split(";")[0] ?? "";
+    const blockedCodes = await req("/auth/mfa/recovery", {
+      method: "POST",
+      cookie: secondCookie,
+      body: {},
+    });
+    check(
+      "aal1 cannot mint recovery codes once a factor exists",
+      blockedCodes.status === 401 && blockedCodes.body?.code === "MFA_REQUIRED",
+      { status: blockedCodes.status, code: blockedCodes.body?.code },
+    );
+    const blockedEnroll = await req("/auth/mfa/enroll", {
+      method: "POST",
+      cookie: secondCookie,
+      body: {},
+    });
+    check(
+      "aal1 cannot enrol another factor once a factor exists",
+      blockedEnroll.status === 401 && blockedEnroll.body?.code === "MFA_REQUIRED",
+      { status: blockedEnroll.status, code: blockedEnroll.body?.code },
+    );
   } finally {
     try {
       if (authUserId) {

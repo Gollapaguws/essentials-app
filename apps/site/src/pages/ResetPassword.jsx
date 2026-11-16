@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { hasSession, updatePassword } from "@/lib/auth";
+import { hasSession, signOut, updatePassword } from "@/lib/auth";
 import AuthLayout from "@/components/AuthLayout";
 
 export default function ResetPassword() {
@@ -39,7 +39,10 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       await updatePassword(newPassword);
-      window.location.href = "/";
+      // A password change ends every session, including the recovery session in
+      // this browser. Sign in again with the new password.
+      await signOut().catch(() => undefined);
+      window.location.href = "/login?reset=1";
     } catch (err) {
       // The session behind a recovery link can be spent or timed out between the
       // click and the save; then there is nothing to update and no way forward
@@ -75,7 +78,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <AuthLayout title="NEW PASSWORD" subtitle="Choose a new password. Your other devices stay signed in.">
+    <AuthLayout title="NEW PASSWORD" subtitle="Choose a new password. Every other signed-in device will be signed out.">
       <form onSubmit={handleSubmit} className="noir-auth-stack">
         <div className="noir-fieldgroup">
           <label className="noir-label" htmlFor="password">
@@ -87,7 +90,8 @@ export default function ResetPassword() {
             type="password"
             autoComplete="new-password"
             autoFocus
-            placeholder="At least 8 characters"
+            minLength={12}
+            placeholder="At least 12 characters"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required
@@ -103,6 +107,7 @@ export default function ResetPassword() {
             className="noir-field"
             type="password"
             autoComplete="new-password"
+            minLength={12}
             placeholder="Same password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}

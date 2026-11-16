@@ -15,7 +15,8 @@ import { JOTFORM_AGENT_SRC, identifyAgentUser, screenName } from "@/lib/agent";
  */
 export function AgentChat() {
   const { me } = useAuth();
-  const screen = screenName(usePathname());
+  const pathname = usePathname();
+  const screen = screenName(pathname);
   // Read by the identity call below without making it re-run on every nav.
   const screenRef = useRef(screen);
 
@@ -58,6 +59,10 @@ export function AgentChat() {
       active = false;
     };
   }, [me]);
+
+  // Do not load a third-party support widget (and the session-replay SDK it
+  // brings with it) on the sign-in, two-step or password screens.
+  if (pathname.startsWith("/login") || pathname.startsWith("/auth/")) return null;
 
   return <Script src={JOTFORM_AGENT_SRC} strategy="afterInteractive" />;
 }

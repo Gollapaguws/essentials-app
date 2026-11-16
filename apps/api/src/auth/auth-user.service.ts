@@ -39,7 +39,18 @@ export class AuthUserService {
     const normalized = email.toLowerCase();
     const byEmail = await prisma.user.findUnique({ where: { email: normalized } });
     if (byEmail) {
-      // Existing seeded/pre-overhaul row: bind it once, keep its role and data.
+      // Never map a different auth identity onto an existing account just because
+      // it claims the same email. Supabase normally keeps emails unique, but an
+      // email-change or provider mix-up must fail closed, not inherit the row.
+      if (byEmail.authUid && byEmail.authUid !== sub) {
+        throw new Error("This email is already linked to another sign-in");
+      }
+      // Lazy-link only unprivileged rows. A privileged row with no authUid must
+      // be provisioned deliberately; otherwise anyone who registers that email
+      // (while confirmations are off) inherits the role.
+      if (!byEmail.authUid && byEmail.role !== "guest") {
+        throw new Error("This account needs an invite before it can be linked");
+      }
       const linked = byEmail.authUid
         ? byEmail
         : await prisma.user.update({ where: { id: byEmail.id }, data: { authUid: sub } });

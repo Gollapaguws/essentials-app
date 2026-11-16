@@ -2,6 +2,7 @@ import {
   createCipheriv,
   createDecipheriv,
   createHash,
+  createHmac,
   randomBytes,
 } from "node:crypto";
 import { Injectable, Logger, NotFoundException, UnauthorizedException } from "@nestjs/common";
@@ -311,14 +312,31 @@ export class DashboardSessionService {
     return { token: this.decrypt(fresh.accessToken), row: fresh, session };
   }
 
-  /** Update the password of a session that is already signed in (recovery/first login). */
+  /**
+   * Update the password of a signed-in account, then end every session.
+   *
+   * A password change is a credential reset: other browsers (and the site's
+   * Supabase session) must not keep working with the old sign-in. The current
+   * browser is signed out too, so it has to prove the new password once.
+   */
   async setPassword(req: Request, password: string): Promise<void> {
-    const { token } = await this.accessToken(req);
+    const { token, row } = await this.accessToken(req);
     await this.gotrue("/user", {
       method: "PUT",
       token,
       body: JSON.stringify({ password }),
     });
+    // The owner has chosen their own password; the first-login gate is done.
+    await prisma.user.update({ where: { id: row.userId }, data: { mustResetPassword: false } });
+    this.authUsers.invalidateById(row.userId);
+
+    // GoTrue's admin endpoint revokes every refresh token for the identity —
+    // including sessions created on the public site, which have no dashboard row.
+    await this.gotrue(`/admin/users/${encodeURIComponent(row.authUid)}/sessions`, {
+      method: "DELETE",
+      service: true,
+    }).catch((e) => this.logger.warn(`could not revoke upstream sessions: ${(e as Error).message}`));
+    await prisma.dashboardSession.deleteMany({ where: { userId: row.userId } });
   }
 
   // ---- MFA --------------------------------------------------------------
@@ -330,12 +348,8 @@ export class DashboardSessionService {
    */
   async factors(req: Request) {
     const { row } = await this.resolve(req);
-    const factors = await this.gotrue<AuthFactor[]>(
-      `/admin/users/${encodeURIComponent(row.authUid)}/factors`,
-      { service: true },
-    );
     return {
-      totp: (Array.isArray(factors) ? factors : [])
+      totp: (await this.listFactors(row))
         .filter((f) => f.factor_type === "totp")
         .map((f) => ({
           id: f.id,
@@ -345,8 +359,34 @@ export class DashboardSessionService {
     };
   }
 
+  private async listFactors(row: SessionRow): Promise<AuthFactor[]> {
+    const factors = await this.gotrue<AuthFactor[]>(
+      `/admin/users/${encodeURIComponent(row.authUid)}/factors`,
+      { service: true },
+    );
+    return Array.isArray(factors) ? factors : [];
+  }
+
+  /**
+   * Adding a factor or replacing recovery codes is only safe once an existing
+   * factor has been satisfied. Otherwise a password-only (aal1) session could
+   * mint a new authenticator or code and walk straight through two-step.
+   */
+  private async assertMfaSetupAllowed(row: SessionRow): Promise<void> {
+    const verified = (await this.listFactors(row)).some(
+      (factor) => factor.factor_type === "totp" && factor.status === "verified",
+    );
+    if (verified && row.aal !== "aal2") {
+      throw new UnauthorizedException({
+        code: "MFA_REQUIRED",
+        message: "Verify your existing authenticator before changing two-step settings.",
+      });
+    }
+  }
+
   async enrollMfa(req: Request) {
-    const { token } = await this.accessToken(req);
+    const { token, row } = await this.accessToken(req);
+    await this.assertMfaSetupAllowed(row);
     const body = await this.gotrue("/factors", {
       method: "POST",
       token,
@@ -471,8 +511,11 @@ export class DashboardSessionService {
   /** Issue a fresh set and retire any previous codes. Plaintext leaves this call once. */
   async generateRecoveryCodes(req: Request) {
     const { row } = await this.resolve(req);
+    await this.assertMfaSetupAllowed(row);
+    // 128 bits per code, grouped for reading aloud. The previous 40-bit codes
+    // were cheap to brute-force if the database ever leaked.
     const codes = Array.from({ length: 10 }, () =>
-      randomBytes(5).toString("hex").toUpperCase().replace(/(.{5})(.{5})/, "$1-$2"),
+      randomBytes(16).toString("hex").toUpperCase().match(/.{4}/g)!.join("-"),
     );
     const hashes = codes.map((c) => this.hashRecovery(c));
     await prisma.$transaction([
@@ -499,8 +542,11 @@ export class DashboardSessionService {
   }
 
   private hashRecovery(code: string): string {
-    // Normalise so a copied code with spaces or dashes still matches.
-    return createHash("sha256").update(code.replace(/[-\s]/g, "").toUpperCase(), "utf8").digest("hex");
+    // Normalise so a copied code with spaces or dashes still matches, then HMAC
+    // with the server key so a stolen database cannot verify guesses offline.
+    return createHmac("sha256", this.key)
+      .update(code.replace(/[-\s]/g, "").toUpperCase(), "utf8")
+      .digest("hex");
   }
 
   /** One refresh per session at a time — GoTrue rotates and reuses are fatal. */

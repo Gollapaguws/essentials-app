@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -10,6 +11,7 @@ import { SupabaseTokenService } from "./supabase-token.service";
 import { AuthUserService } from "./auth-user.service";
 import { DashboardSessionService } from "./dashboard-session.service";
 import { SKIP_MFA_KEY } from "../common/skip-mfa.decorator";
+import { SKIP_PASSWORD_RESET_KEY } from "../common/skip-password-reset.decorator";
 import { ROLES_KEY } from "../common/roles.decorator";
 
 /** Roles that must present an aal2 (MFA-satisfied) session on data endpoints. */
@@ -39,7 +41,10 @@ export class SupabaseAuthGuard implements CanActivate {
     // Prisma is the source of truth for both identity and role: an admin's
     // promotion applies immediately instead of waiting for a new token.
     const identity = await this.authUsers.resolveUser(session.sub, session.email);
-    const role = (identity?.role ?? session.role ?? null) as Role;
+    // Fail closed: a database outage must never fall back to the token's role
+    // claim, which can preserve a role that has already been revoked.
+    if (!identity) throw new UnauthorizedException("Account not found");
+    const role = identity.role;
 
     const skipMfa = this.reflector.getAllAndOverride<boolean>(SKIP_MFA_KEY, [
       ctx.getHandler(),
@@ -60,7 +65,18 @@ export class SupabaseAuthGuard implements CanActivate {
       Array.isArray(requiredRoles) &&
       requiredRoles.length > 0 &&
       requiredRoles.every((r) => r === "admin");
-    const exempt = Boolean(identity?.mfaDisabled) && !adminOnly;
+    const exempt = Boolean(identity.mfaDisabled) && !adminOnly;
+
+    const skipPasswordReset = this.reflector.getAllAndOverride<boolean>(SKIP_PASSWORD_RESET_KEY, [
+      ctx.getHandler(),
+      ctx.getClass(),
+    ]);
+    if (!skipPasswordReset && identity.mustResetPassword) {
+      throw new ForbiddenException({
+        code: "PASSWORD_RESET_REQUIRED",
+        message: "Choose your own password before using the account.",
+      });
+    }
 
     // An admin can exempt one account from the role's two-step requirement; the
     // exemption lives on the User row, so it applies to every client at once.
@@ -76,12 +92,12 @@ export class SupabaseAuthGuard implements CanActivate {
     // request — that would turn every authenticated call into a DB lookup.
     req.user = {
       ...session,
-      sub: identity?.id ?? session.sub,
-      id: identity?.id ?? null,
+      sub: identity.id,
+      id: identity.id,
       authUid: session.sub,
       role,
-      mustResetPassword: identity?.mustResetPassword ?? false,
-      mfaDisabled: identity?.mfaDisabled ?? false,
+      mustResetPassword: identity.mustResetPassword,
+      mfaDisabled: identity.mfaDisabled,
     };
     return true;
   }

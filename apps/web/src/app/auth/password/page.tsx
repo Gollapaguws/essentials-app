@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@essentials/api-client";
 import { landingPath, type MeResponse } from "@essentials/auth";
 import { session } from "@/lib/session";
 import { InfoTip } from "@/components/Tooltip";
@@ -56,21 +55,13 @@ export default function SetPasswordPage() {
     setError(null);
 
     try {
+      // The API clears the first-login flag, then signs every session out. The
+      // browser must prove the new password once instead of keeping the old one.
       await session.setPassword(password);
+      window.location.replace("/dashboard/login?reset=1");
     } catch (e) {
       setBusy(false);
       setError((e as Error).message);
-      return;
-    }
-
-    try {
-      // Only the first-sign-in screen clears the mustResetPassword flag; a recovery
-      // link just needs the password written before the dashboard opens.
-      if (!recovery) await api.post<{ mustResetPassword: boolean }>("/auth/password/complete", {});
-      leave(await api.get<MeResponse>("/auth/me"));
-    } catch {
-      setBusy(false);
-      setError("Password saved, but the account could not be updated. Reload and try again.");
     }
   };
 
@@ -91,14 +82,14 @@ export default function SetPasswordPage() {
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
                 <label htmlFor="password">New password</label>
-                <InfoTip label="At least 8 characters. Use a phrase you have not used on another service." />
+                <InfoTip label="At least 12 characters. Use a phrase you have not used on another service." />
               </div>
               <input
                 id="password"
                 className="w-full bg-bg border border-line rounded-lg px-4 py-3 outline-none focus:border-neon"
                 type="password"
                 autoComplete="new-password"
-                minLength={8}
+                minLength={12}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -115,7 +106,7 @@ export default function SetPasswordPage() {
                 className="w-full bg-bg border border-line rounded-lg px-4 py-3 outline-none focus:border-neon"
                 type="password"
                 autoComplete="new-password"
-                minLength={8}
+                minLength={12}
                 required
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}

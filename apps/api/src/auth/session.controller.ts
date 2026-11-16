@@ -16,11 +16,12 @@ import {
 import { Throttle } from "@nestjs/throttler";
 import { IsEmail, IsOptional, IsString, Matches, MinLength } from "class-validator";
 import type { Request, Response } from "express";
-import { DashboardSessionService } from "./dashboard-session.service";
+import { DashboardSessionService, SESSION_COOKIE } from "./dashboard-session.service";
 import { AgentIdentityService } from "./agent-identity.service";
 import { AgentContextService } from "./agent-context.service";
 import { SupabaseAuthGuard } from "./supabase-auth.guard";
 import { SkipMfa } from "../common/skip-mfa.decorator";
+import { SkipPasswordReset } from "../common/skip-password-reset.decorator";
 
 class LoginDto {
   @IsEmail()
@@ -60,7 +61,7 @@ class RecoverDto {
 
 class PasswordDto {
   @IsString()
-  @MinLength(8)
+  @MinLength(12)
   password!: string;
 }
 
@@ -217,10 +218,16 @@ export class SessionController {
   @HttpCode(200)
   @UseGuards(SupabaseAuthGuard)
   @SkipMfa()
+  @SkipPasswordReset()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  async setPassword(@Body() dto: PasswordDto, @Req() req: Request) {
+  async setPassword(
+    @Body() dto: PasswordDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     await this.sessions.setPassword(req, dto.password);
-    return { ok: true };
+    res.clearCookie(SESSION_COOKIE, { path: "/" });
+    return { ok: true, signedOut: true };
   }
 
   @Get("mfa/factors")

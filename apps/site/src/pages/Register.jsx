@@ -108,9 +108,9 @@ export default function Register() {
                 className="noir-field"
                 type={showPassword ? "text" : "password"}
                 required
-                minLength={8}
+                minLength={12}
                 autoComplete="new-password"
-                placeholder="At least 8 characters"
+                placeholder="At least 12 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />

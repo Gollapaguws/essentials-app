@@ -9,6 +9,7 @@ import type { SupabaseTokenService, VerifiedSession } from "./supabase-token.ser
 
 jest.mock("@essentials/db", () => ({
   prisma: {
+    user: { update: jest.fn() },
     dashboardSession: {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
@@ -21,6 +22,7 @@ jest.mock("@essentials/db", () => ({
 }));
 
 const db = prisma as unknown as {
+  user: { update: jest.Mock };
   dashboardSession: {
     findUnique: jest.Mock;
     findFirst: jest.Mock;
@@ -88,7 +90,10 @@ const config = {
 } as unknown as ConfigService;
 
 const tokens = { verify: jest.fn() } as unknown as SupabaseTokenService & { verify: jest.Mock };
-const authUsers = { resolveUser: jest.fn() } as unknown as AuthUserService & { resolveUser: jest.Mock };
+const authUsers = { resolveUser: jest.fn(), invalidateById: jest.fn() } as unknown as AuthUserService & {
+  resolveUser: jest.Mock;
+  invalidateById: jest.Mock;
+};
 
 const session = (over: Partial<VerifiedSession> = {}): VerifiedSession => ({
   sub: "auth-uid-1",
@@ -112,6 +117,7 @@ async function signIn(over: Partial<VerifiedSession> = {}) {
 }
 
 beforeEach(() => {
+  db.user.update.mockReset().mockResolvedValue({});
   db.dashboardSession.findUnique.mockReset();
   db.dashboardSession.findFirst.mockReset();
   db.dashboardSession.findMany.mockReset().mockResolvedValue([]);
@@ -462,16 +468,37 @@ describe("DashboardSessionService recovery", () => {
 });
 
 describe("DashboardSessionService privileged actions", () => {
-  it("changes the password with the session's own access token", async () => {
+  it("changes the password, clears the first-login flag and revokes every session", async () => {
     const { data, cookie } = await signIn();
     db.dashboardSession.findUnique.mockResolvedValue(data);
-    fetchMock.mockResolvedValueOnce(json({}));
+    fetchMock.mockResolvedValueOnce(json({})).mockResolvedValueOnce(json({}));
 
     await build().setPassword(cookieReq({ [SESSION_COOKIE]: cookie }), "new-password");
 
     expect(fetchMock.mock.calls[0][0]).toBe("http://gotrue.test/auth/v1/user");
     expect(fetchMock.mock.calls[0][1].method).toBe("PUT");
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe("Bearer at-1");
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      "http://gotrue.test/auth/v1/admin/users/auth-uid-1/sessions",
+    );
+    expect(fetchMock.mock.calls[1][1].method).toBe("DELETE");
+    expect(db.user.update).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { mustResetPassword: false },
+    });
+    expect(db.dashboardSession.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
+  });
+
+  it("refuses recovery-code generation at aal1 when a verified factor exists", async () => {
+    const { data, cookie } = await signIn();
+    db.dashboardSession.findUnique.mockResolvedValue(data);
+    fetchMock.mockResolvedValueOnce(
+      json([{ id: "factor-1", friendly_name: "Phone", status: "verified", factor_type: "totp" }]),
+    );
+
+    await expect(
+      build().generateRecoveryCodes(cookieReq({ [SESSION_COOKIE]: cookie })),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it("lists the caller's TOTP factors on the admin route, not the removed GET /factors", async () => {

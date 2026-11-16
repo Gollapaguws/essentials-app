@@ -20,6 +20,10 @@
  * absent from CORS_ORIGINS) and must set the PKCE verifier cookie, a foreign
  * origin must be refused, and the callback page the link lands on must be served.
  *
+ * The dashboard chunk check also always runs: every JavaScript chunk named by
+ * the served dashboard HTML must return JavaScript. A missing chunk is what
+ * leaves the dashboard stuck on its "LOADING…" shell.
+ *
  * Env: API_URL (default http://127.0.0.1:4000/api), SUPABASE_URL
  * (default http://127.0.0.1:54321), SITE_URL (dashboard origin, enables the
  * recovery checks), WEB_URL (dashboard base, defaults to SITE_URL + /dashboard),
@@ -240,6 +244,49 @@ async function checkRecovery() {
   );
 }
 
+/**
+ * The dashboard is a client app: its HTML is a server-rendered "LOADING…"
+ * shell until the JavaScript chunks load. A build that is missing a chunk (or
+ * served a stale one) leaves every dashboard page stuck on that shell, so check
+ * that every script the served HTML names is actually a JavaScript response.
+ */
+async function checkDashboardAssets() {
+  if (!WEB) {
+    skip("dashboard HTML loads", "WEB_URL/SITE_URL not set");
+    return;
+  }
+
+  const page = await fetch(WEB, { signal: AbortSignal.timeout(10_000) });
+  const html = await page.text();
+  check("dashboard HTML loads", page.status === 200 && /<html/i.test(html), {
+    url: WEB,
+    status: page.status,
+    bytes: html.length,
+  });
+  if (page.status !== 200) return;
+
+  const scripts = [...html.matchAll(/<script[^>]+src="([^"]*\/_next\/static\/[^"]+)"/g)].map(
+    (m) => m[1],
+  );
+  check("dashboard HTML names its chunks", scripts.length > 0, { chunks: scripts.length });
+
+  for (const src of scripts) {
+    const url = new URL(src, WEB).toString();
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+      const type = res.headers.get("content-type") ?? "";
+      // Next answers 400 (HTML) for a chunk the running build no longer has.
+      check(`chunk is served as JavaScript`, res.status === 200 && /javascript/i.test(type), {
+        url,
+        status: res.status,
+        type,
+      });
+    } catch (e) {
+      check(`chunk is served as JavaScript`, false, { url, error: e.message });
+    }
+  }
+}
+
 async function main() {
   if (!SERVICE_KEY || !APIKEY) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY and SUPABASE_ANON_KEY must be set");
@@ -260,12 +307,15 @@ async function main() {
   // 3. Dashboard recovery link (read-only, runs in both modes) ------------
   await checkRecovery();
 
+  // 4. Dashboard chunks (read-only, runs in both modes) --------------------
+  await checkDashboardAssets();
+
   if (READ_ONLY) {
     console.log("\nRead-only: skipping auth and door-pass checks.");
     return;
   }
 
-  // 4. Auth --------------------------------------------------------------
+  // 5. Auth --------------------------------------------------------------
   let authUserId = null;
   let token = null;
   let eventId = null;

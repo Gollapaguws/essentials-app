@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { session } from "@/lib/session";
@@ -23,7 +24,6 @@ export default function MfaPage() {
   const [code, setCode] = useState("");
   const [recovery, setRecovery] = useState("");
   const [showRecovery, setShowRecovery] = useState(false);
-  const [generated, setGenerated] = useState<string[] | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,20 +114,6 @@ export default function MfaPage() {
     }
   };
 
-  const generate = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await session.generateRecovery();
-      setGenerated(res.codes);
-      setRemaining(res.codes.length);
-      setBusy(false);
-    } catch (e) {
-      setBusy(false);
-      setError((e as Error).message);
-    }
-  };
-
   return (
     <main className="min-h-screen grid place-items-center px-6 py-10">
       <div className="w-full max-w-md border border-line bg-surface rounded-2xl p-8 space-y-4">
@@ -204,30 +190,16 @@ export default function MfaPage() {
         </button>
 
         <div className="border-t border-line pt-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] uppercase tracking-widest text-neutral-500">
-              Recovery codes {remaining !== null ? `· ${remaining} left` : ""}
-            </p>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={generate}
-              className="text-[11px] uppercase tracking-widest text-neon disabled:opacity-50"
-            >
-              {generated || remaining ? "Replace codes" : "Generate codes"}
-            </button>
-          </div>
-          <p className="text-neutral-500 text-xs">
-            Save these somewhere safe. Each works once if you lose your authenticator; generating a new set retires the old one.
+          <p className="text-[11px] uppercase tracking-widest text-neutral-500">
+            Recovery codes {remaining !== null ? `· ${remaining} left` : ""}
           </p>
-          {generated && (
-            <div className="bg-bg border border-line rounded-lg p-3">
-              <p className="text-amber-300 text-xs mb-2">Copy these now — they will not be shown again.</p>
-              <div className="grid grid-cols-2 gap-1 font-mono text-sm text-neutral-200">
-                {generated.map((c) => <span key={c}>{c}</span>)}
-              </div>
-            </div>
-          )}
+          <p className="text-neutral-500 text-xs">
+            Each code works once if you lose your authenticator. Generate or replace them from{" "}
+            <Link href="/account" className="text-neon hover:underline">
+              Account
+            </Link>{" "}
+            after two-step is active.
+          </p>
         </div>
 
         {error && <p className="text-red-400 text-sm">{error}</p>}

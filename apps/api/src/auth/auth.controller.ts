@@ -9,6 +9,7 @@ import { Auth, CurrentUser } from "../common/auth.decorator";
 import { MAX_PROFILE_IMAGE_BYTES, storeImage } from "../common/media-storage";
 import type { VerifiedSession } from "./supabase-token.service";
 import { SkipMfa } from "../common/skip-mfa.decorator";
+import { SkipPasswordReset } from "../common/skip-password-reset.decorator";
 
 interface RequestIdentity extends VerifiedSession {
   id?: string | null;
@@ -27,6 +28,7 @@ export class AuthController {
   @Get("me")
   @UseGuards(SupabaseAuthGuard)
   @SkipMfa()
+  @SkipPasswordReset()
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   me(@CurrentUser() session: RequestIdentity) {
     const role = session.role ?? null;
@@ -87,6 +89,7 @@ export class AuthController {
   @Post("password/complete")
   @UseGuards(SupabaseAuthGuard)
   @SkipMfa()
+  @SkipPasswordReset()
   @HttpCode(200)
   async completePasswordReset(@CurrentUser() session: RequestIdentity) {
     await this.authUsers.clearPasswordReset(session.id ?? session.sub);
