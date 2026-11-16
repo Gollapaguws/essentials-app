@@ -4,20 +4,25 @@ import { prisma } from "@essentials/db";
 import { InvoicesService } from "./invoices.service";
 import type { NotificationsService } from "../notifications/notifications.service";
 import type { JwtUser } from "../common/roles.guard";
+import { homeTravel } from "../common/geo";
 
 jest.mock("@essentials/db", () => ({
   prisma: {
     artistProfile: { findUnique: jest.fn() },
-    artistBooking: { findMany: jest.fn() },
+    artistBooking: { findMany: jest.fn(), update: jest.fn() },
     invoice: { create: jest.fn(), findUnique: jest.fn() },
+    $transaction: jest.fn(),
   },
   InvoiceStatus: { draft: "draft", sent: "sent", paid: "paid", overdue: "overdue" },
   PaymentStatus: { pending: "pending", paid: "paid", failed: "failed" },
 }));
 
 const profiles = (prisma as unknown as { artistProfile: { findUnique: jest.Mock } }).artistProfile;
-const bookings = (prisma as unknown as { artistBooking: { findMany: jest.Mock } }).artistBooking;
+const bookings = (prisma as unknown as {
+  artistBooking: { findMany: jest.Mock; update: jest.Mock };
+}).artistBooking;
 const invoices = (prisma as unknown as { invoice: { create: jest.Mock; findUnique: jest.Mock } }).invoice;
+const transaction = (prisma as unknown as { $transaction: jest.Mock }).$transaction;
 
 const artist: JwtUser = { sub: "user-1", email: "dj@example.com", role: "artist" };
 
@@ -34,10 +39,28 @@ function completed(over: Record<string, unknown> = {}) {
     performanceFee: 750,
     startAt: new Date("2027-03-13T20:00:00.000Z"),
     endAt: new Date("2027-03-13T21:30:00.000Z"),
-    event: { venueId: "venue-1", title: "Deep End", venue: { name: "The Vault" } },
+    event: {
+      venueId: "venue-1",
+      title: "Deep End",
+      venue: {
+        name: "The Vault",
+        address: "12 Long Street, Cape Town",
+        lat: -33.9321,
+        lng: 18.8602,
+      },
+    },
     ...over,
   };
 }
+
+const home = {
+  homeAddress: "1 Home Road, Cape Town",
+  homeLat: -33.9249,
+  homeLng: 18.4241,
+};
+
+const venueCoords = { lat: -33.9321, lng: 18.8602 };
+const travel = homeTravel({ ...home, travelRatePerKm: 4.95 }, venueCoords)!;
 
 const bank = {
   bankAccountHolder: "Nandi Mokoena",
@@ -52,10 +75,13 @@ beforeEach(() => {
   bookings.findMany.mockReset();
   invoices.create.mockReset();
   invoices.findUnique.mockReset();
+  bookings.update.mockReset().mockResolvedValue({});
+  transaction.mockReset().mockImplementation(async (ops: Promise<unknown>[]) => Promise.all(ops));
   profiles.findUnique.mockResolvedValue({
     id: "artist-1",
     stageName: "Nandi",
     travelRatePerKm: 4.95,
+    ...home,
     ...bank,
   });
   invoices.create.mockImplementation(({ data }) => Promise.resolve({ id: "inv-1", ...data }));
@@ -74,8 +100,10 @@ describe("InvoicesService.generate", () => {
     );
   });
 
-  it("invoices the venue for the stipulated fee, tied to the completed booking", async () => {
-    bookings.findMany.mockResolvedValue([completed()]);
+  it("invoices the fee plus return travel from the DJ's home base", async () => {
+    bookings.findMany.mockResolvedValue([
+      completed({ event: { ...completed().event, venue: { ...completed().event.venue, ...venueCoords } } }),
+    ]);
 
     await service().generate(artist, ["booking-1"]);
 
@@ -84,12 +112,45 @@ describe("InvoicesService.generate", () => {
       artistId: "artist-1",
       bookingId: "booking-1",
       venueId: "venue-1",
-      total: 750,
+      total: 750 + travel.fee,
       status: "sent",
     });
-    // 90 minutes at the hourly rate, billed as the agreed amount — no travel line
-    // is added on top of the stipulated fee.
-    expect(data.items.create).toEqual([{ label: expect.stringContaining("1.5h performance"), amount: 750 }]);
+    expect(data.items.create).toEqual([
+      { label: expect.stringContaining("1.5h performance"), amount: 750 },
+      {
+        label: expect.stringContaining(`${travel.distanceKm.toFixed(1)} km`),
+        amount: travel.fee,
+      },
+    ]);
+    expect(bookings.update).toHaveBeenCalledWith({
+      where: { id: "booking-1" },
+      data: { travelFee: travel.fee },
+    });
+  });
+
+  it("refuses to invoice until the DJ has a home base", async () => {
+    profiles.findUnique.mockResolvedValue({
+      id: "artist-1",
+      stageName: "Nandi",
+      travelRatePerKm: 4.95,
+      homeAddress: null,
+      homeLat: null,
+      homeLng: null,
+      ...bank,
+    });
+    bookings.findMany.mockResolvedValue([completed()]);
+
+    await expect(service().generate(artist)).rejects.toThrow(/home base address/i);
+    expect(invoices.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses to bill travel when the venue has no coordinates", async () => {
+    bookings.findMany.mockResolvedValue([
+      completed({ event: { ...completed().event, venue: { name: "The Vault", lat: null, lng: null } } }),
+    ]);
+
+    await expect(service().generate(artist)).rejects.toThrow(/no map coordinates/i);
+    expect(invoices.create).not.toHaveBeenCalled();
   });
 
   it("refuses to bundle gigs: each venue pays for its own night", async () => {
@@ -103,10 +164,10 @@ describe("InvoicesService.generate", () => {
     await expect(service().generate(artist)).rejects.toThrow(/promoter confirms a gig was played/);
   });
 
-  it("refuses a gig with no agreed fee", async () => {
+  it("refuses an unpaid (free) gig", async () => {
     bookings.findMany.mockResolvedValue([completed({ performanceFee: 0 })]);
 
-    await expect(service().generate(artist)).rejects.toThrow(/no agreed fee/);
+    await expect(service().generate(artist)).rejects.toThrow(/unpaid/);
     expect(invoices.create).not.toHaveBeenCalled();
   });
 
@@ -133,6 +194,7 @@ describe("InvoicesService.renderHtml", () => {
       status: "sent",
       total: 750,
       items: [{ label: "Deep End — performance", amount: 750 }],
+      venue: { name: "The Vault", address: "12 Long Street, Cape Town" },
       artist: {
         stageName: "Nandi",
         user: { name: "Nandi M", email: "dj@example.com" },

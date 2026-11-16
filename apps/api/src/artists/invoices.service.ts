@@ -5,6 +5,7 @@ import type { JwtUser } from "../common/roles.guard";
 import { NotificationsService } from "../notifications/notifications.service";
 import { randomBytes } from "crypto";
 import { escapeHtml } from "../common/html";
+import { homeTravel } from "../common/geo";
 
 /** The fields a venue needs to pay the DJ directly. Account type is optional. */
 const REQUIRED_BANK_FIELDS = [
@@ -69,7 +70,8 @@ export class InvoicesService {
    * Invoice the venue for a gig the promoter has confirmed as played.
    *
    * One completed booking per invoice, at the stipulated fee (the event's hourly
-   * DJ rate × the slot's length). A booking can only ever be billed once — the
+   * DJ rate × the slot's length) plus return travel from the DJ's home base to
+   * the venue at the platform rate. A booking can only ever be billed once — the
    * unique `bookingId` is what enforces that, not the UI.
    */
   async generate(user: JwtUser, bookingIds?: string[]) {
@@ -93,7 +95,11 @@ export class InvoicesService {
         invoice: { is: null },
         ...(bookingIds?.length ? { id: { in: bookingIds } } : {}),
       },
-      include: { event: { include: { venue: true } } },
+      include: {
+        event: {
+          include: { venue: { select: { name: true, address: true, lat: true, lng: true } } },
+        },
+      },
       orderBy: { startAt: "desc" },
       ...(bookingIds?.length ? {} : { take: 1 }),
     });
@@ -105,10 +111,26 @@ export class InvoicesService {
 
     const booking = bookings[0];
     if (booking.performanceFee <= 0) {
-      throw new BadRequestException("This gig has no agreed fee — the promoter sets the DJ fee per hour on the event");
+      throw new BadRequestException(
+        "This gig is unpaid (the DJ fee per hour is R0), so there is nothing to invoice",
+      );
     }
 
-    const venueName = booking.event.venue.name;
+    if (!profile.homeAddress || profile.homeLat == null || profile.homeLng == null) {
+      throw new BadRequestException(
+        "Add your home base address in My Profile so travel to the venue can be calculated.",
+      );
+    }
+
+    const venue = booking.event.venue;
+    const travel = homeTravel(profile, venue);
+    if (!travel) {
+      throw new BadRequestException(
+        "This venue has no map coordinates, so travel cannot be calculated. Ask the venue manager to set its location.",
+      );
+    }
+
+    const venueName = venue.name;
     const hours = Math.max(0.25, (booking.endAt.getTime() - booking.startAt.getTime()) / 3_600_000);
     const number = `ESS-${new Date().getFullYear()}-${randomBytes(3).toString("hex").toUpperCase()}`;
     const items = [
@@ -117,27 +139,44 @@ export class InvoicesService {
         amount: booking.performanceFee,
       },
     ];
-    const total = booking.performanceFee;
+    if (travel.fee > 0) {
+      items.push({
+        label: `Travel: home base to ${venueName} and back — ${travel.distanceKm.toFixed(1)} km @ R${profile.travelRatePerKm.toFixed(2)}/km`,
+        amount: travel.fee,
+      });
+    }
+    const total = booking.performanceFee + travel.fee;
 
-    return prisma.invoice.create({
-      data: {
-        artistId: profile.id,
-        bookingId: booking.id,
-        venueId: booking.event.venueId,
-        number,
-        status: InvoiceStatus.sent,
-        total,
-        items: { create: items },
-      },
-      include: { items: true, venue: { select: { name: true } }, booking: { select: { id: true } } },
-    });
+    const [invoice] = await prisma.$transaction([
+      prisma.invoice.create({
+        data: {
+          artistId: profile.id,
+          bookingId: booking.id,
+          venueId: booking.event.venueId,
+          number,
+          status: InvoiceStatus.sent,
+          total,
+          items: { create: items },
+        },
+        include: { items: true, venue: { select: { name: true } }, booking: { select: { id: true } } },
+      }),
+      // Snapshot the amount on the booking too, so the promoter's DJ history and
+      // the invoice always agree even after the rate changes.
+      prisma.artistBooking.update({ where: { id: booking.id }, data: { travelFee: travel.fee } }),
+    ]);
+
+    return invoice;
   }
 
   /** Branded print-ready invoice (open and Ctrl+P → PDF, or render with scripts/invoice-pdf.mjs). */
   async renderHtml(user: JwtUser, invoiceId: string) {
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId },
-      include: { items: true, artist: { include: { user: { select: { name: true, email: true } } } } },
+      include: {
+        items: true,
+        artist: { include: { user: { select: { name: true, email: true } } } },
+        venue: { select: { name: true, address: true } },
+      },
     });
     if (!invoice) throw new NotFoundException("Invoice not found");
     if (user.role !== "admin" && invoice.artist.user.email !== user.email) throw new ForbiddenException();
@@ -167,6 +206,7 @@ export class InvoicesService {
       <h1>ESSENTIALS</h1><div class="bar"></div>
       <p><strong>Invoice ${escapeHtml(invoice.number)}</strong><br/>
       Artist: ${escapeHtml(invoice.artist.stageName)} (${escapeHtml(invoice.artist.user.email)})<br/>
+      Gig: ${escapeHtml(invoice.venue?.name ?? "Venue")}${invoice.venue?.address ? `, ${escapeHtml(invoice.venue.address)}` : ""}<br/>
       Date: ${new Date().toISOString().slice(0, 10)} · Status: ${escapeHtml(invoice.status)}</p>
       <table><tr><th>Item</th><th style="text-align:right">Amount</th></tr>${rows}
       <tr><td class="total">Total</td><td class="total" style="text-align:right">${invoice.total.toLocaleString()}</td></tr></table>

@@ -4,17 +4,10 @@ import { prisma, ArtistBookingStatus } from "@essentials/db";
 import { rmSync } from "fs";
 import { join } from "path";
 import { storeImage } from "../common/media-storage";
+import { geocodeAddress, haversineKm, homeTravel } from "../common/geo";
 import type { JwtUser } from "../common/roles.guard";
 
 export { MAX_PROFILE_IMAGE_BYTES, PROFILE_IMAGE_EXTENSIONS } from "../common/media-storage";
-
-/** Haversine distance in km. */
-function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
-  const R = 6371, toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return +(2 * R * Math.asin(Math.sqrt(h))).toFixed(1);
-}
 
 /** Average city speed used for drive-time estimates (km/h) when no Maps key is configured. */
 const AVG_SPEED_KMH = 45;
@@ -267,6 +260,9 @@ export class ArtistsService {
       bio?: string;
       imageUrl?: string;
       vehicleConsumptionLPer100km?: number;
+      homeAddress?: string;
+      homeLat?: number;
+      homeLng?: number;
       bankAccountHolder?: string;
       bankName?: string;
       bankAccountNumber?: string;
@@ -288,6 +284,33 @@ export class ArtistsService {
       ...(data.bankAccountType !== undefined ? { bankAccountType: clean(data.bankAccountType) } : {}),
     };
     const existing = await prisma.artistProfile.findUnique({ where: { userId: user.sub } });
+
+    // The home base is the origin for invoice travel. An address is geocoded
+    // once; if the DJ used "use my location" the supplied coordinates win.
+    if (data.homeAddress !== undefined) {
+      const homeAddress = data.homeAddress.trim();
+      const provided =
+        data.homeLat != null && data.homeLng != null
+          ? { lat: data.homeLat, lng: data.homeLng }
+          : null;
+
+      if (!homeAddress) {
+        Object.assign(patch, { homeAddress: null, homeLat: null, homeLng: null });
+      } else if (provided) {
+        Object.assign(patch, { homeAddress, homeLat: provided.lat, homeLng: provided.lng });
+      } else if (existing?.homeAddress === homeAddress && existing.homeLat != null && existing.homeLng != null) {
+        Object.assign(patch, { homeAddress });
+      } else {
+        const found = await geocodeAddress(homeAddress);
+        if (!found) {
+          throw new BadRequestException(
+            "We could not find that home base address. Check it, or use USE MY LOCATION on the profile.",
+          );
+        }
+        Object.assign(patch, { homeAddress, homeLat: found.lat, homeLng: found.lng });
+      }
+    }
+
     if (existing) {
       const updated = await prisma.artistProfile.update({ where: { userId: user.sub }, data: patch });
       // The old photo is unreferenced once the profile points at a replacement (or none).
@@ -422,26 +445,35 @@ export class ArtistsService {
     const bookings = await prisma.artistBooking.findMany({
       where: { artistId: profile.id, status: "completed" },
       include: {
-        event: { select: { title: true, venue: { select: { name: true } } } },
+        event: {
+          select: { title: true, venue: { select: { name: true, lat: true, lng: true } } },
+        },
         invoice: { select: { id: true, number: true, status: true, total: true } },
       },
       orderBy: { startAt: "desc" },
     });
 
-    const gigs = bookings.map((b) => ({
-      id: b.id,
-      eventTitle: b.event.title,
-      venue: b.event.venue.name,
-      startAt: b.startAt,
-      completedAt: b.completedAt,
-      fee: b.performanceFee,
-      invoice: b.invoice,
-    }));
+    const gigs = bookings.map((b) => {
+      // Before invoicing, show the travel the invoice will add; afterwards the
+      // stored amount is the snapshot that was actually billed.
+      const travelFee = b.invoice ? b.travelFee : (homeTravel(profile, b.event.venue)?.fee ?? 0);
+      return {
+        id: b.id,
+        eventTitle: b.event.title,
+        venue: b.event.venue.name,
+        startAt: b.startAt,
+        completedAt: b.completedAt,
+        fee: b.performanceFee,
+        travelFee,
+        amount: b.invoice?.total ?? b.performanceFee + travelFee,
+        invoice: b.invoice,
+      };
+    });
 
     const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
     const uninvoiced = gigs.filter((g) => !g.invoice);
     const unpaid = gigs.filter((g) => g.invoice && g.invoice.status !== "paid");
-    const readyToInvoice = sum(uninvoiced.map((g) => g.fee));
+    const readyToInvoice = sum(uninvoiced.map((g) => g.amount));
     const awaitingPayment = sum(unpaid.map((g) => g.invoice!.total));
 
     return {

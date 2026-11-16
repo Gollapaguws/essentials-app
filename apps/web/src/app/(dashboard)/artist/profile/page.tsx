@@ -11,6 +11,9 @@ interface Profile {
   bio: string | null;
   imageUrl: string | null;
   vehicleConsumptionLPer100km: number;
+  homeAddress: string | null;
+  homeLat: number | null;
+  homeLng: number | null;
   travelRatePerKm: number;
   bankAccountHolder: string | null;
   bankName: string | null;
@@ -24,6 +27,9 @@ interface ProfileForm {
   bio: string;
   imageUrl: string;
   vehicleConsumptionLPer100km: number;
+  homeAddress: string;
+  homeLat: number | null;
+  homeLng: number | null;
   travelRatePerKm: number;
   bankAccountHolder: string;
   bankName: string;
@@ -49,6 +55,9 @@ export default function ArtistProfilePage() {
     bio: "",
     imageUrl: "",
     vehicleConsumptionLPer100km: 8,
+    homeAddress: "",
+    homeLat: null,
+    homeLng: null,
     // Displayed only: the travel rate is the admin-set platform standard.
     travelRatePerKm: 4.95,
     bankAccountHolder: "",
@@ -60,6 +69,8 @@ export default function ArtistProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
   const uploadPhoto = async (file: File) => {
     setError(null);
@@ -94,6 +105,9 @@ export default function ArtistProfilePage() {
             bio: p.bio ?? "",
             imageUrl: p.imageUrl ?? "",
             vehicleConsumptionLPer100km: p.vehicleConsumptionLPer100km,
+            homeAddress: p.homeAddress ?? "",
+            homeLat: p.homeLat,
+            homeLng: p.homeLng,
             travelRatePerKm: p.travelRatePerKm,
             bankAccountHolder: p.bankAccountHolder ?? "",
             bankName: p.bankName ?? "",
@@ -119,12 +133,20 @@ export default function ArtistProfilePage() {
       setError("A stage name is required.");
       return;
     }
+    if ((form.homeLat != null || form.homeLng != null) && !form.homeAddress.trim()) {
+      setError("Add your home address before using your current location.");
+      return;
+    }
     try {
       const body = {
         stageName: form.stageName.trim(),
         bio: form.bio,
         imageUrl: form.imageUrl.trim(),
         vehicleConsumptionLPer100km: form.vehicleConsumptionLPer100km,
+        homeAddress: form.homeAddress.trim(),
+        ...(form.homeLat != null && form.homeLng != null
+          ? { homeLat: form.homeLat, homeLng: form.homeLng }
+          : {}),
         bankAccountHolder: form.bankAccountHolder.trim(),
         bankName: form.bankName.trim(),
         bankAccountNumber: form.bankAccountNumber.trim(),
@@ -137,6 +159,73 @@ export default function ArtistProfilePage() {
     } catch (err) {
       setError(errorMessage(err));
     }
+  };
+
+  /** Name the spot we just read, so USE MY LOCATION alone fills the home base. */
+  const describeCoords = async (lat: number, lng: number) => {
+    const url = new URL("https://nominatim.openstreetmap.org/reverse");
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("lat", String(lat));
+    url.searchParams.set("lon", String(lng));
+    url.searchParams.set("zoom", "18");
+    url.searchParams.set("addressdetails", "1");
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      display_name?: string;
+      address?: Record<string, string>;
+    };
+    const a = data.address ?? {};
+    const parts = [
+      [a.house_number, a.road].filter(Boolean).join(" "),
+      a.suburb || a.neighbourhood || a.city_district,
+      a.city || a.town || a.village || a.municipality,
+      a.postcode,
+    ].filter((part) => Boolean(part && part.trim()));
+    return parts.length >= 2 ? parts.join(", ") : data.display_name?.trim() || null;
+  };
+
+  const useMyLocation = () => {
+    setError(null);
+    setGeoError(null);
+    if (!navigator.geolocation) {
+      setGeoError("This browser cannot read your location. Enter the address instead.");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setForm((f) => ({ ...f, homeLat: latitude, homeLng: longitude }));
+        if (form.homeAddress.trim()) {
+          setLocating(false);
+          return;
+        }
+        // Keep the coordinates even if the lookup fails: a typed address saves
+        // the point, and the DJ can press the button again after fixing it.
+        try {
+          const address = await describeCoords(latitude, longitude);
+          if (address) {
+            setForm((f) => ({ ...f, homeAddress: address, homeLat: latitude, homeLng: longitude }));
+          } else {
+            setGeoError("Location captured, but we could not name the address. Type it, then press USE MY LOCATION again.");
+          }
+        } catch {
+          setGeoError("Location captured, but we could not name the address. Type it, then press USE MY LOCATION again.");
+        } finally {
+          setLocating(false);
+        }
+      },
+      (err) => {
+        setGeoError(
+          err.code === err.PERMISSION_DENIED
+            ? "Location permission was refused. Allow it in your browser, or check the address on the map instead."
+            : "Could not read your location. Check the address on the map instead.",
+        );
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10_000 },
+    );
   };
 
   const confirmed = gigs.filter((g) => g.status === "confirmed").length;
@@ -318,6 +407,55 @@ export default function ArtistProfilePage() {
                   ? "Your bank account is ready for invoices."
                   : "Account holder, bank, account number and branch code are needed before you can invoice a venue."}
               </p>
+            </div>
+
+            <div className="border-t border-line pt-4 space-y-3">
+              <div>
+                <p className="text-xs font-bold tracking-widest text-neutral-400 uppercase">Home base</p>
+                <p className="text-[11px] text-neutral-600 mt-1">
+                  The address invoices calculate return travel from. It is private and never shown to promoters.
+                </p>
+              </div>
+              <div>
+                <label className={label} htmlFor="homeAddress">Home address</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    id="homeAddress"
+                    maxLength={240}
+                    className={field}
+                    placeholder="Street, suburb, city"
+                    value={form.homeAddress}
+                    onChange={(e) => {
+                      setGeoError(null);
+                      setForm({ ...form, homeAddress: e.target.value, homeLat: null, homeLng: null });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={useMyLocation}
+                    disabled={locating}
+                    className="shrink-0 border border-line rounded-lg px-3 text-[10px] font-bold tracking-widest hover:border-neon hover:text-neon disabled:opacity-40"
+                  >
+                    {locating ? "LOCATING…" : "USE MY LOCATION"}
+                  </button>
+                </div>
+                {geoError && <p className="text-[11px] text-red-400 mt-1">{geoError}</p>}
+                <p className="text-[11px] text-neutral-600 mt-1">
+                  {form.homeAddress.trim()
+                    ? form.homeLat != null && form.homeLng != null
+                      ? "Location set. Invoice travel is calculated from here."
+                      : "We will look up this address when you save."
+                    : "Needed before you can invoice a venue."}{" "}
+                  <a
+                    href="https://www.openstreetmap.org/copyright"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2 hover:text-neutral-400"
+                  >
+                    Address search © OpenStreetMap contributors
+                  </a>
+                </p>
+              </div>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">

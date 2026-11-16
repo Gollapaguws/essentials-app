@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
-import { api } from "@essentials/api-client";
+import { API_URL, api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 
 interface InvoiceRef {
@@ -20,6 +20,8 @@ interface PlayedGig {
   startAt: string;
   completedAt: string | null;
   fee: number;
+  travelFee: number;
+  amount: number;
   invoice: InvoiceRef | null;
 }
 
@@ -80,7 +82,7 @@ export default function Earnings() {
     setNotice(null);
     try {
       const inv = await api.post<{ number: string }>("/invoices/generate", { bookingIds: [gig.id] });
-      setNotice(`Invoice ${inv.number} sent to ${gig.venue} for ${rand(gig.fee)}.`);
+      setNotice(`Invoice ${inv.number} sent to ${gig.venue} for ${rand(gig.amount)}.`);
       await load();
     } catch (e) {
       setError(errorMessage(e) ?? "Could not invoice this gig.");
@@ -115,7 +117,8 @@ export default function Earnings() {
           <h1 className="text-2xl font-black tracking-wide">EARNINGS</h1>
           <p className="text-neutral-500 text-xs mt-1">
             Gigs the promoter has confirmed you played — what you have billed, what has been paid,
-            and what is still owed.
+            and what is still owed. Raise each invoice here, remind the venue while it is unpaid,
+            and open the printed invoice for your records.
           </p>
         </div>
 
@@ -167,11 +170,28 @@ export default function Earnings() {
                     <td className="px-4 py-3 text-neutral-400 text-xs">
                       {new Date(gig.startAt).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3 text-right font-bold">{rand(gig.fee)}</td>
+                    <td className="px-4 py-3 text-right font-bold">
+                      {rand(gig.amount)}
+                      {gig.travelFee > 0 && (
+                        <span className="block text-neutral-500 text-[11px] font-normal">
+                          {rand(gig.fee)} + {rand(gig.travelFee)} travel
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`text-xs ${state.className}`}>{state.label}</span>
                         {gig.invoice && <span className="text-neutral-600 text-xs">{gig.invoice.number}</span>}
+                        {gig.invoice && (
+                          <a
+                            href={`${API_URL}/invoices/${gig.invoice.id}/print`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-neon text-xs underline underline-offset-2"
+                          >
+                            Print/PDF
+                          </a>
+                        )}
                         {gig.invoice && gig.invoice.status !== "paid" && (
                           <button
                             onClick={() => remind(gig)}
@@ -189,7 +209,7 @@ export default function Earnings() {
                             title={
                               gig.fee <= 0
                                 ? "This gig has no agreed fee — the promoter sets the DJ fee per hour on the event"
-                                : "Bill the venue for the agreed fee"
+                                : "Bill the venue for the agreed fee and return travel"
                             }
                             className="bg-neon text-bg font-black rounded-lg px-3 py-1 text-[11px] tracking-widest disabled:opacity-40"
                           >
@@ -214,7 +234,8 @@ export default function Earnings() {
 
         <p className="text-neutral-600 text-[11px]">
           Only a gig the promoter has confirmed as played can be invoiced. Invoices bill the agreed
-          fee per gig — travel is priced separately at the platform rate.
+          fee plus return travel from your home base to the venue at the platform rate. Add your home
+          base in My Profile so travel can be calculated.
         </p>
       </main>
     </>

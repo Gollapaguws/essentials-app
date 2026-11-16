@@ -93,6 +93,13 @@ const links: NavLink[] = [
     roles: ["artist", "admin"],
   },
   {
+    href: "/earnings",
+    label: "Earnings",
+    group: "STAGE",
+    hint: "Played gigs and their money: raise the venue invoice, remind the venue, and track what is paid.",
+    roles: ["artist", "admin"],
+  },
+  {
     href: "/artist/profile",
     label: "My Profile",
     group: "STAGE",

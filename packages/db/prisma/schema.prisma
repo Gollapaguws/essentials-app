@@ -400,6 +400,11 @@ model ArtistProfile {
   bio                         String?
   imageUrl                    String?
   vehicleConsumptionLPer100km Float           @default(8)
+  /// The DJ's home base, geocoded when saved. Private: never shown to promoters
+  /// or on the public profile. It is the origin for invoice travel.
+  homeAddress                 String?
+  homeLat                     Float?
+  homeLng                     Float?
   /// Platform-wide standard, set by admins only. DJs and promoters cannot edit it.
   travelRatePerKm             Float           @default(4.95)
   // Payout account printed on the DJ's invoices. Private: never exposed to promoters.

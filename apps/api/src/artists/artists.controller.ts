@@ -8,7 +8,7 @@ import { DjBookingService } from "./dj-booking.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { MAX_PROFILE_IMAGE_BYTES } from "../common/media-storage";
-import { IsBoolean, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { IsBoolean, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 
 class ProfileDto {
   @IsString() stageName!: string;
@@ -17,6 +17,10 @@ class ProfileDto {
   /** Absolute http(s) URL of the profile image. Empty string clears it. */
   @IsOptional() @IsString() @MaxLength(500) imageUrl?: string;
   @IsOptional() @IsNumber() @Min(1) vehicleConsumptionLPer100km?: number;
+  /** Home base for invoice travel. Empty string clears it; coordinates are optional. */
+  @IsOptional() @IsString() @MaxLength(240) homeAddress?: string;
+  @IsOptional() @IsNumber() @Min(-90) @Max(90) homeLat?: number;
+  @IsOptional() @IsNumber() @Min(-180) @Max(180) homeLng?: number;
   /** Payout details printed on the DJ's invoices. Empty strings clear a field. */
   @IsOptional() @IsString() @MaxLength(120) bankAccountHolder?: string;
   @IsOptional() @IsString() @MaxLength(120) bankName?: string;
