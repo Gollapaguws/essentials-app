@@ -10,9 +10,10 @@ put anything there that you want to keep — including signing keys.
 
 ## Android signing
 
-Store builds use EAS-managed remote credentials. EAS holds the upload keystore and
-injects it after prebuild, so a clean prebuild does not change how the app is
-signed.
+Store builds use EAS-managed remote credentials. The project is linked as
+`@gollapagus/essentials-app` (`f6163aa1-d793-4be0-bc36-ea8f29a65ad9`), and the
+upload key is stored in EAS. EAS injects it after prebuild, so a clean prebuild
+does not change how the app is signed.
 
 The same upload key is backed up locally at:
 
@@ -23,17 +24,18 @@ The same upload key is backed up locally at:
 `credentials/` is gitignored. Keep a copy somewhere safe outside this machine;
 losing this key means a Play Console upload-key reset.
 
-### One-time upload to EAS
+### Rotating the upload key
 
+Only do this when rotating the key — re-uploading replaces the one Play expects.
 Run from `apps/mobile`:
 
 ```bash
 npx eas-cli@latest login
-npx eas-cli@latest init                 # links the project, writes extra.eas.projectId
 npx eas-cli@latest credentials --platform android
 ```
 
-In `credentials`, choose **production → Upload a new keystore**, then answer:
+Choose **production → Keystore → Set up a new keystore**, answer **no** to
+“Generate a new Android Keystore?”, then answer:
 
 - keystore path: `credentials/essentials-upload.jks`
 - keystore password: from `credentials/keystore.properties`
