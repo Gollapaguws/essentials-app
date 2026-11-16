@@ -24,3 +24,7 @@ supabase/config.toml
 # Native projects are generated from app.json by `expo prebuild` (CNG).
 apps/mobile/android/
 apps/mobile/ios/
+
+# Android upload key and its passwords. EAS keeps the authoritative copy;
+# this folder only exists so a local prebuild cannot destroy the key.
+apps/mobile/credentials/

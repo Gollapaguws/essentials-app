@@ -6,14 +6,18 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "credentialsSource": "remote"
     },
     "preview": {
       "distribution": "internal",
+      "credentialsSource": "remote",
       "android": { "buildType": "apk" }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "credentialsSource": "remote",
+      "android": { "buildType": "app-bundle" }
     }
   },
   "submit": {
