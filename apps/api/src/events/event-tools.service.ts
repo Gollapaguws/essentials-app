@@ -95,7 +95,7 @@ export class EventToolsService {
   }
 
   /** Delete an event and its dependent rows (guest lists, bookings, chat, promos). Campaigns keep their history, detached. */
-  async remove(user: JwtUser, eventId: string) {
+  async remove(user: JwtUser | { role: string; sub: string }, eventId: string) {
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       include: { groupChat: { select: { id: true } } },

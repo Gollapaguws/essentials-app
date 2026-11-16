@@ -5,7 +5,7 @@ export function wrapTemplate(body: string, unsubscribeUrl?: string) {
     <hr style="border-color:#222;margin:24px 0" />
     <p style="color:#666;font-size:12px">
       ESSENTIALS · You receive this because you RSVP'd or signed up.
-      ${unsubscribeUrl ? `<a href="${unsubscribeUrl}" style="color:#00FF66">Unsubscribe or manage preferences</a>` : ""}
+      ${unsubscribeUrl ? `<a href="${encodeURI(unsubscribeUrl)}" style="color:#00FF66">Unsubscribe or manage preferences</a>` : ""}
     </p>
   </div>
 </div>`;

@@ -172,9 +172,9 @@
 .noir {
   --noir-void: #05070d;
   --noir-deep: #0d1424;
-  --noir-ice: #cfe3ff;
+  --noir-ice: #00FF55;
   --noir-steel: #8aa2c8;
-  --noir-line: rgba(207, 227, 255, 0.16);
+  --noir-line: rgba(0, 255, 85, 0.16);
   --noir-gutter: clamp(20px, 6vw, 96px);
   position: relative;
   min-height: 100vh;
@@ -376,7 +376,7 @@
 }
 
 .noir-dot.is-active {
-  background: #ffd166;
+  background: #00FF55;
 }
 
 .noir-slider-right {
@@ -398,7 +398,7 @@
   height: 40px;
   border: 1px solid rgba(255, 209, 102, 0.4);
   background: rgba(5, 7, 13, 0.45);
-  color: #ffd166;
+  color: #00FF55;
   font: inherit;
   font-size: 14px;
   cursor: pointer;
@@ -406,8 +406,8 @@
 }
 
 .noir-arrow:hover {
-  background: #ffd166;
-  border-color: #ffd166;
+  background: #00FF55;
+  border-color: #00FF55;
   color: var(--noir-void);
 }
 
@@ -778,7 +778,7 @@
   padding: 0 14px;
   border: 1px solid rgba(255, 209, 102, 0.55);
   background: rgba(5, 7, 13, 0.72);
-  color: #ffd166;
+  color: #00FF55;
   font: inherit;
   font-size: 10px;
   font-weight: 500;
@@ -789,7 +789,7 @@
 }
 
 .noir-stream-btn:hover {
-  background: #ffd166;
+  background: #00FF55;
   color: var(--noir-void);
 }
 
@@ -949,7 +949,7 @@
 .noir-ticket,
 .noir-input,
 .noir-msg {
-  color: #ffd166;
+  color: #00FF55;
 }
 
 .noir-micro,
@@ -964,13 +964,13 @@
 
 .noir-menu:hover,
 .noir-btn:hover {
-  background: #ffd166;
-  border-color: #ffd166;
+  background: #00FF55;
+  border-color: #00FF55;
   color: var(--noir-void);
 }
 
 .noir ::selection {
-  background: #ffd166;
+  background: #00FF55;
   color: var(--noir-void);
 }
 
@@ -1138,7 +1138,7 @@
 
 .noir-door-mark {
   margin: 0;
-  color: #ffd166;
+  color: #00FF55;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.42em;
@@ -1254,9 +1254,9 @@
 }
 
 .noir-field:focus {
-  border-color: #ffd166;
+  border-color: #00FF55;
   outline: none;
-  box-shadow: 0 0 0 1px #ffd166;
+  box-shadow: 0 0 0 1px #00FF55;
 }
 
 .noir-auth-primary,
@@ -1281,14 +1281,14 @@
 }
 
 .noir-auth-primary {
-  border: 1px solid #ffd166;
-  background: #ffd166;
+  border: 1px solid #00FF55;
+  background: #00FF55;
   color: var(--noir-void);
 }
 
 .noir-auth-primary:hover:not(:disabled) {
   background: transparent;
-  color: #ffd166;
+  color: #00FF55;
 }
 
 .noir-auth-primary:disabled {
@@ -1303,8 +1303,8 @@
 }
 
 .noir-auth-google:hover {
-  border-color: #ffd166;
-  color: #ffd166;
+  border-color: #00FF55;
+  color: #00FF55;
 }
 
 .noir-auth-or {
@@ -1379,13 +1379,13 @@
 }
 
 .noir-quiet-link:hover {
-  border-bottom-color: #ffd166;
-  color: #ffd166;
+  border-bottom-color: #00FF55;
+  color: #00FF55;
 }
 
 .noir-quiet-link--gold {
   border-bottom-color: rgba(255, 209, 102, 0.45);
-  color: #ffd166;
+  color: #00FF55;
 }
 
 .noir-quiet-link--gold:hover {
@@ -1405,7 +1405,7 @@
   align-items: center;
   min-height: 44px;
   border-bottom: 1px solid transparent;
-  color: #ffd166;
+  color: #00FF55;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.3em;
@@ -1414,7 +1414,7 @@
 }
 
 .noir-nav-quiet:hover {
-  border-bottom-color: #ffd166;
+  border-bottom-color: #00FF55;
 }
 
 .noir-overlay,
@@ -1458,7 +1458,7 @@
   border: 0;
   border-bottom: 1px solid rgba(255, 209, 102, 0.4);
   background: none;
-  color: #ffd166;
+  color: #00FF55;
   font: inherit;
   font-size: 12px;
   letter-spacing: 0.18em;

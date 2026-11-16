@@ -2,6 +2,13 @@ import { supabase } from "@/lib/supabase";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
 
+/**
+ * Where the Next.js dashboard is served. Production mounts it under
+ * `/dashboard` (NEXT_BASE_PATH in scripts/deploy-vps.sh); a local `next dev`
+ * serves it at the root, so override with VITE_DASHBOARD_URL when needed.
+ */
+export const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL ?? "/dashboard";
+
 /** Read the current access token straight from the Supabase session. */
 async function currentToken() {
   const { data } = await supabase.auth.getSession();

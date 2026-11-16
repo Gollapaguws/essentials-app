@@ -27,6 +27,15 @@ export default function EventDetail() {
   const [event, setEvent] = useState(null);
   const [state, setState] = useState("loading");
 
+  // Redirect to events list if no ID provided
+  if (!id) {
+    // Use navigate from react-router-dom, but we're in a function component
+    // Redirect by setting state and letting the effect re-run, or use useNavigate
+    // For now, we'll just show the missing state which will redirect logically
+    setState("missing");
+    return;
+  }
+
   useEffect(() => {
     let live = true;
     setState("loading");

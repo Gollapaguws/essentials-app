@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { signInWithPassword, signInWithGoogle } from "@/lib/auth";
+import { Link, useNavigate } from "react-router-dom";
+import { DASHBOARD_ROLES } from "@essentials/auth";
+import { DASHBOARD_URL, fetchMe, signInWithPassword, signInWithGoogle } from "@/lib/auth";
 import { authCallbackUrl } from "@/lib/supabase";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
@@ -11,6 +12,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
 
   const submit = async (e) => {
     e.preventDefault();
@@ -20,7 +22,15 @@ export default function Login() {
       await signInWithPassword(email, password);
       // Signing in here is only half the job: the dashboard owns MFA and role
       // routing, so hand off instead of leaving the visitor on a silent form.
-      window.location.href = "/dashboard";
+      // Guests have no dashboard, though — sending them there only bounced them
+      // off a page they cannot open, so they stay on the public site.
+      const me = await fetchMe();
+      const role = me?.user?.role ?? null;
+      if (role && !DASHBOARD_ROLES.includes(role)) {
+        navigate("/", { replace: true });
+        return;
+      }
+      window.location.href = DASHBOARD_URL;
     } catch {
       setError("That email and password do not match an account. Check both, or use Google.");
     } finally {

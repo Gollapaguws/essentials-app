@@ -3,7 +3,7 @@ export const colors = {
   bg: "#0A0A0A",
   surface: "#141414",
   border: "#222222",
-  neon: "#00FF66",
+  neon: "#00FF55",
   text: "#FFFFFF",
   muted: "#888888",
   danger: "#FF3B5C",

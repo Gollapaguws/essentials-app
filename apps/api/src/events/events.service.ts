@@ -1,20 +1,34 @@
-import { Injectable, ForbiddenException, NotFoundException, BadRequestException, ConflictException } from "@nestjs/common";
+import { Injectable, ForbiddenException, NotFoundException, BadRequestException, ConflictException, Logger } from "@nestjs/common";
 import { createHmac } from "crypto";
-import { prisma, GuestListStatus, EventStatus } from "@essentials/db";
+import { prisma, GuestListStatus, EventStatus, PaymentStatus, InvoiceStatus } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 import { ConfigService } from "@nestjs/config";
 import { LoyaltyService } from "../loyalty/loyalty.service";
 import { VenuesService } from "../venues/venues.service";
 import { buildSlots, normalizePlan } from "./slots";
+import { StripeProvider, PayfastProvider, SandboxProvider } from "../payments/providers";
+import type { PaymentProvider } from "../payments/payment-provider.interface";
 
 /** Every query is role-scoped: guests see own data, promoters their events, venue managers their venues, admin all. */
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
+  private provider: PaymentProvider;
+
   constructor(
     private config: ConfigService,
     private loyalty: LoyaltyService,
     private venues: VenuesService,
-  ) {}
+  ) {
+    const name = this.config.get("PAYMENT_PROVIDER") ?? "sandbox";
+    this.provider =
+      name === "stripe" && this.config.get("STRIPE_SECRET_KEY")
+        ? new StripeProvider(this.config.get("STRIPE_SECRET_KEY")!, this.config)
+        : name === "payfast"
+          ? new PayfastProvider(this.config)
+          : new SandboxProvider(this.config);
+    this.logger.log(`payment provider: ${this.provider.name}`);
+  }
 
   /** Door-pass HMAC key — independent of the (removed) session JWT secret. */
   private qrSecret() {
@@ -288,6 +302,37 @@ export class EventsService {
     await prisma.eventGroupChat.create({ data: { eventId: created.id } });
     if (selfManaged) this.venues.announceApproval(created);
     return created;
+  }
+
+  /**
+   * Promoter checkout for event tickets using the configured payment provider.
+   */
+  async checkout(eventId: string, user: JwtUser) {
+    const event = await this.detail(eventId, user);
+    if (!event) throw new NotFoundException("Event not found");
+    if (event.status !== EventStatus.approved && event.status !== EventStatus.live) {
+      throw new BadRequestException("Event is not open for ticket sales");
+    }
+    if (event.ticketPrice <= 0) {
+      throw new BadRequestException("Event has no ticket price set");
+    }
+
+    const isOwner = event.promoterId === user.sub;
+    if (!isOwner && user.role !== "admin") throw new ForbiddenException("Not your event");
+
+    const appUrl = this.config.get("APP_URL") ?? "http://localhost:3001";
+    const provider = this.provider;
+    const description = `ESSENTIALS event: ${event.title}`;
+    const checkout = await provider.createCheckout({
+      reference: event.id,
+      amountMinor: event.ticketPrice * 100,
+      description,
+      payerEmail: user.email,
+      successUrl: `${appUrl}/events/${event.id}?payment=success`,
+      cancelUrl: `${appUrl}/events/${event.id}?payment=cancelled`,
+    });
+
+    return { checkoutUrl: checkout.url, provider: provider.name, reference: event.id };
   }
 
   /**

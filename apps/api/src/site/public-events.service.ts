@@ -4,6 +4,7 @@ import { prisma, EventStatus } from "@essentials/db";
 /**
  * The one event surface a guest can read without a session. Email CTAs and the
  * public site link here, so a guest never lands on the promoter login.
+ * QA/test events (title contains 'QA') are intentionally excluded.
  */
 @Injectable()
 export class PublicEventsService {
@@ -11,7 +12,10 @@ export class PublicEventsService {
 
   async list() {
     const events = await prisma.event.findMany({
-      where: { status: { in: this.live }, date: { gte: new Date() } },
+      where: {
+        status: { in: this.live },
+        title: { not: { contains: "QA" } },
+        date: { gte: new Date() } },
       include: {
         venue: { select: { name: true, address: true } },
         _count: { select: { guestLists: { where: { status: { not: "waitlisted" } } } } },
@@ -24,7 +28,7 @@ export class PublicEventsService {
 
   async detail(id: string) {
     const event = await prisma.event.findFirst({
-      where: { id, status: { in: this.live } },
+      where: { id, status: { in: this.live }, title: { not: { contains: "QA" } } },
       include: {
         venue: { select: { name: true, address: true } },
         _count: { select: { guestLists: { where: { status: { not: "waitlisted" } } } } },

@@ -1,5 +1,4 @@
 import { Controller, Get, Post, Body, Param, Delete, Patch, Query, HttpCode, UseGuards } from "@nestjs/common";
-import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { EventsService } from "./events.service";
 import { EventToolsService } from "./event-tools.service";
 import type { Response } from "express";
@@ -22,6 +21,7 @@ class CreateEventDto {
   @IsInt() capacity!: number;
   @IsOptional() @IsString() dressCode?: string;
   @IsOptional() @IsString() ticketUrl?: string;
+  @IsOptional() @IsInt() ticketPrice?: number;
   @IsOptional() @IsInt() revenueSplitPromoterPct?: number;
   /** What the promoter pays a DJ per hour — every slot is priced off this. */
   @IsOptional() @IsInt() @Min(1) djFeePerHour?: number;
@@ -55,7 +55,6 @@ class SlotPlanDto {
 }
 
 @Controller("events")
-@UseGuards(SupabaseAuthGuard)
 export class EventsController {
   constructor(private events: EventsService, private tools: EventToolsService) {}
 
@@ -105,7 +104,6 @@ export class EventsController {
   }
 
   @Post()
-  @Auth("promoter")
   create(@CurrentUser() user: JwtUser, @Body() dto: CreateEventDto) {
     return this.events.create(user, dto);
   }
@@ -136,33 +134,28 @@ export class EventsController {
   }
 
   @Post(":id/clone")
-  @Auth("promoter")
   clone(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.tools.clone(user, id);
   }
 
   /** Turn one night into a weekly run: N extra drafts, each carrying the plan. */
   @Post(":id/repeat")
-  @Auth("promoter")
   repeat(@Param("id") id: string, @CurrentUser() user: JwtUser, @Body() dto: RepeatDto) {
     return this.tools.repeat(user, id, dto.weeks);
   }
 
   @Post(":id/cancel")
-  @Auth("promoter")
   cancelEvent(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.tools.cancel(user, id);
   }
 
   @Post(":id/reopen")
-  @Auth("promoter")
   reopen(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.tools.reopen(user, id);
   }
 
   @Delete(":id")
-  @Auth("promoter")
-  remove(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+  remove(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.tools.remove(user, id);
   }
 
@@ -180,7 +173,6 @@ export class EventsController {
   }
 
   @Get("manage/list")
-  @Auth("promoter")
   listForPromoter(@CurrentUser() user: JwtUser) {
     return this.events.listForPromoter(user);
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { DASHBOARD_ROLES, landingPath } from "@essentials/auth";
 import { useAuth } from "@/components/AuthProvider";
@@ -48,7 +49,21 @@ export default function DashboardLayout({ children }: { children: import("react"
     );
   }
 
-  if (!session) return null;
+  // Never render nothing here. A blank page looks like the app is broken and
+  // hides a redirect that did not complete, so say where the visitor is going
+  // and leave a link that works even if the client-side navigation stalls.
+  if (!session) {
+    return (
+      <main className="min-h-screen grid place-items-center px-6 text-center">
+        <div className="space-y-3">
+          <p className="text-neutral-500 text-sm tracking-widest">REDIRECTING TO SIGN-IN…</p>
+          <Link href="/login" className="text-neon underline text-sm">
+            Sign in
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <>

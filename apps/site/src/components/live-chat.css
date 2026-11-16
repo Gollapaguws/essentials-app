@@ -49,7 +49,7 @@
   flex: 0 0 auto;
   max-width: 38%;
   overflow: hidden;
-  color: #ffd166;
+  color: #00FF55;
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.22em;
@@ -127,7 +127,7 @@
 .noir-chat-emoji:hover,
 .noir-chat-emoji[aria-expanded="true"] {
   border-color: var(--noir-ice);
-  color: #ffd166;
+  color: #00FF55;
 }
 
 /* Opens upward over the log so the palette never pushes the page down. */

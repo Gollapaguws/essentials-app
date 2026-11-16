@@ -50,9 +50,7 @@ export class SimulcastService implements OnModuleDestroy {
     this.logger.log(`simulcast push started → ${targetId} (attempt ${attempt + 1})`);
   }
 
-  /** Start pushes for every enabled target. Called when a broadcast begins. */
-  async startAll(): Promise<number> {
-    if (!this.liveAvailable()) return 0;
+  /** Start pushes for every enabled target. Called when a broadcast begins. */async startAll(): Promise<number> {    if (!(await this.liveAvailable())) return 0;
     const targets = await prisma.streamTarget.findMany({ where: { enabled: true } });
     let started = 0;
     for (const t of targets) {
@@ -92,9 +90,8 @@ export class SimulcastService implements OnModuleDestroy {
     return out;
   }
 
-  private liveAvailable(): boolean {
-    return this.pushes.size >= 0; // pushes read from MediaMTX; mediamtx holds the path
-  }
+  private async liveAvailable(): Promise<boolean> {
+    const targets = await prisma.streamTarget.findMany({ where: { enabled: true } });    return targets.length > 0;  }
 
   onModuleDestroy() {
     this.stopAll();

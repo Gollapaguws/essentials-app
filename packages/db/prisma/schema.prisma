@@ -152,6 +152,8 @@ model Event {
   djFeePerHour            Int             @default(0)
   /// Planning ceiling for the night's DJ spend; slots are priced off the rate.
   budget                  Int             @default(0)
+  /// Price per ticket for the event (in whole currency units).
+  ticketPrice             Int             @default(0)
   // The plan the slots were generated from, kept so the promoter can reopen and edit it.
   slotCount               Int?
   slotMinutes             Int?

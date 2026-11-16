@@ -57,7 +57,7 @@ export class PaymentsService {
 
   /** Signed webhook: reconcile payment + invoice status. Idempotent. */
   async handleWebhook(providerName: string, rawBody: string, signature: string | undefined, parsed?: unknown) {
-    if (providerName !== this.provider.name && this.provider.name !== "sandbox") {
+    if (this.provider.name !== "sandbox" && providerName !== this.provider.name) {
       throw new BadRequestException("Unknown provider webhook");
     }
     if (!this.provider.verifyWebhookSignature(rawBody, signature)) {
