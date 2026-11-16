@@ -92,6 +92,18 @@ function Manual({ manual }: { manual: HelpManual }) {
             {String(i + 1).padStart(2, "0")} · {topic.title.toUpperCase()}
           </h3>
           {topic.intro && <p className="text-sm text-neutral-400 max-w-2xl">{topic.intro}</p>}
+          {topic.steps && (
+            <ol className="space-y-2 max-w-2xl">
+              {topic.steps.map((step, stepIndex) => (
+                <li key={step} className="flex gap-3 text-sm text-neutral-300 leading-relaxed">
+                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border border-neon/40 text-[10px] font-black text-neon">
+                    {stepIndex + 1}
+                  </span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+          )}
           <ul className="space-y-2 max-w-2xl">
             {topic.points.map((point) => (
               <li key={point} className="text-sm text-neutral-300 leading-relaxed pl-4 relative">

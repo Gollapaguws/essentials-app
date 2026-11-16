@@ -13,6 +13,8 @@ export type HelpRole = Extract<AuthRole, "artist" | "promoter" | "venue_manager"
 export interface HelpTopic {
   title: string;
   intro?: string;
+  /** A walkthrough, shown as a numbered list before the notes. */
+  steps?: string[];
   points: string[];
 }
 
@@ -32,7 +34,7 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
     role: "artist",
     title: "DJ manual",
     summary:
-      "How a DJ profile, slots, gigs and invoices fit together — and what to do when a screen looks empty.",
+      "How a DJ profile, slots, gigs and invoices fit together, with an invoicing walkthrough from bank details to paid and a browser broadcasting walkthrough.",
     screens: "My Profile · Live Calendar · Go Live · Artist Portal · Gig Calendar · Earnings · Notifications · Account",
     topics: [
       {
@@ -40,7 +42,7 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         intro: "Everything a DJ does hangs off this profile. Without it there is nothing to apply with or bill from.",
         points: [
           "Set your stage name, bio and photo. The photo must be a real image under 5 MB; anything else is refused.",
-          "Travel settings feed the route plan and the travel line on invoices. The rate is set platform-wide by an admin and shown read-only here.",
+          "Your home base and travel settings feed the route plan and the travel line on invoices. Enter the address or use USE MY LOCATION; the rate is set platform-wide by an admin and shown read-only here.",
           "If Gig Calendar and Earnings look empty, check this page first — an account with no profile has no gigs to show.",
         ],
       },
@@ -53,6 +55,7 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
           "DJ Applications (inside the Artist Portal) shows each application as pending, confirmed or declined.",
           "A decline may include the promoter's reason. The reason is optional — if it is blank, ask the promoter.",
           "Once confirmed, the fee for that slot is locked and you appear on the public lineup with your set time.",
+          "An admin can cancel a booking after a promoter confirms it — the slot reopens to the other applicants and everyone involved is told. A gig already marked played cannot be cancelled this way.",
         ],
       },
       {
@@ -67,16 +70,37 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         ],
       },
       {
-        title: "Going live without OBS",
+        title: "Going live in the browser, start to finish",
         intro:
-          "Go Live turns this browser into the encoder: camera or shared screen plus one audio input, previewed before anything is sent.",
+          "Your first broadcast, in order. The whole encoder runs in the browser — there is no OBS, stream key or second app to install.",
+        steps: [
+          "Book the window. Live Calendar (/bookings) → pick the day → enter a start and end time → book the session. Go Live only unlocks while one of your sessions covers the current time, so book it before your set, not after you are already on air.",
+          "Open Go Live (/go-live) on a laptop or desktop in Chrome or Edge. A booked-session banner confirms the window you are broadcasting inside; if it says no session is booked, go back to step 1.",
+          "Choose the picture. CAMERA films you; SCREEN shares a window, tab or your whole display. Then pick the camera and the microphone or mixer input. The device lists stay empty until the browser has permission — press START PREVIEW once and allow access, then choose the right input.",
+          "Press START PREVIEW. The PRE-FLIGHT panel fills in as the browser gets each piece: camera or screen, microphone, audio level, live session and broadcast channel. Check the framing in the video panel and play a record: the audio meter and the Audio level check should move with the music. If they stay flat, the wrong input is selected or the mixer is not connected. Echo cancellation, noise suppression and auto gain are deliberately off so they cannot pump or duck the mix.",
+          "Press GO LIVE once PRE-FLIGHT shows the live session and broadcast channel green. The page shows CONNECTING…, then a red-dot LIVE badge and a running timer. The stream now plays on the public front page and is pushed to every platform enabled on the admin Streaming page. Leave the tab open and keep the machine awake for the whole set.",
+          "End with END BROADCAST, or simply close the tab. The public player and every restream stop with it. Preview and press GO LIVE again if you need to come back on air.",
+        ],
         points: [
-          "Pick your camera (or share a screen) and the input your mixer is plugged into, press Start preview, then Go live. No OBS, stream key or extra software is involved.",
-          "Go Live only unlocks during a booked live session. With no booking covering the moment, the button is refused and the server rejects the stream.",
-          "Browsers hide device names until you allow access: if the camera or microphone list is empty, preview once and grant permission.",
-          "Echo cancellation, noise suppression and auto gain are switched off on purpose — they pump and duck a music mix.",
-          "Only one broadcast can run at a time. If someone else is already live, starting is refused until that broadcast ends.",
-          "Keep the tab open. Closing it or pressing End broadcast stops the stream, and the public front page and enabled restream targets follow it automatically.",
+          "If a broadcast is already live, GO LIVE is refused: only one broadcast can run at a time. Wait for it to end.",
+          "PRE-FLIGHT is advice, not a second gate: a missing microphone or a flat meter shows amber and the broadcast still starts video only. Only an unbooked session or another live broadcast blocks GO LIVE.",
+          "DJs need a booked live session; admins can broadcast without one. A venue gig on Gig Calendar does not count as a live session.",
+          "Use a wired connection if you can. The browser sends one encoded stream to the server; a dropped connection ends the broadcast, so preview again to restart it.",
+        ],
+      },
+      {
+        title: "When Go Live will not start",
+        intro:
+          "Most failures are one of five things. Check PRE-FLIGHT first — it names the piece that is missing.",
+        points: [
+          "No booked session: the session check is red and GO LIVE is refused. Book a window on Live Calendar that covers now. The page re-checks every 30 seconds, so refresh it after booking.",
+          "Another broadcast is live: the channel check is red and GO LIVE is disabled until that broadcast ends. Only one can run at a time, platform-wide.",
+          "Camera or microphone blocked: the device lists stay empty and preview shows a permission error. Allow camera and microphone for the site in the browser's address-bar settings, reload, then press START PREVIEW again.",
+          "No microphone by choice or by accident: PRE-FLIGHT shows amber and the broadcast runs video only. Plug the mixer in, pick it under Microphone / mixer input, and preview again if you need sound.",
+          "Audio level flat while a record plays: PRE-FLIGHT keeps Audio level amber. Select the mixer input rather than the laptop microphone, check the cable and the mixer's USB/level, and watch the meter before going live.",
+          "Streaming server errors: “Could not reach the streaming server” or “The streaming server did not answer” means the connection failed before anything was sent. Check the network and press GO LIVE again; the preview stays up.",
+          "The broadcast ended by itself: a dropped connection, a closed shared screen or Stop sharing ends it with a reason. Preview again, confirm PRE-FLIGHT, and GO LIVE to return. Closing the tab always ends the broadcast.",
+          "Screen sharing will not start: pick a window or screen in the browser picker. Cancelling the picker leaves you in preview with an error. Use Chrome or Edge on a laptop or desktop; phones and unsupported browsers cannot capture this way.",
         ],
       },
       {
@@ -96,15 +120,30 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         ],
       },
       {
-        title: "Invoicing and getting paid",
-        intro: "An invoice can only be raised once the promoter has marked the gig played.",
+        title: "Invoicing end to end",
+        intro:
+          "A gig's money moves through six stages. Follow them in order the first time; after that, Earnings tells you where each gig is.",
+        steps: [
+          "Set up payment details once. My Profile → Bank account needs the account holder, bank, account number and branch code. They are printed on every invoice so the venue can pay you, and promoters never see them. Invoicing is refused until all four are filled in and your home base is set.",
+          "Get confirmed for a slot. Apply on Gig Calendar or the public event page. When the promoter confirms you, the slot's fee is locked — that agreed fee is what the invoice will bill.",
+          "Play the night. Do not invoice yet: a confirmed gig is not billable.",
+          "Wait for the promoter to mark the gig played. They do that in DJ Applications after the set ends. Only then does the gig appear on Earnings (/earnings) with INVOICE VENUE next to it.",
+          "Raise the invoice. Earnings → INVOICE VENUE sends one invoice to the venue for the agreed fee, with your bank details and a printable PDF. A gig can only be billed once.",
+          "Get paid. The venue pays through the payment link on the invoice (Stripe or PayFast) or by bank transfer. The invoice stays invoiced until the provider clears it, then shows paid. While it is unpaid, REMIND VENUE nudges the venue manager in-app and by email.",
+        ],
+        points: [
+          "The fee is the amount agreed with the promoter. There is no commission line, and return travel from your home base to the venue is added at the platform rate.",
+          "A failed payment does not cancel the invoice — retry the payment link instead of raising a second invoice.",
+          "One invoice per gig, so the same set can never be billed to the venue twice. A gig missing from Earnings has not been marked played yet.",
+          "Export calendar downloads confirmed and played gigs as an .ics file for your own calendar.",
+        ],
+      },
+      {
+        title: "Invoices at a glance",
         points: [
           "Earnings splits your gigs into not yet invoiced, invoiced and waiting, and paid.",
-          "One invoice per gig, sent to the venue. It cannot be billed twice.",
-          "Unpaid invoices have Remind venue, which nudges the venue manager in-app and by email.",
-          "Payment links are created from the invoice; Stripe and PayFast are the payment providers.",
-          "A failed payment does not cancel the invoice — retry the payment link before escalating.",
-          "Export calendar downloads confirmed and played gigs as an .ics file for your own calendar.",
+          "Unpaid invoices have REMIND VENUE, which nudges the venue manager in-app and by email.",
+          "The printable invoice can be opened and saved as a PDF, and carries your bank details and the invoice number the venue must quote.",
         ],
       },
       {
@@ -130,6 +169,7 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         points: [
           "Sent back to a password screen? The account was created for you and has never chosen its own password. Setting one is the last step before the dashboard opens.",
           "No dashboard at all? The account is a guest. Only an admin can set DJ, promoter or venue manager on Users.",
+          "INVOICE VENUE refused? My Profile is missing bank details or a home base, or the promoter has not marked the gig played yet.",
           "DJs are not asked for a two-step code; if you are being asked, the account holds a different role.",
           "Still stuck? Email " + CONTACT + " with your account email, the gig or event name, and what you expected to happen. Nobody can promise how fast a reply arrives.",
         ],
@@ -192,6 +232,7 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         title: "Reaching the crowd",
         points: [
           "Email Engine holds segments (filters over taste, attendance and vibe) and campaigns (welcome series, weekly drop, reminders, winback, one-off), with attribution showing which RSVPs a send produced.",
+          "Importing a mailing list requires a tick confirming every contact opted in; without it the upload is refused. The attestation is stored with the segment, an address that unsubscribed stays unsubscribed, and consent can still be withdrawn later.",
           "Unsubscribe and preference links are signed and expire; a hand-edited link will not work. Preferences can be re-enabled from the resubscribe link.",
           "Promotions are per-event codes — discount, free entry or bottle upgrade — with a use cap and optional expiry.",
           "Insights covers guest lifetime value and cohort retention; Analytics shows RSVPs, check-ins and pacing for the next night.",
@@ -347,6 +388,15 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
           "Settings holds the platform travel rate in rand per kilometre. Saving it applies to every DJ profile.",
           "It cannot be saved as zero; the floor is R0.01.",
           "There is no commission setting — the platform takes no cut of a DJ's fee, and the venue pays the DJ's invoice directly.",
+        ],
+      },
+      {
+        title: "The booking desk",
+        points: [
+          "Admin accounts see CANCEL SLOT on pending and confirmed rows in DJ Applications. It is the override for a booking neither the promoter nor the DJ can resolve.",
+          "Cancelling a confirmed slot frees it, reopens it to the other applicants, and tells the DJ, the promoter and anyone still waiting on that slot. Cancelling a pending application just removes it from the promoter's queue.",
+          "A gig already marked played cannot be cancelled here: it is payable, and settling it is a conversation with the DJ.",
+          "Cancelling twice sends no duplicate notices. The DJ still withdraws their own pending application, and the promoter still declines, moves and extends bookings.",
         ],
       },
       {

@@ -134,11 +134,18 @@ honest answer is that an admin sets the role.
 ## 6. For DJs
 
 ### Profile
-- **My Profile** holds stage name, bio, photo and travel settings. The photo
-  upload accepts a real image up to 5 MB; anything else is refused.
+- **My Profile** holds stage name, bio, photo, home base, travel settings and
+  the **bank account** invoices are paid into. The photo upload accepts a real image up to
+  5 MB; anything else is refused.
+- The bank block needs the account holder, bank, account number and branch
+  code. They are printed on every invoice and are never shown to promoters.
+  Invoicing is refused until all four are filled in, and the profile page says
+  which ones are missing.
 - The travel rate is set platform-wide by an admin on Settings and is shown
   read-only. A DJ cannot change it, and neither can a promoter. Do not quote a
   figure: it changes, and the invoice is the source of truth.
+- The home base is the address invoices calculate return travel from. Enter the
+  address or use **USE MY LOCATION**; it is private and never shown to promoters.
 - `profile` and `vehicleConsumptionLPer100km` feed the route plan and travel
   costs on invoices.
 
@@ -164,6 +171,10 @@ honest answer is that an admin sets the role.
   the same event; the DJ cannot apply for it themselves.
 - Once a promoter confirms, the slot's fee is locked — it is the amount that was
   agreed — and the DJ appears on the public lineup with their set time.
+- An **admin** can cancel a pending or confirmed booking from DJ Applications
+  with **CANCEL SLOT**. A confirmed slot is freed and reopened to the other
+  applicants, and the DJ, promoter and anyone waiting are told. A completed gig
+  cannot be cancelled this way because it is already payable.
 
 ### Blackout dates
 - **Gig Calendar → Dates I can't play** blocks a day, optionally with a reason.
@@ -171,18 +182,44 @@ honest answer is that an admin sets the role.
   gig already confirmed; that needs a conversation with the promoter.
 
 ### Money
-- **Earnings** splits every promoter-confirmed gig into not yet invoiced,
-  invoiced and waiting, and paid.
+- **Earnings** splits money into earned, invoiced, paid and still owed, and
+  labels each played gig: not invoiced, invoiced and waiting, overdue or paid.
 - A gig can only be invoiced after the promoter marks it **played**. Invoicing
   earlier is refused; the DJ sees the booking as confirmed but not completed.
+- Invoicing also needs a home base on My Profile. The invoice adds return travel
+  from that address to the gig venue.
 - An invoice is sent to the **venue**, once per gig. It cannot be billed twice.
-- Unpaid invoices have **Remind venue**, which notifies the venue manager in-app
+- Unpaid invoices have **REMIND VENUE**, which notifies the venue manager in-app
   and by email. It refuses invoices that are already paid.
 - Payment links are created from the invoice; Stripe and PayFast are the
   providers. A payment failing does not cancel the invoice.
-- **Route plan** estimates travel; the invoice's travel line uses the platform
-  rate, not whatever the DJ typed.
+- **Route plan** estimates travel; the invoice's travel line is home base to the
+  venue and back at the platform rate, not whatever the DJ typed.
 - **Export calendar** downloads confirmed and played gigs as `.ics`.
+
+### Invoicing end to end
+
+Walk a DJ through these six steps in order; this is the whole path from an empty
+profile to money in the bank.
+
+1. **Set up the bank account once.** My Profile → Bank account: account holder,
+   bank, account number and branch code. All four are required before any
+   invoice can be raised; the page says which are missing.
+2. **Get confirmed for a slot.** Apply on Gig Calendar or the public event page.
+   The promoter confirms, and the slot's fee is locked at the agreed amount.
+3. **Play the night.** A confirmed gig is not billable yet.
+4. **The promoter marks the gig played** in DJ Applications after the set. Only
+   then does it appear on Earnings with **INVOICE VENUE**.
+5. **Raise the invoice** from Earnings → INVOICE VENUE. One invoice per gig, sent
+   to the venue with the agreed fee, the bank details and a printable PDF.
+6. **The venue pays** through the payment link (Stripe or PayFast) or by bank
+   transfer. The invoice stays `sent`/`invoiced` until the provider clears it,
+   then reads `paid`. If it is still unpaid, **REMIND VENUE** nudges the venue
+   manager in-app and by email.
+
+If a DJ says they cannot find the button: a gig missing from Earnings has not
+been marked played yet, and INVOICE VENUE is refused while bank details are
+missing. Neither is a bug, and neither is something support can change.
 
 ### Booking a live session
 - **Live Calendar** is where a DJ books the windows they will broadcast in.
@@ -196,22 +233,53 @@ honest answer is that an admin sets the role.
   when no booking covers the current time, and the ingest connection itself is
   refused too.
 
-### Going live without OBS
-- **Go Live** broadcasts straight from the browser: pick the camera or a shared
-  screen plus one microphone/mixer input, preview, then press **Go live**. There
-  is no OBS, encoder install or stream key for DJs.
-- Go Live only unlocks inside a booked live session. If no booking covers the
-  moment, the page says so and the server rejects the stream.
-- The browser hides device names until access is granted, so the lists can be
-  empty on the first visit; previewing once and allowing access fills them.
-- Echo cancellation, noise suppression and auto gain are deliberately off so a
-  music mix is not pumped or ducked.
-- Only one broadcast runs at a time. If a broadcast is already live, a DJ's
-  connection is refused until it ends.
-- Closing the tab or pressing **End broadcast** stops the stream. The public
-  front page and every restream target enabled by an admin follow automatically.
-- Admins still use the same ingest from the front page, and manage restream
-  targets on **Streaming**.
+### Going live in the browser, start to finish
+1. **Book the window.** Live Calendar (`/bookings`) → pick the day → set a
+   start and end time → book the session. Go Live only unlocks while one of the
+   DJ's sessions covers the current time.
+2. **Open Go Live** (`/go-live`) on a laptop or desktop in Chrome or Edge. A
+   booked-session banner names the window; if none is shown, step 1 is missing.
+3. **Choose the picture and sound.** CAMERA films the DJ; SCREEN shares a
+   window, tab or the whole display. Then pick the camera and the
+   microphone/mixer input. The device lists stay empty until permission is
+   granted — START PREVIEW once and allow access.
+4. **Press START PREVIEW.** The PRE-FLIGHT panel fills in: camera/screen,
+   microphone, audio level, live session and broadcast channel. Check the
+   framing and watch the audio meter while a record plays; a flat meter means the
+   wrong input or a disconnected mixer. Echo cancellation, noise suppression and
+   auto gain are deliberately off.
+5. **Press GO LIVE** once the session and channel checks are green. CONNECTING…
+   becomes a red-dot LIVE badge with a timer. The stream plays on the public
+   front page and is pushed to every enabled restream target. The tab must stay
+   open and the machine awake.
+6. **End with END BROADCAST** (or close the tab). The public player and all
+   restreams stop. Preview and GO LIVE again to return on air.
+
+Only one broadcast runs at a time; a second GO LIVE is refused. A missing
+microphone produces a video-only broadcast rather than a failure. Admins do not
+need a booking; a venue gig is not a live session. PRE-FLIGHT is advisory: only
+the session and channel checks block GO LIVE.
+
+### When Go Live will not start
+- **No booked session**: the session check is red and GO LIVE is refused. Book a
+  Live Calendar window covering now; the page re-checks every 30 seconds.
+- **Another broadcast is live**: the channel check is red and GO LIVE is
+  disabled until it ends. Only one broadcast runs platform-wide.
+- **Camera/microphone blocked**: device lists stay empty and preview shows a
+  permission error. Allow camera and microphone for the site in the browser,
+  reload, and preview again.
+- **No microphone**: PRE-FLIGHT shows amber and the broadcast is video only. Plug
+  in the mixer, pick it as the input, and preview again for sound.
+- **Flat audio level**: select the mixer input rather than the laptop microphone
+  and check the cable and mixer level while watching the meter.
+- **Streaming server unreachable/refused**: the connection failed before
+  sending; check the network and press GO LIVE again, the preview stays up.
+- **Broadcast ended by itself**: a dropped connection, closed shared screen or
+  browser **Stop sharing** ends it with a reason. Preview, confirm PRE-FLIGHT,
+  then GO LIVE again. Closing the tab always ends it.
+- **Screen share cancelled**: the picker must have a window or screen selected;
+  cancelling leaves the page in preview with an error. Use Chrome or Edge on a
+  laptop or desktop.
 
 ### Alerts
 - The bell feed lives under **Notifications**. Telegram can be linked from the
@@ -270,6 +338,10 @@ honest answer is that an admin sets the role.
 - **Email Engine**: segments (filters over taste, attendance, vibe) and campaigns
   (welcome series, weekly drop, 24h and 1h reminders, winback, one-off), with
   attribution showing which RSVPs a send produced.
+- **Importing a mailing list** requires a tick confirming every contact opted
+  in; without it the upload is refused. The attestation and policy version are
+  stored with the segment, and an address that already unsubscribed stays
+  unsubscribed.
 - Unsubscribe and preference links in mail are signed and expire. A bare
   `?email=` link will not work; mail already sent shows "invalid or has expired".
   Preferences can be re-enabled from the resubscribe link.
@@ -311,6 +383,11 @@ open the promoter pages.
 
 ## 10. For admins
 
+- **DJ Applications** also gives an admin **CANCEL SLOT** on pending and
+  confirmed rows: an override for a booking neither side can resolve. A
+  confirmed slot is freed and reopened to the other applicants, and the DJ,
+  promoter and anyone waiting are told. A completed gig is refused because it
+  is already payable, and cancelling twice sends no duplicate notices.
 - **Users**: every account with role and email. New accounts can be created with
   a temporary password and a role; the password is shown once and the account
   must choose a new one at first sign-in. Roles are changed here, and take effect
@@ -350,6 +427,8 @@ open the promoter pages.
   `WhatsNewBroadcast`, so a restart or a redeploy cannot repeat it, and editing
   an existing release sends nothing.
 - Guests RSVP from an event page; the door pass is issued to the signed-in guest.
+- The newsletter box in the site footer is unticked by default and requires
+  explicit consent. A subscribe request without consent is refused.
 
 ## 12. Troubleshooting
 
@@ -420,7 +499,7 @@ and no time.
 The team edits this after each deploy. **Keep the date current** — a stale
 "nothing outstanding" is worse than no list.
 
-**Last updated: 8 November 2026.**
+**Last updated: 14 November 2026.**
 
 - Nothing outstanding.
 
