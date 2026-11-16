@@ -343,7 +343,7 @@ export class DjBookingService {
 
     const title = confirm ? `CONFIRMED — ${booking.event.title}` : `Application declined`;
     const body = confirm
-      ? `You're playing ${booking.event.title} (${booking.slot} slot). ${booking.event.date.toDateString()} — see your gig calendar. Fee: ${booking.performanceFee}.`
+      ? `You're playing ${booking.event.title} (${booking.slot} slot). ${booking.event.date.toDateString()} — see your gig calendar. ${booking.performanceFee > 0 ? `Fee: ${booking.performanceFee}.` : "This is an unpaid gig."}`
       : `The promoter declined your application for ${booking.event.title}.${note ? ` Reason: ${note}` : ""}`;
     await this.notifications.deliver([booking.artist.userId], {
       kind: confirm ? "confirmed" : "declined",
@@ -585,7 +585,10 @@ export class DjBookingService {
     await this.notifications.deliver([booking.artist.userId], {
       kind: "generic",
       title: `Gig confirmed: ${booking.event.title}`,
-      body: `${booking.event.venue.name} confirmed your ${booking.slot ?? "set"}. You can invoice the venue for ${booking.performanceFee} now.`,
+      body:
+        booking.performanceFee > 0
+          ? `${booking.event.venue.name} confirmed your ${booking.slot ?? "set"}. You can invoice the venue for ${booking.performanceFee} now.`
+          : `${booking.event.venue.name} confirmed your ${booking.slot ?? "set"}. This was an unpaid gig, so there is nothing to invoice.`,
       link: `${this.appUrl()}/gig-calendar`,
       channels: ["inapp", "email"],
     });

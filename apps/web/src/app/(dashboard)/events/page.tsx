@@ -190,7 +190,8 @@ export default function EventManager() {
     setSlots({
       eventId: event.id,
       budget: event.budget,
-      djFeePerHour: event.djFeePerHour || 500,
+      // 0 is a deliberate free night; only an event with no plan at all gets the R500 default.
+      djFeePerHour: event.slotCount ? event.djFeePerHour : 500,
       slotCount: event.slotCount ?? 4,
       slotMinutes: event.slotMinutes ?? 60,
       slotStart: hhmm(event.slotStartMinute),
@@ -331,10 +332,29 @@ export default function EventManager() {
           </div>
 
           <div className="grid md:grid-cols-5 gap-3 items-end">
-            <label className="text-xs text-neutral-400 space-y-1">
+            <div className="text-xs text-neutral-400 space-y-1">
               <span>DJ fee / hour (R)</span>
-              <input required type="number" min={1} className={`${field} w-full`} value={form.djFeePerHour} onChange={(e) => setForm({ ...form, djFeePerHour: +e.target.value })} />
-            </label>
+              <div className="flex items-center gap-2">
+                <input
+                  required
+                  type="number"
+                  min={0}
+                  aria-label="DJ fee per hour"
+                  disabled={form.djFeePerHour === 0}
+                  className={`${field} w-full disabled:opacity-50`}
+                  value={form.djFeePerHour}
+                  onChange={(e) => setForm({ ...form, djFeePerHour: +e.target.value })}
+                />
+                <label className="flex items-center gap-1 whitespace-nowrap text-[10px] uppercase tracking-widest text-neutral-400">
+                  <input
+                    type="checkbox"
+                    checked={form.djFeePerHour === 0}
+                    onChange={(e) => setForm({ ...form, djFeePerHour: e.target.checked ? 0 : 500 })}
+                  />
+                  Free
+                </label>
+              </div>
+            </div>
             <label className="text-xs text-neutral-400 space-y-1">
               <span>Timeslots</span>
               <input required type="number" min={1} max={12} className={`${field} w-full`} value={form.slotCount} onChange={(e) => setForm({ ...form, slotCount: +e.target.value })} />
@@ -355,10 +375,16 @@ export default function EventManager() {
 
           <p className="text-xs text-neutral-500">
             {form.slotCount} × {form.slotMinutes} min from {form.slotStart} ·{" "}
-            <span className="text-neutral-300">R{planFee.toLocaleString()} per slot</span> · R{planTotal.toLocaleString()} total
-            {form.budget > 0 && (planTotal > form.budget
-              ? <span className="text-yellow-400"> — plan is R{(planTotal - form.budget).toLocaleString()} above the R{form.budget.toLocaleString()} budget; you can only confirm DJs up to the budget</span>
-              : <span> of R{form.budget.toLocaleString()} budget</span>)}
+            {form.djFeePerHour === 0 ? (
+              <span className="text-neon">free gig — every slot pays R0 and DJs play unpaid</span>
+            ) : (
+              <>
+                <span className="text-neutral-300">R{planFee.toLocaleString()} per slot</span> · R{planTotal.toLocaleString()} total
+                {form.budget > 0 && (planTotal > form.budget
+                  ? <span className="text-yellow-400"> — plan is R{(planTotal - form.budget).toLocaleString()} above the R{form.budget.toLocaleString()} budget; you can only confirm DJs up to the budget</span>
+                  : <span> of R{form.budget.toLocaleString()} budget</span>)}
+              </>
+            )}
           </p>
 
           {selectedVenue && (
@@ -419,8 +445,9 @@ export default function EventManager() {
                         <p className="font-bold">{e.title}</p>
                         {e.slotCount ? (
                           <p className="text-neutral-500 text-xs">
-                            {e.slotCount} × {e.slotMinutes} min · R{e.djFeePerHour.toLocaleString()}/h ·{" "}
-                            <span className="text-neutral-300">R{fee.toLocaleString()}/slot</span> · R{e.committed.toLocaleString()} committed
+                            {e.slotCount} × {e.slotMinutes} min ·{" "}
+                            {e.djFeePerHour > 0 ? `R${e.djFeePerHour.toLocaleString()}/h` : "Free gig"} ·{" "}
+                            <span className="text-neutral-300">{e.djFeePerHour > 0 ? `R${fee.toLocaleString()}/slot` : "R0/slot"}</span> · R{e.committed.toLocaleString()} committed
                             {e.budget > 0 ? ` of R${e.budget.toLocaleString()}` : ""}
                             {e.budget > 0 && allocated > e.budget && (
                               <span className="text-yellow-400"> · plan R{(allocated - e.budget).toLocaleString()} over budget · confirmations stop at R{e.budget.toLocaleString()}</span>
@@ -528,10 +555,28 @@ export default function EventManager() {
                       <tr className="border-t border-line bg-surface/60">
                         <td colSpan={6} className="px-4 py-3 space-y-2">
                           <div className="grid md:grid-cols-5 gap-2 items-end">
-                            <label className="text-xs text-neutral-400 space-y-1">
+                            <div className="text-xs text-neutral-400 space-y-1">
                               <span>DJ fee / hour (R)</span>
-                              <input type="number" min={1} className={`${field} w-full`} value={slots.djFeePerHour} onChange={(ev) => setSlots({ ...slots, djFeePerHour: +ev.target.value })} />
-                            </label>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  aria-label="DJ fee per hour"
+                                  disabled={slots.djFeePerHour === 0}
+                                  className={`${field} w-full disabled:opacity-50`}
+                                  value={slots.djFeePerHour}
+                                  onChange={(ev) => setSlots({ ...slots, djFeePerHour: +ev.target.value })}
+                                />
+                                <label className="flex items-center gap-1 whitespace-nowrap text-[10px] uppercase tracking-widest text-neutral-400">
+                                  <input
+                                    type="checkbox"
+                                    checked={slots.djFeePerHour === 0}
+                                    onChange={(ev) => setSlots({ ...slots, djFeePerHour: ev.target.checked ? 0 : 500 })}
+                                  />
+                                  Free
+                                </label>
+                              </div>
+                            </div>
                             <label className="text-xs text-neutral-400 space-y-1">
                               <span>Timeslots</span>
                               <input type="number" min={1} max={12} className={`${field} w-full`} value={slots.slotCount} onChange={(ev) => setSlots({ ...slots, slotCount: +ev.target.value })} />
@@ -551,9 +596,15 @@ export default function EventManager() {
                           </div>
                           <p className="text-xs text-neutral-500">
                             {slots.slotCount} × {slots.slotMinutes} min from {slots.slotStart} ·{" "}
-                            <span className="text-neutral-300">R{editFee.toLocaleString()} per slot</span> · R{editTotal.toLocaleString()} total
-                            {slots.budget > 0 && editTotal > slots.budget && (
-                              <span className="text-yellow-400"> — plan over budget · you can only confirm DJs up to R{slots.budget.toLocaleString()}</span>
+                            {slots.djFeePerHour === 0 ? (
+                              <span className="text-neon">free gig — every slot pays R0 and DJs play unpaid</span>
+                            ) : (
+                              <>
+                                <span className="text-neutral-300">R{editFee.toLocaleString()} per slot</span> · R{editTotal.toLocaleString()} total
+                                {slots.budget > 0 && editTotal > slots.budget && (
+                                  <span className="text-yellow-400"> — plan over budget · you can only confirm DJs up to R{slots.budget.toLocaleString()}</span>
+                                )}
+                              </>
                             )}
                           </p>
                           <div className="space-y-1">

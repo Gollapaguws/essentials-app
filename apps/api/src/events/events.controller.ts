@@ -23,8 +23,8 @@ class CreateEventDto {
   @IsOptional() @IsString() dressCode?: string;
   @IsOptional() @IsString() ticketUrl?: string;
   @IsOptional() @IsInt() revenueSplitPromoterPct?: number;
-  /** What the promoter pays a DJ per hour — every slot is priced off this. */
-  @IsOptional() @IsInt() @Min(1) djFeePerHour?: number;
+  /** What the promoter pays a DJ per hour — every slot is priced off this. 0 = free gig. */
+  @IsOptional() @IsInt() @Min(0) djFeePerHour?: number;
   /** Planning ceiling for the night's DJ spend. */
   @IsOptional() @IsInt() @Min(0) budget?: number;
   @IsOptional() @IsInt() @Min(1) slotCount?: number;
@@ -63,7 +63,8 @@ class RepeatDto {
 }
 
 class SlotPlanDto {
-  @IsInt() @Min(1) djFeePerHour!: number;
+  /** 0 is a free (unpaid) night. */
+  @IsInt() @Min(0) djFeePerHour!: number;
   @IsOptional() @IsInt() @Min(0) budget?: number;
   @IsInt() @Min(1) slotCount!: number;
   @IsInt() @Min(15) slotMinutes!: number;

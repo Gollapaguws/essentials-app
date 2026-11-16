@@ -46,9 +46,9 @@ export function normalizePlan(input: {
   const slotCount = Math.round(Number(input.slotCount ?? 0));
   const slotMinutes = Math.round(Number(input.slotMinutes ?? 0));
 
-  // "Must stipulate the fee per hour": a slot with no rate is a gig that cannot be invoiced.
-  if (!Number.isFinite(djFeePerHour) || djFeePerHour <= 0) {
-    throw new BadRequestException("Set the DJ fee per hour (it is what the DJ invoices the venue)");
+  // Zero is a deliberate choice: a free (unpaid) night. Negative rates are not.
+  if (!Number.isFinite(djFeePerHour) || djFeePerHour < 0) {
+    throw new BadRequestException("DJ fee per hour cannot be negative (set 0 for a free gig)");
   }
   if (!Number.isFinite(budget) || budget < 0) throw new BadRequestException("Budget cannot be negative");
   if (slotCount < SLOT_COUNT_RANGE.min || slotCount > SLOT_COUNT_RANGE.max) {

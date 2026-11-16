@@ -9,11 +9,17 @@ describe("normalizePlan", () => {
     expect(normalizePlan({ budget: 5000 })).toBeNull();
   });
 
-  it("requires the DJ fee per hour, because that is what the DJ invoices", () => {
-    expect(() => normalizePlan({ slotCount: 4, slotMinutes: 60, slotStart: "20:00" })).toThrow(BadRequestException);
-    expect(() => normalizePlan({ djFeePerHour: 0, slotCount: 4, slotMinutes: 60, slotStart: "20:00" })).toThrow(
-      /DJ fee per hour/,
-    );
+  it("accepts a free night but rejects a negative rate", () => {
+    expect(normalizePlan({ djFeePerHour: 0, slotCount: 4, slotMinutes: 60, slotStart: "20:00" })).toMatchObject({
+      djFeePerHour: 0,
+    });
+    expect(() =>
+      normalizePlan({ djFeePerHour: -1, slotCount: 4, slotMinutes: 60, slotStart: "20:00" }),
+    ).toThrow(BadRequestException);
+    // No rate sent at all is the same as free, not an error.
+    expect(normalizePlan({ slotCount: 4, slotMinutes: 60, slotStart: "20:00" })).toMatchObject({
+      djFeePerHour: 0,
+    });
   });
 
   it("rejects impossible plans", () => {
@@ -42,6 +48,11 @@ describe("slotFee", () => {
     expect(slotFee(500, 90)).toBe(750);
     expect(slotFee(300, 45)).toBe(225);
     expect(slotFee(450, 30)).toBe(225);
+  });
+
+  it("pays nothing on a free night", () => {
+    expect(slotFee(0, 60)).toBe(0);
+    expect(slotFee(0, 90)).toBe(0);
   });
 
   it("rounds to whole currency units", () => {
