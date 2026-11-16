@@ -583,6 +583,19 @@ model SiteVisit {
   @@index([day])
 }
 
+// One row per anonymous visitor, event and UTC day. Used for install-funnel
+// counts without cookies or a persistent identifier.
+model SiteEvent {
+  id         String   @id @default(cuid())
+  name       String
+  visitorKey String
+  day        String
+  createdAt  DateTime @default(now())
+
+  @@unique([name, visitorKey, day])
+  @@index([day])
+}
+
 // ===== What's new (changelog) announcements =====
 // One row per changelog release mailed to members, keyed by its date.
 model WhatsNewBroadcast {

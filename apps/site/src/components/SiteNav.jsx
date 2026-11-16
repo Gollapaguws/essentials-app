@@ -14,10 +14,92 @@ const links = [
   { label: "PRIVACY", note: "What we hold and your rights", to: { pathname: "/privacy" } },
 ];
 
+const INSTALL_DISMISSED_KEY = "essentials-install-banner-dismissed";
+const API_URL = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
+
+const trackInstallEvent = (name) => {
+  void fetch(`${API_URL}/site/event`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+    keepalive: true,
+  }).catch(() => {});
+};
+
+const isStandalone = () => {
+  if (typeof window === "undefined") return false;
+  const standaloneDisplay = window.matchMedia?.("(display-mode: standalone)")?.matches;
+  return Boolean(standaloneDisplay || window.navigator.standalone);
+};
+
+const getInstallStep = () => {
+  if (typeof navigator === "undefined") return null;
+  const ua = navigator.userAgent;
+  const isIOS =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  if (isIOS) return "Open in Safari, tap Share, then Add to Home Screen.";
+  if (/Android/.test(ua)) return "Open in Chrome, tap the menu, then Install app.";
+  return "Open this page in Safari or Chrome, then add it to your home screen.";
+};
+
 export default function SiteNav() {
   const [open, setOpen] = useState(false);
   const [me, setMe] = useState(null);
+  const [showInstall, setShowInstall] = useState(() => {
+    if (typeof window === "undefined" || isStandalone()) return false;
+    try {
+      return window.localStorage.getItem(INSTALL_DISMISSED_KEY) !== "1";
+    } catch {
+      return true;
+    }
+  });
+  const [installPrompt, setInstallPrompt] = useState(null);
   const closeRef = useRef(null);
+
+  const dismissInstall = () => {
+    trackInstallEvent("install_banner_dismiss");
+    setShowInstall(false);
+    try {
+      window.localStorage.setItem(INSTALL_DISMISSED_KEY, "1");
+    } catch {
+      // Private browsing can reject writes; dismissing still works this visit.
+    }
+  };
+
+  const installApp = async () => {
+    if (!installPrompt) return;
+    trackInstallEvent("install_prompt_open");
+    try {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice?.outcome === "accepted") setShowInstall(false);
+    } catch {
+      // The prompt can only be opened once; keep the written instructions visible.
+    } finally {
+      setInstallPrompt(null);
+    }
+  };
+
+  // Chrome fires this only when the PWA meets its install criteria. Keeping the
+  // event lets the banner offer the native install sheet instead of instructions.
+  useEffect(() => {
+    const onPrompt = (event) => {
+      event.preventDefault();
+      setInstallPrompt(event);
+    };
+    const onInstalled = () => {
+      trackInstallEvent("app_install");
+      setShowInstall(false);
+    };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
 
   useEffect(() => {
     const load = () => fetchMe().then(setMe);
@@ -57,6 +139,33 @@ export default function SiteNav() {
 
   return (
     <header className="noir-nav">
+      {showInstall && (
+        <div className="noir-install" role="region" aria-label="Install the ESSENTIALS app">
+          <div className="noir-install-copy">
+            <span className="noir-install-kicker">INSTALL ESSENTIALS</span>
+            <p className="noir-install-text">
+              {installPrompt
+                ? "Install for full-screen access and quicker launches."
+                : getInstallStep()}
+            </p>
+          </div>
+          <div className="noir-install-actions">
+            {installPrompt && (
+              <button type="button" className="noir-install-btn" onClick={installApp}>
+                INSTALL
+              </button>
+            )}
+            <button
+              type="button"
+              className="noir-install-close"
+              onClick={dismissInstall}
+              aria-label="Dismiss install instructions"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+        </div>
+      )}
       <div className="noir-navbar">
         <Link to="/" className="noir-brand">
           ESSENTIALS

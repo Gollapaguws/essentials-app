@@ -7,16 +7,21 @@ import { randomBytes } from "crypto";
 import { mkdirSync, writeFileSync } from "fs";
 import { join, extname } from "path";
 import { SiteContentService, FrontPageContent } from "./site-content.service";
-import { SiteStatsService } from "./site-stats.service";
+import { SITE_EVENTS, SiteStatsService } from "./site-stats.service";
+import type { SiteEventName } from "./site-stats.service";
 import { PublicEventsService } from "./public-events.service";
 import { PublicDjsService } from "./public-djs.service";
 import { ChangelogService } from "./changelog.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
-import { IsString, MaxLength } from "class-validator";
+import { IsIn, IsString, MaxLength } from "class-validator";
 
 class SiteVisitDto {
   @IsString() @MaxLength(100) path!: string;
+}
+
+class SiteEventDto {
+  @IsIn([...SITE_EVENTS]) name!: SiteEventName;
 }
 
 /**
@@ -119,6 +124,15 @@ export class SiteContentController {
     res.json({ ok: true });
   }
 
+  /** Anonymous install-funnel beacon. Same daily hash, no cookies or raw IP. */
+  @Post("event")
+  @HttpCode(200)
+  trackEvent(@Body() dto: SiteEventDto, @Res() res: Response) {
+    const ip = (res.req.headers["x-forwarded-for"] as string)?.split(",")[0] ?? res.req.socket.remoteAddress ?? "";
+    void this.siteStats.recordEvent(dto.name, ip.trim());
+    res.json({ ok: true });
+  }
+
   /** Privacy data export for the signed-in user. */
   @Get("my-data")
   @UseGuards(SupabaseAuthGuard)
@@ -126,7 +140,7 @@ export class SiteContentController {
     return this.siteStats.myData(user);
   }
 
-  /** Admin: front-page traffic, last 30 days. */
+  /** Admin: front-page traffic and install-funnel counts, last 30 days. */
   @Get("stats")
   @UseGuards(SupabaseAuthGuard)
   @Auth("admin")

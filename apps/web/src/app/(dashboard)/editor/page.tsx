@@ -21,16 +21,32 @@ interface FrontPage {
   lineupPublishAt?: string;
 }
 
+interface SiteStats {
+  days: { day: string; views: number; uniqueVisitors: number }[];
+  events: Record<"install_banner_dismiss" | "install_prompt_open" | "app_install", number>;
+}
+
 const emptyEvent: FrontPageEvent = { title: "", displayDate: "", city: "", venue: "", doors: "22:00", price: "R150", status: "ANNOUNCED" };
+
+function SiteMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="border border-line rounded-lg px-4 py-3">
+      <div className="text-2xl font-black tabular-nums">{value.toLocaleString()}</div>
+      <div className="text-[10px] uppercase tracking-widest text-neutral-500">{label}</div>
+    </div>
+  );
+}
 
 /** Admin editor for the essentialsedm.com front page. Saves to /api/site/content (admin-only). */
 export default function FrontPageEditor() {
   const [c, setC] = useState<FrontPage>({});
+  const [stats, setStats] = useState<SiteStats | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api.get<FrontPage>("/site/content").then(setC).catch((e) => setError(errorMessage(e)));
+    api.get<SiteStats>("/site/stats").then(setStats).catch(() => {});
   }, []);
 
   const set = (patch: Partial<FrontPage>) => setC((p) => ({ ...p, ...patch }));
@@ -79,6 +95,7 @@ export default function FrontPageEditor() {
 
   const input = "w-full bg-bg border border-line rounded-lg px-3 py-2";
   const label = "text-xs text-neutral-400 uppercase tracking-wider";
+  const pageViews = stats?.days.reduce((total, day) => total + day.views, 0) ?? 0;
 
   return (
     <>
@@ -90,6 +107,23 @@ export default function FrontPageEditor() {
         </div>
         {msg && <p className="text-neon text-sm">{msg}</p>}
         {error && <p className="text-red-400 text-sm">{error}</p>}
+
+        {stats && (
+          <section className="border border-line bg-surface rounded-xl p-4 space-y-3">
+            <div>
+              <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Install banner</h2>
+              <p className="text-xs text-neutral-500 mt-1">
+                Last 30 days · anonymous daily counts. Android/Chrome installs report automatically; iOS installs cannot be measured.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <SiteMetric label="Page views" value={pageViews} />
+              <SiteMetric label="Banner dismissals" value={stats.events.install_banner_dismiss} />
+              <SiteMetric label="Install prompt opens" value={stats.events.install_prompt_open} />
+              <SiteMetric label="App installs" value={stats.events.app_install} />
+            </div>
+          </section>
+        )}
 
         <section className="border border-line bg-surface rounded-xl p-4 space-y-4">
           <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Hero</h2>

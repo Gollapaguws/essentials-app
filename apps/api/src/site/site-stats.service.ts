@@ -3,13 +3,25 @@ import { prisma } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 import { PRIVACY_POLICY_VERSION } from "../common/privacy";
 
+export const SITE_EVENTS = [
+  "install_banner_dismiss",
+  "install_prompt_open",
+  "app_install",
+] as const;
+
+export type SiteEventName = (typeof SITE_EVENTS)[number];
+
 /** Public analytics beacon + privacy data export support. */
 @Injectable()
 export class SiteStatsService {
+  private visitorKey(day: string, ip: string) {
+    return Buffer.from(`${day}:${ip}`).toString("base64").slice(0, 32);
+  }
+
   /** Pageview beacon from the front page (no cookies, no PII beyond a daily hash). */
   async recordVisit(path: string, ip: string) {
     const day = new Date().toISOString().slice(0, 10);
-    const visitorKey = Buffer.from(`${day}:${ip}`).toString("base64").slice(0, 32);
+    const visitorKey = this.visitorKey(day, ip);
     await prisma.siteVisit.upsert({
       where: { visitorKey_path_day: { visitorKey, path: path.slice(0, 100), day } },
       update: { views: { increment: 1 } },
@@ -18,16 +30,54 @@ export class SiteStatsService {
     return { ok: true };
   }
 
-  /** Admin: daily views for the last 30 days. */
+  /**
+   * Anonymous install-funnel event. The unique key means one count per visitor
+   * per event per day even if the client retries the beacon.
+   */
+  async recordEvent(name: SiteEventName, ip: string) {
+    const day = new Date().toISOString().slice(0, 10);
+    await prisma.siteEvent.create({
+      data: { name, visitorKey: this.visitorKey(day, ip), day },
+    }).catch(() => null);
+    return { ok: true };
+  }
+
+  /** Admin: daily views and install-funnel counts for the last 30 days. */
   async stats() {
-    const rows = await prisma.siteVisit.groupBy({
-      by: ["day"],
-      _sum: { views: true },
-      _count: { visitorKey: true },
-      orderBy: { day: "desc" },
-      take: 30,
-    });
-    return rows.map((r) => ({ day: r.day, views: r._sum.views ?? 0, uniqueVisitors: r._count.visitorKey }));
+    const since = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const [rows, eventRows] = await Promise.all([
+      prisma.siteVisit.groupBy({
+        by: ["day"],
+        _sum: { views: true },
+        _count: { visitorKey: true },
+        orderBy: { day: "desc" },
+        take: 30,
+      }),
+      prisma.siteEvent.groupBy({
+        by: ["name"],
+        where: { day: { gte: since }, name: { in: [...SITE_EVENTS] } },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const events: Record<SiteEventName, number> = {
+      install_banner_dismiss: 0,
+      install_prompt_open: 0,
+      app_install: 0,
+    };
+    for (const row of eventRows) {
+      if (row.name in events) events[row.name as SiteEventName] = row._count._all;
+    }
+
+    return {
+      since,
+      days: rows.map((r) => ({
+        day: r.day,
+        views: r._sum.views ?? 0,
+        uniqueVisitors: r._count.visitorKey,
+      })),
+      events,
+    };
   }
 
   /** POPIA/GDPR data export: the authenticated person's account and activity record. */
