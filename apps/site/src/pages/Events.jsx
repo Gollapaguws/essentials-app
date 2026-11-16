@@ -62,7 +62,7 @@ export default function Events() {
           {events.length > 0 && (
             <div className="noir-strip">
               {events.map((event) => (
-                <Link key={event.id} to={`/events/${event.id}`} className="noir-frame">
+                <article key={event.id} className="noir-frame">
                   <span className="noir-scan" aria-hidden="true" />
                   <span className="noir-micro">{when(event.date)}</span>
                   <span className="noir-frame-title">{event.title}</span>
@@ -72,20 +72,29 @@ export default function Events() {
                   </span>
                   {Array.isArray(event.artists) && event.artists.length > 0 && (
                     <span className="noir-djs">
-                      {event.artists.map((dj, i) => (
-                        <span className="noir-dj" key={`${dj.name}-${i}`}>
-                          <span className="noir-dj-name">{dj.name}</span>
-                          {dj.time && <span className="noir-dj-time">{dj.time}</span>}
-                        </span>
-                      ))}
+                      {event.artists.map((dj, i) => {
+                        const Tag = dj.id ? Link : "span";
+                        return (
+                          <Tag
+                            className="noir-dj"
+                            key={`${dj.id ?? dj.name}-${i}`}
+                            {...(dj.id ? { to: `/djs/${dj.id}` } : {})}
+                          >
+                            <span className="noir-dj-name">{dj.name}</span>
+                            {dj.time && <span className="noir-dj-time">{dj.time}</span>}
+                          </Tag>
+                        );
+                      })}
                     </span>
                   )}
                   <span className="noir-frame-meta">
                     <span className="noir-micro">Going {event.going}</span>
                     <span className="noir-micro">{String(event.status ?? "").toUpperCase()}</span>
                   </span>
-                  <span className="noir-ticket">VIEW THE NIGHT →</span>
-                </Link>
+                  <Link to={`/events/${event.id}`} className="noir-ticket">
+                    VIEW THE NIGHT →
+                  </Link>
+                </article>
               ))}
             </div>
           )}

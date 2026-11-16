@@ -77,15 +77,15 @@ describe("PublicEventsService", () => {
 
   it("shows confirmed DJs on the public event card", async () => {
     db.artistBooking.findMany.mockResolvedValue([
-      { eventId: "event-1", slot: "22:00-23:00", slotRef: { label: "22:00–23:00" }, artist: { stageName: "Nova" } },
-      { eventId: "event-1", slot: "legacy label", slotRef: null, artist: { stageName: "Kes" } },
+      { eventId: "event-1", slot: "22:00-23:00", slotRef: { label: "22:00–23:00" }, artist: { id: "artist-nova", stageName: "Nova" } },
+      { eventId: "event-1", slot: "legacy label", slotRef: null, artist: { id: "artist-kes", stageName: "Kes" } },
     ]);
 
     const [row] = await service().list();
 
     expect(row.artists).toEqual([
-      { name: "Nova", time: "22:00–23:00" },
-      { name: "Kes", time: "legacy label" },
+      { id: "artist-nova", name: "Nova", time: "22:00–23:00" },
+      { id: "artist-kes", name: "Kes", time: "legacy label" },
     ]);
     expect(db.artistBooking.findMany.mock.calls[0][0].where).toEqual({
       eventId: { in: ["event-1"] },

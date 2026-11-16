@@ -14,6 +14,7 @@ if (typeof window !== "undefined") {
 
 import Events from './pages/Events';
 import EventDetail from './pages/EventDetail';
+import DjProfile from './pages/DjProfile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import AuthCallback from './pages/AuthCallback';
@@ -34,6 +35,7 @@ const PublicSite = () => (
       <Route path="/" element={<Home />} />
       <Route path="/events" element={<Events />} />
       <Route path="/events/:id" element={<EventDetail />} />
+      <Route path="/djs/:id" element={<DjProfile />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/auth/callback" element={<AuthCallback />} />

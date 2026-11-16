@@ -7,6 +7,7 @@ import { fetchMe, openDashboard, signOut } from "@/lib/auth";
 // router goes home, then ScrollToTop brings the section into view.
 const links = [
   { label: "EVENTS", note: "Next nights, doors and tickets", to: { pathname: "/", hash: "#lineup" } },
+  { label: "THE DJS", note: "The roster and their profiles", to: { pathname: "/", hash: "#djs" } },
   { label: "THE COLLECTIVE", note: "What the room is for", to: { pathname: "/", hash: "#collective" } },
   { label: "CONTACT", note: "Join the mailing list", to: { pathname: "/", hash: "#contact" } },
   { label: "WHAT'S NEW", note: "What has landed lately", to: { pathname: "/whats-new" }, member: true },

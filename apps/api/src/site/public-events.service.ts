@@ -41,7 +41,7 @@ export class PublicEventsService {
    */
   private async withArtists<T extends { id: string }>(
     rows: T[],
-  ): Promise<(T & { artists: { name: string; time: string | null }[] })[]> {
+  ): Promise<(T & { artists: { id: string; name: string; time: string | null }[] })[]> {
     const ids = rows.map((r) => r.id);
     if (!ids.length) return rows.map((r) => ({ ...r, artists: [] }));
 
@@ -51,15 +51,15 @@ export class PublicEventsService {
         eventId: true,
         slot: true,
         slotRef: { select: { label: true } },
-        artist: { select: { stageName: true } },
+        artist: { select: { id: true, stageName: true } },
       },
       orderBy: { startAt: "asc" },
     });
 
-    const byEvent = new Map<string, { name: string; time: string | null }[]>();
+    const byEvent = new Map<string, { id: string; name: string; time: string | null }[]>();
     for (const b of bookings) {
       const list = byEvent.get(b.eventId) ?? [];
-      list.push({ name: b.artist.stageName, time: b.slotRef?.label ?? b.slot ?? null });
+      list.push({ id: b.artist.id, name: b.artist.stageName, time: b.slotRef?.label ?? b.slot ?? null });
       byEvent.set(b.eventId, list);
     }
     return rows.map((r) => ({ ...r, artists: byEvent.get(r.id) ?? [] }));

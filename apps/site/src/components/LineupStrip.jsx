@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function LineupStrip({ events = [] }) {
   const hasEvents = events.length > 0;
 
@@ -22,12 +24,19 @@ export default function LineupStrip({ events = [] }) {
                 </span>
                 {Array.isArray(event.artists) && event.artists.length > 0 && (
                   <span className="noir-djs">
-                    {event.artists.map((dj, i) => (
-                      <span className="noir-dj" key={`${dj.name}-${i}`}>
-                        <span className="noir-dj-name">{dj.name}</span>
-                        {dj.time && <span className="noir-dj-time">{dj.time}</span>}
-                      </span>
-                    ))}
+                    {event.artists.map((dj, i) => {
+                      const Tag = dj.id ? Link : "span";
+                      return (
+                        <Tag
+                          className="noir-dj"
+                          key={`${dj.id ?? dj.name}-${i}`}
+                          {...(dj.id ? { to: `/djs/${dj.id}` } : {})}
+                        >
+                          <span className="noir-dj-name">{dj.name}</span>
+                          {dj.time && <span className="noir-dj-time">{dj.time}</span>}
+                        </Tag>
+                      );
+                    })}
                   </span>
                 )}
                 <span className="noir-frame-meta">

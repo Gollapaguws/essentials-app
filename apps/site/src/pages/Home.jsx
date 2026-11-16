@@ -3,6 +3,7 @@ import { useSiteContent } from "@/lib/useSiteContent";
 import SiteNav from "@/components/SiteNav";
 import HeroCinema from "@/components/HeroCinema";
 import LineupStrip from "@/components/LineupStrip";
+import DjShowcase from "@/components/DjShowcase";
 import ManifestoQuote from "@/components/ManifestoQuote";
 import LivePanel from "@/components/LivePanel";
 import LiveChat from "@/components/LiveChat";
@@ -18,6 +19,7 @@ export default function Home() {
         <LivePanel idleLoop={content.idleLoop} />
         <LiveChat />
         <LineupStrip events={content.events} />
+        <DjShowcase />
         <ManifestoQuote />
       </main>
       <SiteFooter />

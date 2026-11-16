@@ -60,7 +60,7 @@ describe("SiteContentService.get", () => {
       },
     ]);
     db.artistBooking.findMany.mockResolvedValue([
-      { eventId: "event-9", slot: "22:00-23:00", slotRef: { label: "22:00–23:00" }, artist: { stageName: "Nova" } },
+      { eventId: "event-9", slot: "22:00-23:00", slotRef: { label: "22:00–23:00" }, artist: { id: "artist-nova", stageName: "Nova" } },
     ]);
 
     const content = await service().get();
@@ -76,7 +76,7 @@ describe("SiteContentService.get", () => {
     });
     // 20:00 UTC is 22:00 in Cape Town.
     expect(card.displayDate).toContain("5");
-    expect(card.artists).toEqual([{ name: "Nova", time: "22:00–23:00" }]);
+    expect(card.artists).toEqual([{ id: "artist-nova", name: "Nova", time: "22:00–23:00" }]);
   });
 
   it("does not list the same event twice when it is also curated", async () => {
@@ -105,16 +105,16 @@ describe("SiteContentService.get", () => {
     );
     db.event.findMany.mockResolvedValue([{ id: "live-1" }]);
     db.artistBooking.findMany.mockResolvedValue([
-      { eventId: "live-1", slot: "20:00-21:00", slotRef: { label: "20:00–21:00" }, artist: { stageName: "Nova" } },
-      { eventId: "live-1", slot: "legacy label", slotRef: null, artist: { stageName: "Kes" } },
+      { eventId: "live-1", slot: "20:00-21:00", slotRef: { label: "20:00–21:00" }, artist: { id: "artist-nova", stageName: "Nova" } },
+      { eventId: "live-1", slot: "legacy label", slotRef: null, artist: { id: "artist-kes", stageName: "Kes" } },
     ]);
 
     const content = await service().get();
     const [first, second] = (content.events ?? []) as unknown as Record<string, unknown>[];
 
     expect(first.artists).toEqual([
-      { name: "Nova", time: "20:00–21:00" },
-      { name: "Kes", time: "legacy label" },
+      { id: "artist-nova", name: "Nova", time: "20:00–21:00" },
+      { id: "artist-kes", name: "Kes", time: "legacy label" },
     ]);
     expect(second).not.toHaveProperty("artists");
     expect(db.artistBooking.findMany.mock.calls[0][0].where).toEqual({

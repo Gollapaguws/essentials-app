@@ -9,6 +9,7 @@ import { join, extname } from "path";
 import { SiteContentService, FrontPageContent } from "./site-content.service";
 import { SiteStatsService } from "./site-stats.service";
 import { PublicEventsService } from "./public-events.service";
+import { PublicDjsService } from "./public-djs.service";
 import { ChangelogService } from "./changelog.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
@@ -30,6 +31,7 @@ export class SiteContentController {
     private siteStats: SiteStatsService,
     private config: ConfigService,
     private publicEvents: PublicEventsService,
+    private publicDjs: PublicDjsService,
     private changelog: ChangelogService,
   ) {}
 
@@ -53,6 +55,17 @@ export class SiteContentController {
   @Get("events/:id")
   event(@Param("id") id: string) {
     return this.publicEvents.detail(id);
+  }
+
+  /** Public DJ roster and profiles. No session: the lineup links to these. */
+  @Get("djs")
+  djs() {
+    return this.publicDjs.list();
+  }
+
+  @Get("djs/:id")
+  dj(@Param("id") id: string) {
+    return this.publicDjs.detail(id);
   }
 
   @Post("content")

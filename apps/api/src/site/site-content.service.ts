@@ -169,15 +169,16 @@ export class SiteContentService {
         eventId: true,
         slot: true,
         slotRef: { select: { label: true } },
-        artist: { select: { stageName: true } },
+        artist: { select: { id: true, stageName: true } },
       },
       orderBy: { startAt: "asc" },
     });
 
-    const byEvent = new Map<string, { name: string; time: string | null }[]>();
+    const byEvent = new Map<string, { id: string; name: string; time: string | null }[]>();
     for (const booking of bookings) {
       const list = byEvent.get(booking.eventId) ?? [];
       list.push({
+        id: booking.artist.id,
         name: booking.artist.stageName,
         time: booking.slotRef?.label ?? booking.slot ?? null,
       });
