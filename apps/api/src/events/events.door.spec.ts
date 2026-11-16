@@ -122,4 +122,14 @@ describe("EventsService.checkInGuest", () => {
 
     expect(db.guestList.update).toHaveBeenCalled();
   });
+
+  it("lets door staff check a guest in and search the list", async () => {
+    const door = { sub: "door-1", email: "d@example.com", role: "door" } as JwtUser;
+
+    await service().checkInGuest(door, "event-1", "guest-1");
+    const rows = await service().guestList(door, "event-1", "nom");
+
+    expect(db.guestList.update).toHaveBeenCalled();
+    expect(rows[0]).toMatchObject({ name: "Nomsa" });
+  });
 });

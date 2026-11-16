@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-export type AuthRole = "guest" | "artist" | "promoter" | "venue_manager" | "admin";
+export type AuthRole = "guest" | "artist" | "promoter" | "venue_manager" | "door" | "admin";
 
 /** Canonical identity returned by `GET /api/auth/me`. */
 export interface AuthUser {
@@ -48,7 +48,7 @@ export function createSupabaseClient(o: CreateSupabaseClientOptions): SupabaseCl
 export const MFA_REQUIRED_ROLES: readonly AuthRole[] = ["promoter", "venue_manager", "admin"];
 
 /** Roles allowed into the dashboard. DJs included: the artist portal lives there. */
-export const DASHBOARD_ROLES: readonly AuthRole[] = ["artist", "promoter", "venue_manager", "admin"];
+export const DASHBOARD_ROLES: readonly AuthRole[] = ["artist", "promoter", "venue_manager", "door", "admin"];
 
 /**
  * Where a role should land after signing in. `/dashboard` is the promoter
@@ -57,5 +57,6 @@ export const DASHBOARD_ROLES: readonly AuthRole[] = ["artist", "promoter", "venu
 export function landingPath(role: AuthRole | null): string {
   if (role === "artist") return "/artist";
   if (role === "venue_manager") return "/venue";
+  if (role === "door") return "/door";
   return "/";
 }

@@ -105,17 +105,17 @@ export class EventsController {
     return this.events.checkIn(qrToken, user);
   }
 
-  /** Promoter/venue: the door list, searchable by guest name or email. */
+  /** Promoter/venue/door staff: the door list, searchable by guest name or email. */
   @Get(":id/guest-list")
-  @Auth("promoter", "venue_manager", "admin")
+  @Auth("promoter", "venue_manager", "door", "admin")
   guestList(@Param("id") id: string, @CurrentUser() user: JwtUser, @Query("q") q?: string) {
     return this.events.guestList(user, id, q?.trim() || undefined);
   }
 
-  /** Promoter/venue: check a guest in by list entry, no QR scanner needed. */
+  /** Promoter/venue/door staff: check a guest in by list entry, no QR scanner needed. */
   @Post(":id/check-in-guest")
   @HttpCode(200)
-  @Auth("promoter", "venue_manager", "admin")
+  @Auth("promoter", "venue_manager", "door", "admin")
   checkInGuest(@Param("id") id: string, @CurrentUser() user: JwtUser, @Body() dto: DoorCheckInDto) {
     return this.events.checkInGuest(user, id, dto.guestListId);
   }
@@ -204,7 +204,7 @@ export class EventsController {
   }
 
   @Get("manage/list")
-  @Auth("promoter")
+  @Auth("promoter", "door", "admin")
   listForPromoter(@CurrentUser() user: JwtUser) {
     return this.events.listForPromoter(user);
   }

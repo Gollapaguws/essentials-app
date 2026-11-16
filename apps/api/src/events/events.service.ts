@@ -453,9 +453,19 @@ export class EventsService {
   }
 
   async listForPromoter(user: JwtUser) {
-    if (user.role !== "promoter" && user.role !== "admin") throw new ForbiddenException("Promoters only");
+    if (user.role !== "promoter" && user.role !== "admin" && user.role !== "door") {
+      throw new ForbiddenException("Promoters only");
+    }
+    // Door staff run the list for whichever night they are working, so they see
+    // every event that can be at the door rather than one promoter's catalogue.
+    const where: Prisma.EventWhereInput =
+      user.role === "admin"
+        ? {}
+        : user.role === "door"
+          ? { status: { in: [EventStatus.approved, EventStatus.live, EventStatus.completed] } }
+          : { promoterId: user.sub };
     const events = await prisma.event.findMany({
-      where: user.role === "admin" ? {} : { promoterId: user.sub },
+      where,
       include: {
         venue: { select: { name: true } },
         _count: { select: { guestLists: true, artistBookings: true } },
@@ -498,6 +508,8 @@ export class EventsService {
     if (user.role === "admin") return;
     if (user.role === "promoter" && user.sub === promoterId) return;
     if (user.role === "venue_manager" && venueManagerId === user.sub) return;
+    // Door staff work the guest list and check-in for the night they are on.
+    if (user.role === "door") return;
     if (user.role === "guest") return; // read-only via detail()
     throw new ForbiddenException();
   }

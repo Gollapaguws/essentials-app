@@ -16,6 +16,7 @@ enum Role {
   guest
   artist
   venue_manager
+  door
 }
 
 enum VibeTag {

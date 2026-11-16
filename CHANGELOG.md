@@ -2,6 +2,34 @@
 
 Notable changes to ESSENTIALS. Dates are UTC.
 
+## 2026-11-16
+
+### Door staff
+
+- **A new `door` role for door ticket staff.** An admin can create or re-role an
+  account to **Door staff** on the Users page. Door staff land on `/door` after
+  signing in, see only Door, Notifications and Account in the nav, and are not
+  subject to two-step verification.
+- Door staff can read the guest list and check guests in by list entry — no QR
+  scanner needed — and the check-in is written to the door log against their
+  account. They cannot create events, change fees, or open promoter pages.
+- The Night selector shows every approved, live or completed event rather than
+  one promoter's catalogue, so a door team can work any night they are on.
+- The Help section gains a door staff manual, and the support manual in
+  `docs/chatbot-manual.md` documents the role.
+
+### Webmail
+
+- **Roundcube is now upstream 1.6.21**, which supports PHP 8.5 natively, so the
+  local polyfill patch is gone. The tree lives at `/var/www/roundcube`, keeps the
+  existing Debian SQLite database and `/webmail/` URL, and the nginx alias points
+  at the new tree.
+- **Dovecot 2.4 config fixes:** the username format uses 2.4 variable syntax and
+  the inbox path is pinned to `%{home}/Maildir`, so per-user inbox autocreation
+  no longer fails with a permission error.
+- Webmail sign-in and inbox loading are verified end to end through nginx, IMAP
+  and Postfix delivery.
+
 ## 2026-11-14
 
 ### Booking desk

@@ -65,4 +65,14 @@ describe("EventsService.listForPromoter", () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(events.findMany).not.toHaveBeenCalled();
   });
+
+  it("gives door staff every night that has a door open, not one promoter's list", async () => {
+    events.findMany.mockResolvedValue([]);
+
+    await service().listForPromoter({ sub: "door-1", email: "d@example.com", role: "door" });
+
+    expect(events.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { status: { in: ["approved", "live", "completed"] } } }),
+    );
+  });
 });

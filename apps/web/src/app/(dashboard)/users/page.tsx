@@ -36,6 +36,7 @@ interface RoleForm {
 const ROLE_LABEL: Record<string, string> = {
   artist: "DJ",
   venue_manager: "Venue",
+  door: "Door staff",
   promoter: "Promoter",
   guest: "Guest",
   admin: "Admin",
@@ -55,7 +56,7 @@ export default function Users() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState("");
-  const [newRole, setNewRole] = useState<"guest" | "artist" | "promoter" | "venue_manager" | "admin">("guest");
+  const [newRole, setNewRole] = useState<"guest" | "artist" | "promoter" | "venue_manager" | "door" | "admin">("guest");
   const [creating, setCreating] = useState(false);
   const [provisioned, setProvisioned] = useState<{ email: string; password: string } | null>(null);
   const [resetResult, setResetResult] = useState<{
@@ -185,10 +186,10 @@ export default function Users() {
     }
   };
 
-  const choose = (user: RegisteredUser, role: FormKind | "promoter" | "guest") => {
+  const choose = (user: RegisteredUser, role: FormKind | "promoter" | "door" | "guest") => {
     setError(null);
     setNotice(null);
-    if (role === "guest" || role === "promoter") {
+    if (role === "guest" || role === "promoter" || role === "door") {
       void request(user, `/users/${user.id}/role`, { role }, "role updated");
       return;
     }
@@ -306,7 +307,7 @@ export default function Users() {
               value={newRole}
               onChange={(e) => setNewRole(e.target.value as typeof newRole)}
             >
-              {(["guest", "promoter", "artist", "venue_manager", "admin"] as const).map((role) => (
+              {(["guest", "promoter", "artist", "venue_manager", "door", "admin"] as const).map((role) => (
                 <option key={role} value={role}>
                   {ROLE_LABEL[role]}
                 </option>
@@ -416,7 +417,7 @@ export default function Users() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        {(["artist", "venue_manager", "promoter", "guest"] as const).map((option) => (
+                        {(["artist", "venue_manager", "door", "promoter", "guest"] as const).map((option) => (
                           <button
                             key={option}
                             disabled={busyId === u.id}

@@ -83,7 +83,7 @@ const links: NavLink[] = [
     label: "Door",
     group: "AUDIENCE",
     hint: "Search the guest list by name or email and check people in without a scanner.",
-    roles: ["promoter", "venue_manager", "admin"],
+    roles: ["promoter", "venue_manager", "door", "admin"],
   },
   {
     href: "/artist",
@@ -194,6 +194,7 @@ const ROLE_LABEL: Record<string, string> = {
   promoter: "PROMOTER",
   artist: "ARTIST",
   venue_manager: "VENUE",
+  door: "DOOR",
   guest: "GUEST",
 };
 
