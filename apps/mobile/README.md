@@ -59,6 +59,25 @@ builds an app bundle and auto-increments `versionCode`; `preview` builds an
 installable APK. `versionName` and the starting `versionCode` come from
 `app.json`.
 
+### Play Store submission credentials
+
+`eas submit` needs a Google service account with access to the Play listing. EAS
+keeps that key remotely; never commit it.
+
+1. In Google Cloud Console, enable the **Google Play Android Developer API**,
+   create a service account, and download a JSON key.
+2. In Play Console → **Users and permissions**, invite the service account email
+   and grant release permissions for the tracks you use (internal testing first,
+   production when ready).
+3. Upload the key once: `npx eas-cli@latest credentials --platform android` →
+   **Submissions: Google Service Account Key for Play Store Submissions** →
+   **Upload** the JSON. A local copy belongs in `credentials/`, which is ignored.
+4. Submit the latest build:
+   `npx eas-cli@latest submit --platform android --profile production --latest --non-interactive`
+
+EAS Submit targets the **internal testing** track by default; set
+`submit.production.android.track` in `eas.json` to change it.
+
 ### Local builds
 
 `npx expo run:android` and `npx expo prebuild` are for development and use the
