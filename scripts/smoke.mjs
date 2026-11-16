@@ -167,7 +167,13 @@ async function checkLineup() {
     }
 
     const mismatches = listed
-      .map((e) => ({ event: e.title, want: expected.get(e.eventId) ?? [], got: e.artists ?? [] }))
+      .map((e) => ({
+        event: e.title,
+        want: expected.get(e.eventId) ?? [],
+        // The public lineup also carries a profile id for the DJ link; the
+        // booking comparison is about who plays and when, not that link.
+        got: (e.artists ?? []).map(({ name, time }) => ({ name, time })),
+      }))
       .filter(({ want, got }) => JSON.stringify(want) !== JSON.stringify(got));
 
     check(
