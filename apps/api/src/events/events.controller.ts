@@ -81,6 +81,12 @@ export class EventsController {
     return this.events.feed();
   }
 
+  /** The signed-in guest's upcoming door passes. Declared before `:id` on purpose. */
+  @Get("mine")
+  mine(@CurrentUser() user: JwtUser) {
+    return this.events.mine(user);
+  }
+
   @Get(":id")
   detail(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.events.detail(id, user);
@@ -102,6 +108,7 @@ export class EventsController {
   }
 
   @Post("check-in")
+  @Auth("promoter", "venue_manager", "door", "admin")
   checkIn(@CurrentUser() user: JwtUser, @Body("qrToken") qrToken: string) {
     return this.events.checkIn(qrToken, user);
   }
@@ -205,7 +212,7 @@ export class EventsController {
   }
 
   @Get("manage/list")
-  @Auth("promoter", "door", "admin")
+  @Auth("promoter", "venue_manager", "door", "admin")
   listForPromoter(@CurrentUser() user: JwtUser) {
     return this.events.listForPromoter(user);
   }

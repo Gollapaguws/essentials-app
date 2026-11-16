@@ -104,21 +104,51 @@ export class EventsService {
       },
     });
     if (!event) throw new NotFoundException("Event not found");
-    this.assertCanManage(event.promoterId, event.venue.managerId, user);
 
     const going = event._count.guestLists;
-    const myRsvp =
-      user.role === "guest"
-        ? event.guestLists.find((g) => g.userId === user.sub) ?? null
-        : null;
+    // Event detail is readable by every signed-in account (the mobile feed is
+    // visible to DJs and staff too). Only guests and admins can RSVP, and only
+    // people who run this night get the guest list.
+    const canRsvp = user.role === "guest" || user.role === "admin";
+    const myRsvp = canRsvp ? event.guestLists.find((g) => g.userId === user.sub) ?? null : null;
+    const canManage = this.canManage(event.promoterId, event.venue.managerId, user);
     return {
       ...event,
       going,
       headcount: `${going}/${event.capacity} going`,
       spotsLeft: Math.max(0, event.capacity - going),
+      canRsvp,
       myRsvp,
-      guestLists: user.role === "guest" ? undefined : event.guestLists,
+      guestLists: canManage ? event.guestLists : undefined,
     };
+  }
+
+  /** Upcoming door passes for the signed-in guest, in the same shape as the feed. */
+  async mine(user: JwtUser) {
+    const rows = await prisma.guestList.findMany({
+      where: {
+        userId: user.sub,
+        status: { in: [GuestListStatus.attending, GuestListStatus.checked_in] },
+        event: {
+          status: { in: [EventStatus.approved, EventStatus.live] },
+          date: { gte: new Date() },
+        },
+      },
+      include: {
+        event: {
+          include: {
+            venue: { select: { name: true, lat: true, lng: true, amenities: true } },
+            _count: { select: { guestLists: { where: { status: { not: "waitlisted" } } } } },
+          },
+        },
+      },
+      orderBy: { event: { date: "asc" } },
+    });
+    return rows.map(({ event, status }) => ({
+      ...event,
+      going: event._count.guestLists,
+      myRsvp: { status },
+    }));
   }
 
   /** RSVP with capacity enforcement -> waitlist when full. Records campaign attribution. */
@@ -195,7 +225,12 @@ export class EventsService {
       include: { event: { include: { venue: true } }, user: { select: { name: true } } },
     });
     if (!entry) return { result: "invalid" as const };
-    if (entry.event.promoterId !== user.sub && entry.event.venue.managerId !== user.sub && user.role !== "admin") {
+    if (
+      entry.event.promoterId !== user.sub &&
+      entry.event.venue.managerId !== user.sub &&
+      user.role !== "admin" &&
+      user.role !== "door"
+    ) {
       throw new ForbiddenException("Not your event");
     }
     if (entry.status === "checked_in") return { result: "duplicate" as const, guest: entry.user.name };
@@ -453,7 +488,12 @@ export class EventsService {
   }
 
   async listForPromoter(user: JwtUser) {
-    if (user.role !== "promoter" && user.role !== "admin" && user.role !== "door") {
+    if (
+      user.role !== "promoter" &&
+      user.role !== "venue_manager" &&
+      user.role !== "admin" &&
+      user.role !== "door"
+    ) {
       throw new ForbiddenException("Promoters only");
     }
     // Door staff run the list for whichever night they are working, so they see
@@ -463,7 +503,9 @@ export class EventsService {
         ? {}
         : user.role === "door"
           ? { status: { in: [EventStatus.approved, EventStatus.live, EventStatus.completed] } }
-          : { promoterId: user.sub };
+          : user.role === "venue_manager"
+            ? { venue: { managerId: user.sub } }
+            : { promoterId: user.sub };
     const events = await prisma.event.findMany({
       where,
       include: {
@@ -504,13 +546,15 @@ export class EventsService {
     });
   }
 
-  private assertCanManage(promoterId: string, venueManagerId: string | null | undefined, user: JwtUser) {
-    if (user.role === "admin") return;
-    if (user.role === "promoter" && user.sub === promoterId) return;
-    if (user.role === "venue_manager" && venueManagerId === user.sub) return;
+  private canManage(promoterId: string, venueManagerId: string | null | undefined, user: JwtUser) {
+    if (user.role === "admin") return true;
+    if (user.role === "promoter" && user.sub === promoterId) return true;
+    if (user.role === "venue_manager" && venueManagerId === user.sub) return true;
     // Door staff work the guest list and check-in for the night they are on.
-    if (user.role === "door") return;
-    if (user.role === "guest") return; // read-only via detail()
-    throw new ForbiddenException();
+    return user.role === "door";
+  }
+
+  private assertCanManage(promoterId: string, venueManagerId: string | null | undefined, user: JwtUser) {
+    if (!this.canManage(promoterId, venueManagerId, user)) throw new ForbiddenException();
   }
 }

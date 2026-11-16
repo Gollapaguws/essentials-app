@@ -1,3 +1,4 @@
+import { createHmac } from "crypto";
 import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { prisma } from "@essentials/db";
@@ -10,7 +11,7 @@ import type { JwtUser } from "../common/roles.guard";
 jest.mock("@essentials/db", () => ({
   prisma: {
     event: { findUnique: jest.fn() },
-    guestList: { findMany: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
+    guestList: { findUnique: jest.fn(), findMany: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
     doorLog: { create: jest.fn() },
   },
   GuestListStatus: { attending: "attending", waitlisted: "waitlisted", checked_in: "checked_in" },
@@ -19,7 +20,7 @@ jest.mock("@essentials/db", () => ({
 
 const db = prisma as unknown as {
   event: { findUnique: jest.Mock };
-  guestList: { findMany: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
+  guestList: { findUnique: jest.Mock; findMany: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
   doorLog: { create: jest.Mock };
 };
 
@@ -59,6 +60,7 @@ beforeEach(() => {
     promoterId: "promoter-1",
     venue: { managerId: "venue-1" },
   });
+  db.guestList.findUnique.mockReset().mockResolvedValue(guest());
   db.guestList.findMany.mockReset().mockResolvedValue([guest()]);
   db.guestList.findFirst.mockReset().mockResolvedValue(guest());
   db.guestList.update.mockReset().mockResolvedValue({});
@@ -79,6 +81,31 @@ describe("EventsService.guestList", () => {
   it("keeps other promoters out of the door list", async () => {
     await expect(service().guestList(other, "event-1")).rejects.toBeInstanceOf(ForbiddenException);
     expect(db.guestList.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("EventsService.checkIn", () => {
+  const token = `EL:event-1:user-1:${createHmac("sha256", "dev-secret")
+    .update("event-1:user-1")
+    .digest("hex")
+    .slice(0, 24)}`;
+
+  it("lets door staff scan a guest in for any night", async () => {
+    const result = await service().checkIn(token, {
+      sub: "door-1",
+      email: "d@example.com",
+      role: "door",
+    });
+
+    expect(result).toMatchObject({ result: "ok", guest: "Nomsa", headcount: 2 });
+    expect(db.guestList.update).toHaveBeenCalled();
+  });
+
+  it("still refuses a guest who scans their own pass", async () => {
+    await expect(
+      service().checkIn(token, { sub: "user-1", email: "g@example.com", role: "guest" }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(db.guestList.update).not.toHaveBeenCalled();
   });
 });
 

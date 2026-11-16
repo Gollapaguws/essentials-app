@@ -25,6 +25,7 @@ describe("promoter access", () => {
   it.each([
     ["create an event", EventsController, "create"],
     ["clone, cancel, reopen or delete an event", EventsController, "listForPromoter"],
+    ["check a guest in at the door", EventsController, "checkIn"],
     ["create a venue", VenuesController, "create"],
     ["see the venues it manages", VenuesController, "mine"],
     ["see events awaiting the venue's approval", VenuesController, "pending"],
@@ -43,5 +44,6 @@ describe("promoter access", () => {
   it("keeps guests out of the promoter-only writes", () => {
     expect(rolesOf(VenuesController, "create")).not.toContain("guest");
     expect(rolesOf(ArtistsController, "decide")).not.toContain("guest");
+    expect(rolesOf(EventsController, "checkIn")).not.toContain("guest");
   });
 });

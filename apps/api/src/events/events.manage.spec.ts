@@ -66,6 +66,20 @@ describe("EventsService.listForPromoter", () => {
     expect(events.findMany).not.toHaveBeenCalled();
   });
 
+  it("gives a venue manager the nights at their own venues", async () => {
+    events.findMany.mockResolvedValue([]);
+
+    await service().listForPromoter({
+      sub: "venue-1",
+      email: "v@example.com",
+      role: "venue_manager",
+    });
+
+    expect(events.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { venue: { managerId: "venue-1" } } }),
+    );
+  });
+
   it("gives door staff every night that has a door open, not one promoter's list", async () => {
     events.findMany.mockResolvedValue([]);
 
