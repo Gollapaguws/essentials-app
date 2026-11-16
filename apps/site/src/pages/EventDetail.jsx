@@ -89,16 +89,21 @@ export default function EventDetail() {
                   <span className="noir-micro noir-lbl-block">CONFIRMED DJS</span>
                   <span className="noir-djs" style={{ maxWidth: 420, marginTop: 10 }}>
                     {event.artists.map((dj, i) => {
-                      const Tag = dj.id ? Link : "span";
-                      return (
-                        <Tag
-                          className="noir-dj"
-                          key={`${dj.id ?? dj.name}-${i}`}
-                          {...(dj.id ? { to: `/djs/${dj.id}` } : {})}
-                        >
+                      const key = `${dj.id ?? dj.name}-${i}`;
+                      const content = (
+                        <>
                           <span className="noir-dj-name">{dj.name}</span>
                           {dj.time && <span className="noir-dj-time">{dj.time}</span>}
-                        </Tag>
+                        </>
+                      );
+                      return dj.id ? (
+                        <Link className="noir-dj" key={key} to={`/djs/${dj.id}`}>
+                          {content}
+                        </Link>
+                      ) : (
+                        <span className="noir-dj" key={key}>
+                          {content}
+                        </span>
                       );
                     })}
                   </span>

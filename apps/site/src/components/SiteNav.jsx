@@ -29,7 +29,9 @@ const trackInstallEvent = (name) => {
 const isStandalone = () => {
   if (typeof window === "undefined") return false;
   const standaloneDisplay = window.matchMedia?.("(display-mode: standalone)")?.matches;
-  return Boolean(standaloneDisplay || window.navigator.standalone);
+  const standalone = /** @type {Navigator & { standalone?: boolean }} */ (window.navigator)
+    .standalone;
+  return Boolean(standaloneDisplay || standalone);
 };
 
 const getInstallStep = () => {
