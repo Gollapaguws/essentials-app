@@ -29,7 +29,17 @@ npm run build -w @essentials/db
 # dist/ is not committed, so web would typecheck against a stale client without this.
 npm run build -w @essentials/api-client
 npm run build -w @essentials/api
+# Build the dashboard into a scratch directory and swap it in afterwards. A
+# build straight into .next leaves the running server serving HTML that names
+# chunks the new build has already replaced (or removed) — the page then stays on
+# "LOADING…" because its JavaScript never loads. The old build keeps serving
+# until the new one is complete, and a failed build leaves the site untouched.
+export NEXT_DIST_DIR=.next-build
+rm -rf apps/web/.next-build
 npm run build -w @essentials/web
+rm -rf apps/web/.next-old
+mv apps/web/.next apps/web/.next-old 2>/dev/null || true
+mv apps/web/.next-build apps/web/.next
 
 (cd apps/site && npm run build)
 rsync -a apps/site/dist/ /var/www/essentialsedm/
@@ -37,6 +47,9 @@ rsync -a apps/site/dist/ /var/www/essentialsedm/
 systemctl restart essentials-api essentials-web
 sleep 6
 systemctl is-active essentials-api essentials-web
+# The new build is live and its chunks are checked below; the previous one is
+# no longer needed.
+rm -rf apps/web/.next-old
 curl -s -o /dev/null -w "site:%{http_code}\n" https://essentialsedm.com/
 curl -s -o /dev/null -w "dashboard:%{http_code}\n" https://essentialsedm.com/dashboard
 curl -s -o /dev/null -w "api:%{http_code}\n" https://essentialsedm.com/api/auth/me
