@@ -51,7 +51,7 @@ class ResendProvider implements MailProvider {
   }
   async send(input: SendEmailInput) {
     const { data } = await this.client.emails.send({
-      from: process.env.MAIL_FROM ?? "ESSENTIALS <hello@essentials.example>",
+      from: input.from ?? process.env.MAIL_FROM ?? "ESSENTIALS <hello@essentials.example>",
       to: input.to,
       subject: input.subject,
       html: input.html,

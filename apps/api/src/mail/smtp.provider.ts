@@ -19,7 +19,7 @@ export class SmtpProvider implements MailProvider {
 
   async send(input: SendEmailInput) {
     const info = await this.transport.sendMail({
-      from: this.from,
+      from: input.from ?? this.from,
       to: input.to,
       subject: input.subject,
       html: input.html,

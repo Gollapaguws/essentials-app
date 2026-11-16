@@ -7,9 +7,14 @@ import { ConsolePage } from "@/components/console/ConsolePage";
 import { PageHeader } from "@/components/console/PageHeader";
 
 interface Campaign {
-  id: string; name: string; flow: string; status: string; subject: string; sentCount: number;
+  id: string; name: string; flow: string; status: string; subject: string; sentCount: number; createdAt: string;
+  contentHtml?: string | null;
   segment?: { name: string } | null;
   _count: { emailJobs: number };
+}
+interface CampaignPreview {
+  id: string; name: string; subject: string; from: string; html: string;
+  status: string; segmentName: string | null;
 }
 interface Attribution {
   guestListJoins: number;
@@ -75,6 +80,11 @@ export default function EmailEngine() {
   const [allMatchingSelected, setAllMatchingSelected] = useState(false);
   const [excludedEmails, setExcludedEmails] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({ name: "", flow: "weekly_drop", subject: "", segmentId: "", html: "" });
+  const [preview, setPreview] = useState<CampaignPreview | null>(null);
+  const [previewSegment, setPreviewSegment] = useState("");
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [releaseBusy, setReleaseBusy] = useState(false);
+  const [releaseStatus, setReleaseStatus] = useState<string | null>(null);
   const htmlRef = useRef<HTMLTextAreaElement>(null);
   const mailingLists = segments.filter((segment) => segment.contactCount !== null);
   const selectionCount = allMatchingSelected
@@ -104,6 +114,45 @@ export default function EmailEngine() {
       setForm({ name: "", flow: "weekly_drop", subject: "", segmentId: "", html: "" });
       load();
     } catch (err) { setError(errorMessage(err)); }
+  };
+
+  // Newsletters arrive by email as drafts; nothing goes out until a manager
+  // opens the preview and releases the same campaign.
+  const drafts = campaigns.filter((c) => c.flow === "newsletter" && c.status === "draft");
+
+  const openPreview = async (id: string, segmentId?: string | null) => {
+    setError(null);
+    setPreviewBusy(true);
+    setPreviewSegment(segmentId ?? "");
+    try {
+      setPreview(await api.get<CampaignPreview>(`/email/campaigns/${id}/preview`, { cache: "no-store" }));
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setPreviewBusy(false);
+    }
+  };
+
+  const releasePreview = async () => {
+    if (!preview) return;
+    const targetName = previewSegment
+      ? segments.find((s) => s.id === previewSegment)?.name ?? "the selected list"
+      : "all consenting guests";
+    if (!window.confirm(`Send “${preview.subject}” to ${targetName}?`)) return;
+    setReleaseBusy(true);
+    setError(null);
+    try {
+      const result = await api.post<{ queued: number }>(`/email/campaigns/${preview.id}/send`, {
+        segmentId: previewSegment || undefined,
+      });
+      setReleaseStatus(`Queued ${result.queued.toLocaleString()} email${result.queued === 1 ? "" : "s"} for “${preview.subject}”.`);
+      setPreview(null);
+      load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setReleaseBusy(false);
+    }
   };
 
   const uploadList = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -647,6 +696,42 @@ export default function EmailEngine() {
           </div>
         </div>
 
+        <section className="border border-neon/30 bg-surface rounded-xl p-4 space-y-3">
+          <div>
+            <h2 className="font-bold text-neon tracking-widest text-sm">NEWSLETTER INBOX</h2>
+            <p className="mt-1 text-xs text-neutral-500">
+              Email an HTML file to <strong>newsletter@essentialsedm.com</strong> from {" "}
+              <strong>curator@essentialsedm.com</strong>. The attachment becomes the bulk email — nothing is sent until you preview it below.
+              Bulk mail leaves as <strong>newsletter@essentialsedm.com</strong>.
+            </p>
+          </div>
+          {releaseStatus && <p className="text-xs text-neon">{releaseStatus}</p>}
+          <div className="space-y-2">
+            {drafts.map((draft) => (
+              <div key={draft.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-2">
+                <div>
+                  <p className="text-sm font-bold">{draft.subject}</p>
+                  <p className="text-xs text-neutral-500">
+                    Received {new Date(draft.createdAt).toLocaleString()} · draft, not sent
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openPreview(draft.id)}
+                  className="rounded-lg border border-neon/60 px-4 py-2 text-xs font-black tracking-widest text-neon hover:bg-neon hover:text-bg"
+                >
+                  PREVIEW
+                </button>
+              </div>
+            ))}
+            {!drafts.length && (
+              <p className="text-xs text-neutral-500">
+                {previewBusy ? "Loading preview…" : "No newsletters waiting. Send an HTML attachment from the curator address."}
+              </p>
+            )}
+          </div>
+        </section>
+
         <form onSubmit={send} className="border border-line bg-surface rounded-xl p-4 space-y-4">
           <div className="grid md:grid-cols-5 gap-3 items-end">
             <input required className="bg-bg border border-line rounded-lg px-3 py-2" placeholder="Campaign name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -740,6 +825,58 @@ export default function EmailEngine() {
             </tbody>
           </table>
       </div>
+
+      {preview && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4">
+          <div className="my-8 w-full max-w-3xl space-y-3 rounded-xl border border-line bg-surface p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-bold text-neon tracking-widest text-sm">PREVIEW · NOT SENT</h2>
+                <p className="mt-1 text-sm font-bold">{preview.subject}</p>
+                <p className="text-xs text-neutral-500">From {preview.from} · {preview.segmentName ?? "all consenting guests"}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreview(null)}
+                className="rounded-lg border border-line px-3 py-1.5 text-xs font-bold tracking-widest text-neutral-400 hover:text-neon"
+              >
+                CLOSE
+              </button>
+            </div>
+            <iframe
+              title={`Preview of ${preview.subject}`}
+              srcDoc={preview.html}
+              sandbox=""
+              className="h-[420px] w-full rounded-lg border border-line bg-white"
+            />
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <label className="text-xs text-neutral-500">
+                Send to
+                <select
+                  className="mt-1 block rounded-lg border border-line bg-bg px-3 py-2 text-sm"
+                  value={previewSegment}
+                  onChange={(e) => setPreviewSegment(e.target.value)}
+                >
+                  <option value="">All consenting guests</option>
+                  {segments.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}{s.contactCount !== null ? ` · ${s.contactCount.toLocaleString()} emails` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={releasePreview}
+                disabled={releaseBusy}
+                className="rounded-lg bg-neon px-6 py-2 font-black tracking-widest text-bg disabled:opacity-50"
+              >
+                {releaseBusy ? "QUEUEING…" : "SEND THIS NEWSLETTER"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </ConsolePage>
   );
 }

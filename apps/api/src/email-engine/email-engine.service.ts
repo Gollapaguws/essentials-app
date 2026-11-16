@@ -7,6 +7,9 @@ import { EmailSenderService } from "./email-sender.service";
 import type { Prisma } from "@prisma/client";
 import { parseMailingList } from "./mailing-list";
 import { PRIVACY_POLICY_VERSION } from "../common/privacy";
+import { NEWSLETTER_CURATOR, NEWSLETTER_FROM, NEWSLETTER_INBOX, parseNewsletterEmail } from "./newsletter-inbox";
+import { wrapTemplate } from "../mail/templates";
+import { unsubscribeLink } from "../mail/unsubscribe";
 
 function csvField(value: string) {
   return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
@@ -64,16 +67,19 @@ export class EmailEngineService {
     }
   }
 
-  /** Resolve a segment filter into a recipient set. Guests with granted consent only. */
+  /** Resolve a segment filter into a recipient set. Email consent is checked per recipient. */
   async resolveRecipients(segmentId?: string): Promise<{ id: string; email: string; name: string | null }[]> {
     let where: Prisma.UserWhereInput = { role: "guest" };
     if (segmentId) {
       const segment = await prisma.emailSegment.findUnique({ where: { id: segmentId } });
       if (!segment) throw new NotFoundException("Segment not found");
       const f = segment.filter as { emails?: string[]; musicTastes?: string[]; minAttendedEvents?: number; vibeTag?: string };
+      // An imported list is an explicit address list, not a guest persona: every
+      // listed address receives it, whatever the account's role. Dynamic
+      // segments keep targeting guests.
+      where = f.emails?.length ? { email: { in: f.emails } } : { role: "guest" };
       where = {
         ...where,
-        ...(f.emails?.length ? { email: { in: f.emails } } : {}),
         ...(f.musicTastes?.length ? { musicTastes: { hasSome: f.musicTastes } } : {}),
         ...(f.vibeTag ? { vibeTag: f.vibeTag as never } : {}),
       };
@@ -378,25 +384,97 @@ export class EmailEngineService {
         status: "sending",
       },
     });
-    const recipients = await this.resolveRecipients(data.segmentId);
-    const emails = new Set<string>();
+    const queued = await this.queueCampaign(campaign.id, data.segmentId);
+    return { campaignId: campaign.id, queued };
+  }
+
+  /** Queue one job per consenting recipient; consent is re-checked at send time. */
+  private async queueCampaign(campaignId: string, segmentId?: string) {
+    const recipients = await this.resolveRecipients(segmentId);
+    const seen = new Set<string>();
+    let queued = 0;
     for (const r of recipients) {
-      if (emails.has(r.email)) continue;
-      emails.add(r.email);
+      if (seen.has(r.email)) continue;
+      seen.add(r.email);
       const consent = await prisma.consent.findUnique({ where: { email_channel: { email: r.email, channel: "email" } } });
       if (!consent || consent.status !== ConsentStatus.granted) continue;
-      await prisma.emailJob.create({ data: { campaignId: campaign.id, userId: r.id } });
+      queued++;
+      await prisma.emailJob.create({ data: { campaignId, userId: r.id } });
       if (this.emailQueue) {
-        await this.emailQueue.add("send", { campaignId: campaign.id, userId: r.id }, { attempts: 3, backoff: { type: "exponential", delay: 30_000 } });
+        await this.emailQueue.add("send", { campaignId, userId: r.id }, { attempts: 3, backoff: { type: "exponential", delay: 30_000 } });
       } else {
         try {
-          await this.sender?.sendCampaignEmail(campaign.id, r.id);
+          await this.sender?.sendCampaignEmail(campaignId, r.id);
         } catch (e) {
           this.logger.warn(`inline send failed for ${r.email}: ${(e as Error).message}`);
         }
       }
     }
-    return { campaignId: campaign.id, queued: emails.size };
+    return queued;
+  }
+
+  /**
+   * Turn mail the curator sent to newsletter@ into a draft campaign. Only the
+   * curator may submit one, and the bulk body is the HTML attachment, never the
+   * cover note. Nothing is sent until a manager previews and releases it.
+   */
+  async ingestNewsletter(raw: Buffer) {
+    const mail = await parseNewsletterEmail(raw);
+    if (mail.from !== NEWSLETTER_CURATOR) {
+      throw new ForbiddenException(`Only ${NEWSLETTER_CURATOR} can send a newsletter to ${NEWSLETTER_INBOX}`);
+    }
+    const campaign = await prisma.campaign.create({
+      data: {
+        name: `Newsletter · ${new Date().toISOString().slice(0, 10)}`,
+        flow: "newsletter",
+        subject: mail.subject,
+        contentHtml: mail.html,
+        status: "draft",
+      },
+    });
+    this.logger.log(`newsletter draft ${campaign.id} received from ${mail.filename}`);
+    return { ok: true, campaignId: campaign.id, subject: campaign.subject };
+  }
+
+  private siteUrl() {
+    return (process.env.SITE_URL ?? "https://essentialsedm.com").replace(/\/$/, "");
+  }
+
+  /** Render a campaign exactly as recipients will see it, without sending. */
+  async previewCampaign(user: JwtUser, campaignId: string) {
+    if (user.role !== "promoter" && user.role !== "admin") throw new ForbiddenException();
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: { segment: { select: { name: true } } },
+    });
+    if (!campaign) throw new NotFoundException("Campaign not found");
+    const body = campaign.contentHtml?.trim();
+    if (!body) throw new BadRequestException("This campaign has no HTML body to preview");
+    return {
+      id: campaign.id,
+      name: campaign.name,
+      subject: campaign.subject,
+      flow: campaign.flow,
+      status: campaign.status,
+      segmentName: campaign.segment?.name ?? null,
+      from: process.env.NEWSLETTER_FROM ?? NEWSLETTER_FROM,
+      html: wrapTemplate(body, unsubscribeLink("preview@essentialsedm.com", this.siteUrl())),
+    };
+  }
+
+  /** Release a received newsletter draft; the preview has already shown it. */
+  async sendCampaign(user: JwtUser, campaignId: string, segmentId?: string) {
+    if (user.role !== "promoter" && user.role !== "admin") throw new ForbiddenException();
+    const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
+    if (!campaign) throw new NotFoundException("Campaign not found");
+    if (!campaign.contentHtml?.trim()) throw new BadRequestException("This campaign has no HTML body to send");
+    if (campaign.status !== "draft") throw new BadRequestException("Only a draft campaign can be sent");
+
+    const target = segmentId ?? campaign.segmentId ?? undefined;
+    if (segmentId) await prisma.campaign.update({ where: { id: campaignId }, data: { segmentId } });
+    await prisma.campaign.update({ where: { id: campaignId }, data: { status: "sending" } });
+    const queued = await this.queueCampaign(campaignId, target);
+    return { campaignId, queued };
   }
 
   /** One-click unsubscribe + preference center backing. */

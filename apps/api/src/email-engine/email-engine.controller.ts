@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, Res, Req, UploadedFile, UseInterceptors, BadRequestException } from "@nestjs/common";
+import { Controller, Get, Post, Delete, Body, Param, Query, Res, Req, Headers, UploadedFile, UseInterceptors, BadRequestException, ForbiddenException } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ConfigService } from "@nestjs/config";
@@ -35,6 +35,25 @@ class ContactSelectionDto {
   @IsString({ each: true })
   excluded?: string[];
 }
+/** Read an unparsed message body (message/rfc822 is not JSON-parsed). */
+function readRawBody(req: Request, limit = 10 * 1024 * 1024): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    req.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > limit) {
+        reject(new BadRequestException("The newsletter email is too large"));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
 class CampaignDto {
   @IsString() name!: string;
   @IsString() flow!: string;
@@ -179,6 +198,41 @@ export class EmailEngineController {
   @Auth("promoter")
   send(@CurrentUser() user: JwtUser, @Body() dto: CampaignDto) {
     return this.engine.enqueueCampaign(user, dto);
+  }
+
+  /**
+   * Raw mail delivered to newsletter@ by Postfix. Only the local pipe may call
+   * this, and the message itself must come from the curator.
+   */
+  @Post("inbound/newsletter")
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  async inboundNewsletter(
+    @Req() req: Request,
+    @Headers("x-newsletter-token") token?: string,
+  ) {
+    const expected = this.config.get<string>("NEWSLETTER_INBOUND_TOKEN");
+    if (!expected || token !== expected) throw new ForbiddenException();
+    const remote = req.socket.remoteAddress ?? "";
+    if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remote)) throw new ForbiddenException();
+    return this.engine.ingestNewsletter(await readRawBody(req));
+  }
+
+  /** Render a campaign for review without sending it. */
+  @Get("campaigns/:id/preview")
+  @Auth("promoter")
+  previewCampaign(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    return this.engine.previewCampaign(user, id);
+  }
+
+  /** Release a previewed draft campaign to a segment (or all consenting guests). */
+  @Post("campaigns/:id/send")
+  @Auth("promoter")
+  releaseCampaign(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Body() dto: { segmentId?: string },
+  ) {
+    return this.engine.sendCampaign(user, id, dto?.segmentId);
   }
 
   @Get("campaigns")

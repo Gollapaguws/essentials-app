@@ -30,6 +30,7 @@
     "helmet": "^8.0.0",
     "ioredis": "^5.11.1",
     "jose": "^5.10.0",
+    "mailparser": "^3.14.3",
     "multer": "2.5.0",
     "nanoid": "^3.3.7",
     "nodemailer": "^10.3.1",

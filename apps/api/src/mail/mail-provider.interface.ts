@@ -4,6 +4,8 @@
  * + Postal (MTA) behind this same interface — see docs/email-deliverability.md.
  */
 export interface SendEmailInput {
+  /** Overrides the configured From address (bulk newsletters send as newsletter@). */
+  from?: string;
   to: string;
   subject: string;
   html: string;

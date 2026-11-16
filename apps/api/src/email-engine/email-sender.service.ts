@@ -66,7 +66,9 @@ export class EmailSenderService {
         }
       }
 
-      await this.mail.send({ to: user.email, subject: campaign.subject, html, unsubscribeUrl: unsub });
+      // Bulk mail is sent as newsletter@, never from the transactional hello@ box.
+      const from = this.config.get<string>("NEWSLETTER_FROM") ?? "ESSENTIALS <newsletter@essentialsedm.com>";
+      await this.mail.send({ from, to: user.email, subject: campaign.subject, html, unsubscribeUrl: unsub });
       await prisma.emailJob.update({ where: { id: jobRow.id }, data: { status: "sent" } });
       await prisma.campaign.update({ where: { id: campaignId }, data: { sentCount: { increment: 1 } } });
       await prisma.emailEvent.create({ data: { email: user.email, userId, type: "delivered", meta: { campaignId } } });
