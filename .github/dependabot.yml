@@ -1,0 +1,33 @@
+version: 2
+
+# apps/site is a workspace member, so its dependencies come from the root
+# lockfile. A second npm entry for it (or a second lockfile in that directory)
+# only produces phantom alerts against a stale manifest.
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Runtime upgrades land together so they can be tested as one change.
+      production-dependencies:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      # Dev tooling is split out: a broken test runner or bundler should not
+      # block a security fix to a runtime dependency.
+      development-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+    # Majors fall outside both groups above, so each one arrives as its own PR;
+    # mixing them is how a Nest core bump once arrived alongside an ESM-only CLI.
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
