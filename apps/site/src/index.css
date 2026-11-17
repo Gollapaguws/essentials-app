@@ -1,8 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700&family=Abril+Fatface&family=Jost:wght@200;300;400;500;600&family=Cinzel:wght@400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
+@config "../tailwind.config.js";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
   :root {
