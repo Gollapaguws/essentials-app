@@ -1,6 +1,23 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0a0a0a;
+  --color-surface: #141414;
+  --color-line: #222222;
+  --color-neon: #00ff66;
+  --font-sans: Inter, Helvetica, sans-serif;
+}
+
+/* Tailwind v4 defaults bare borders to currentColor; keep the v3 gray so
+   existing `border` utilities look the same. */
+@layer base {
+  *,
+  ::before,
+  ::after,
+  ::backdrop {
+    border-color: #e5e7eb;
+  }
+}
 
 @layer components {
   .console-page {

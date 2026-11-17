@@ -13,6 +13,7 @@
     "dev:web": "npm run dev --workspace @essentials/web",
     "dev:mobile": "npm run dev --workspace @essentials/mobile",
     "build": "npm run build --workspaces --if-present",
+    "audit:prod": "node scripts/check-production-audit.mjs",
     "proof:auth": "node scripts/auth-proof.mjs",
     "smoke": "node scripts/smoke.mjs",
     "smoke:mfa": "node scripts/mfa-smoke.mjs",
@@ -20,14 +21,32 @@
   },
   "overrides": {
     "body-parser": "1.20.9",
-    "qs": "6.16.0",
+    "qs": "6.17.1",
+    "lodash": "4.18.1",
+    "tar": "7.5.23",
+    "tmp": "0.2.7",
+    "postcss": "8.5.33",
+    "ws": "8.23.0",
+    "@xmldom/xmldom": "0.8.15",
+    "fast-xml-parser": "5.12.1",
+    "image-size": "2.1.0",
+    "decode-uri-component": "0.5.1",
+    "turbo-stream": "3.2.1",
+    "picomatch@4": "4.0.7",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@types/jest": "30.0.0",
+    "jest": "30.5.2",
+    "@nestjs/cli": {
+      "glob": "14.0.6"
+    },
     "@nestjs/platform-express": {
       "multer": "2.5.0",
       "body-parser": "1.20.9"
     },
     "express": {
       "body-parser": "1.20.9",
-      "qs": "6.16.0"
+      "qs": "6.17.1"
     }
   },
   "devDependencies": {
@@ -38,6 +57,6 @@
   },
   "dependencies": {
     "body-parser": "1.20.9",
-    "qs": "6.16.0"
+    "qs": "6.17.1"
   }
 }

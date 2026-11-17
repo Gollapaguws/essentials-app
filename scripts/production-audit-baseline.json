@@ -1,0 +1,10 @@
+{
+  "allowed": [
+    {
+      "url": "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
+      "package": "picomatch",
+      "severity": "high",
+      "reason": "No patched release exists; 4.0.7 is the latest version."
+    }
+  ]
+}

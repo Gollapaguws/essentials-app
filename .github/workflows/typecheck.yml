@@ -11,6 +11,22 @@ permissions:
   contents: read
 
 jobs:
+  production-audit:
+    name: Production dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Only installed production dependencies are gated. Documented
+      # unpatchable advisories are listed in scripts/production-audit-baseline.json.
+      - name: Check production audit
+        run: npm run audit:prod
+
   typecheck:
     name: Typecheck (api, web, mobile, site)
     runs-on: ubuntu-latest
@@ -25,9 +41,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            apps/site/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -120,9 +134,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            apps/site/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
