@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
-const basePath = process.env.NEXT_BASE_PATH ?? "";
+// Production always serves the dashboard under /dashboard (nginx routes that
+// prefix), so default it there too. Without this, a plain `next build` bakes an
+// empty base path into the HTML: every chunk is requested from /_next/*, which
+// nginx answers from the public site's index.html, and the dashboard never boots.
+const basePath =
+  process.env.NEXT_BASE_PATH ?? (process.env.NODE_ENV === "production" ? "/dashboard" : "");
 
 // basePath alone is enough: Next serves the app *and* its /_next assets under it.
 // Setting assetPrefix to the same value made the rendered HTML ask for /_next/*,
