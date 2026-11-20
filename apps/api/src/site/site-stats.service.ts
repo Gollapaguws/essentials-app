@@ -42,12 +42,13 @@ export class SiteStatsService {
     return { ok: true };
   }
 
-  /** Admin: daily views and install-funnel counts for the last 30 days. */
+  /** Admin: daily views, top pages and install-funnel counts for the last 30 days. */
   async stats() {
     const since = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const [rows, eventRows] = await Promise.all([
+    const [rows, eventRows, pathRows] = await Promise.all([
       prisma.siteVisit.groupBy({
         by: ["day"],
+        where: { day: { gte: since } },
         _sum: { views: true },
         _count: { visitorKey: true },
         orderBy: { day: "desc" },
@@ -57,6 +58,13 @@ export class SiteStatsService {
         by: ["name"],
         where: { day: { gte: since }, name: { in: [...SITE_EVENTS] } },
         _count: { _all: true },
+      }),
+      prisma.siteVisit.groupBy({
+        by: ["path"],
+        where: { day: { gte: since } },
+        _sum: { views: true },
+        orderBy: { _sum: { views: "desc" } },
+        take: 10,
       }),
     ]);
 
@@ -75,6 +83,10 @@ export class SiteStatsService {
         day: r.day,
         views: r._sum.views ?? 0,
         uniqueVisitors: r._count.visitorKey,
+      })),
+      paths: pathRows.map((r) => ({
+        path: r.path,
+        views: r._sum.views ?? 0,
       })),
       events,
     };

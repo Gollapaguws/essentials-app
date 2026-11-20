@@ -23,6 +23,7 @@ interface FrontPage {
 
 interface SiteStats {
   days: { day: string; views: number; uniqueVisitors: number }[];
+  paths: { path: string; views: number }[];
   events: Record<"install_banner_dismiss" | "install_prompt_open" | "app_install", number>;
 }
 
@@ -96,6 +97,10 @@ export default function FrontPageEditor() {
   const input = "w-full bg-bg border border-line rounded-lg px-3 py-2";
   const label = "text-xs text-neutral-400 uppercase tracking-wider";
   const pageViews = stats?.days.reduce((total, day) => total + day.views, 0) ?? 0;
+  const uniqueVisitors = stats?.days.reduce((total, day) => total + day.uniqueVisitors, 0) ?? 0;
+  // The API returns newest first; the chart reads left to right in time.
+  const dailyViews = stats ? [...stats.days].reverse() : [];
+  const peakViews = Math.max(1, ...dailyViews.map((day) => day.views));
 
   return (
     <>
@@ -109,18 +114,54 @@ export default function FrontPageEditor() {
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
         {stats && (
-          <section className="border border-line bg-surface rounded-xl p-4 space-y-3">
+          <section className="border border-line bg-surface rounded-xl p-4 space-y-4">
             <div>
-              <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Install banner</h2>
+              <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Front page analytics</h2>
               <p className="text-xs text-neutral-500 mt-1">
-                Last 30 days · anonymous daily counts. Android/Chrome installs report automatically; iOS installs cannot be measured.
+                Last 30 days · anonymous daily counts, no cookies. Visitors are counted per day.
+                Android/Chrome installs report automatically; iOS installs cannot be measured.
               </p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <SiteMetric label="Page views" value={pageViews} />
+              <SiteMetric label="Unique visitors" value={uniqueVisitors} />
               <SiteMetric label="Banner dismissals" value={stats.events.install_banner_dismiss} />
               <SiteMetric label="Install prompt opens" value={stats.events.install_prompt_open} />
               <SiteMetric label="App installs" value={stats.events.app_install} />
+            </div>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <h3 className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">Views per day</h3>
+                {dailyViews.length ? (
+                  <div className="flex h-28 items-end gap-1" role="img" aria-label={`Daily page views for the last ${dailyViews.length} days with traffic`}>
+                    {dailyViews.map((day) => (
+                      <div
+                        key={day.day}
+                        className="flex-1 rounded-t bg-neon/60 hover:bg-neon"
+                        style={{ height: `${Math.max(3, (day.views / peakViews) * 100)}%` }}
+                        title={`${day.day}: ${day.views.toLocaleString()} views · ${day.uniqueVisitors.toLocaleString()} visitors`}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-neutral-500">No traffic recorded yet.</p>
+                )}
+              </div>
+              <div>
+                <h3 className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">Top pages</h3>
+                {stats.paths.length ? (
+                  <ul className="space-y-1.5">
+                    {stats.paths.map((page) => (
+                      <li key={page.path} className="flex items-baseline justify-between gap-3 text-xs">
+                        <span className="truncate font-mono text-neutral-300" title={page.path}>{page.path}</span>
+                        <span className="tabular-nums text-neutral-500">{page.views.toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-neutral-500">No pages recorded yet.</p>
+                )}
+              </div>
             </div>
           </section>
         )}
