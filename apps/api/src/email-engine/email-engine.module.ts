@@ -3,6 +3,7 @@ import { BullModule } from "@nestjs/bullmq";
 import { EmailEngineController } from "./email-engine.controller";
 import { EmailEngineService } from "./email-engine.service";
 import { EmailSenderService } from "./email-sender.service";
+import { EmailQuotaService } from "./email-quota.service";
 import { EmailProcessor } from "./email.processor";
 import { RemindersService } from "./reminders.service";
 import { SiteModule } from "../site/site.module";
@@ -27,7 +28,7 @@ export class EmailEngineModule {
         SiteModule,
       ],
       controllers: [EmailEngineController],
-      providers: [EmailEngineService, EmailSenderService, RemindersService, ...(useRedis ? [EmailProcessor] : [])],
+      providers: [EmailEngineService, EmailSenderService, EmailQuotaService, RemindersService, ...(useRedis ? [EmailProcessor] : [])],
     };
   }
 }

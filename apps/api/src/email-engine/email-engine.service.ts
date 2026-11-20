@@ -4,6 +4,7 @@ import type { Queue } from "bullmq";
 import { prisma, ConsentStatus, EventStatus } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 import { EmailSenderService } from "./email-sender.service";
+import { EmailQuotaService } from "./email-quota.service";
 import type { Prisma } from "@prisma/client";
 import { parseMailingList } from "./mailing-list";
 import { PRIVACY_POLICY_VERSION } from "../common/privacy";
@@ -21,6 +22,20 @@ function readListEmails(filter: unknown): string[] | null {
   const emails = (filter as { emails?: unknown }).emails;
   if (!Array.isArray(emails) || !emails.every((email) => typeof email === "string")) return null;
   return [...new Set(emails.map((email) => email.toLowerCase()))];
+}
+
+const EMAIL_JOB_STATUSES = ["queued", "sent", "failed", "skipped"] as const;
+
+export interface DeliveryCounts {
+  total: number;
+  queued: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+}
+
+function emptyDelivery(): DeliveryCounts {
+  return { total: 0, queued: 0, sent: 0, failed: 0, skipped: 0 };
 }
 
 export interface ContactSelection {
@@ -58,7 +73,43 @@ export class EmailEngineService {
   constructor(
     @Optional() @Inject(getQueueToken("email")) private emailQueue?: Queue,
     @Optional() @Inject(forwardRef(() => EmailSenderService)) private sender?: EmailSenderService,
+    @Optional() private quota?: EmailQuotaService,
   ) {}
+
+  private assertManager(user: JwtUser) {
+    if (user.role !== "promoter" && user.role !== "admin") throw new ForbiddenException();
+  }
+
+  /** Queue depth plus today's send allowance, for the dashboard controls. */
+  async queueStatus(user: JwtUser) {
+    this.assertManager(user);
+    if (!this.emailQueue) return { available: false as const };
+    const [paused, counts, quota] = await Promise.all([
+      this.emailQueue.isPaused(),
+      this.emailQueue.getJobCounts("wait", "active", "delayed", "failed", "completed", "paused"),
+      this.quota ? this.quotaSnapshot() : Promise.resolve(null),
+    ]);
+    return { available: true as const, paused, counts, quota, checkedAt: new Date().toISOString() };
+  }
+
+  private async quotaSnapshot() {
+    const quota = this.quota!;
+    return { limit: quota.limit(), usedToday: await quota.usedToday(), waitMs: await quota.waitMs() };
+  }
+
+  async pauseQueue(user: JwtUser) {
+    this.assertManager(user);
+    if (!this.emailQueue) throw new BadRequestException("The email queue is not enabled");
+    await this.emailQueue.pause();
+    return this.queueStatus(user);
+  }
+
+  async resumeQueue(user: JwtUser) {
+    this.assertManager(user);
+    if (!this.emailQueue) throw new BadRequestException("The email queue is not enabled");
+    await this.emailQueue.resume();
+    return this.queueStatus(user);
+  }
 
   private async dispatch(campaignId: string, userId: string) {
     await prisma.emailJob.create({ data: { campaignId, userId } });
@@ -523,24 +574,56 @@ export class EmailEngineService {
     });
   }
 
-  /** Campaign attribution: guest-list joins it generated. */
+  /** Per-campaign job counts for post-send delivery stats, keyed by campaign id. */
+  private async deliveryByCampaign(campaignIds: string[]) {
+    const counts = new Map<string, DeliveryCounts>();
+    for (const id of campaignIds) counts.set(id, emptyDelivery());
+    if (!campaignIds.length) return counts;
+    const rows = await prisma.emailJob.groupBy({
+      by: ["campaignId", "status"],
+      where: { campaignId: { in: campaignIds } },
+      _count: { _all: true },
+    });
+    for (const row of rows) {
+      const entry = counts.get(row.campaignId);
+      if (!entry) continue;
+      const n = row._count._all;
+      entry.total += n;
+      if ((EMAIL_JOB_STATUSES as readonly string[]).includes(row.status)) {
+        entry[row.status as (typeof EMAIL_JOB_STATUSES)[number]] = n;
+      }
+    }
+    return counts;
+  }
+
+  /** Campaign attribution: guest-list joins it generated, plus delivery stats. */
   async attribution(user: JwtUser, campaignId: string) {
     const campaign = await prisma.campaign.findUniqueOrThrow({ where: { id: campaignId }, include: { event: true, segment: true } });
     if (!campaign) throw new NotFoundException("Campaign not found");
     if (user.role !== "admin" && campaign.event && campaign.event.promoterId !== user.sub) throw new ForbiddenException();
-    const joins = await prisma.guestList.count({ where: { sourceCampaignId: campaignId } });
+    const [joins, delivery] = await Promise.all([
+      prisma.guestList.count({ where: { sourceCampaignId: campaignId } }),
+      this.deliveryByCampaign([campaignId]),
+    ]);
     return {
       campaign: { id: campaign.id, name: campaign.name, flow: campaign.flow, status: campaign.status, sentCount: campaign.sentCount },
+      delivery: delivery.get(campaignId) ?? emptyDelivery(),
       guestListJoins: joins,
     };
   }
 
+  /** Campaigns with recipient totals and per-status (sent/failed/queued/skipped) counts. */
   async listCampaigns(user: JwtUser) {
     if (user.role !== "promoter" && user.role !== "admin") throw new ForbiddenException();
-    return prisma.campaign.findMany({
+    const campaigns = await prisma.campaign.findMany({
       include: { segment: { select: { name: true } }, _count: { select: { emailJobs: true } } },
       orderBy: { createdAt: "desc" },
     });
+    const delivery = await this.deliveryByCampaign(campaigns.map((c) => c.id));
+    return campaigns.map((campaign) => ({
+      ...campaign,
+      delivery: delivery.get(campaign.id) ?? emptyDelivery(),
+    }));
   }
 
   /** Weekly drop targets: approved/live upcoming events. */

@@ -7,6 +7,7 @@ import { SmtpProvider } from "./smtp.provider";
 import { htmlToText, wrapTemplate } from "./templates";
 import { unsubscribeHeaders } from "./unsubscribe";
 import { Resend } from "resend";
+import { MailQuotaError, isQuotaError } from "./mail-quota.error";
 
 @Injectable()
 export class MailService implements MailProvider {
@@ -50,7 +51,10 @@ class ResendProvider implements MailProvider {
     this.client = new Resend(apiKey);
   }
   async send(input: SendEmailInput) {
-    const { data } = await this.client.emails.send({
+    // The SDK reports API failures in `error` instead of throwing. Ignoring it
+    // marked every rejected send as delivered, which hid an entire newsletter
+    // going nowhere.
+    const { data, error } = await this.client.emails.send({
       from: input.from ?? process.env.MAIL_FROM ?? "ESSENTIALS <hello@essentials.example>",
       to: input.to,
       subject: input.subject,
@@ -58,6 +62,11 @@ class ResendProvider implements MailProvider {
       text: input.text,
       headers: unsubscribeHeaders(input.unsubscribeUrl),
     });
-    return { id: data?.id ?? "" };
+    if (error) {
+      const message = `Resend rejected ${input.to}: ${error.message}`;
+      throw isQuotaError(error.name, error.message) ? new MailQuotaError(message) : new Error(message);
+    }
+    if (!data?.id) throw new Error(`Resend returned no id for ${input.to}`);
+    return { id: data.id };
   }
 }

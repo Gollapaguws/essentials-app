@@ -1,6 +1,7 @@
 import { Injectable, Logger, Inject, forwardRef } from "@nestjs/common";
 import { prisma, ConsentStatus } from "@essentials/db";
 import { MailService } from "../mail/mail.service";
+import { MailQuotaError } from "../mail/mail-quota.error";
 import { emailTemplates } from "../mail/templates";
 import { unsubscribeLink } from "../mail/unsubscribe";
 import { EmailEngineService } from "./email-engine.service";
@@ -73,9 +74,28 @@ export class EmailSenderService {
       await prisma.campaign.update({ where: { id: campaignId }, data: { sentCount: { increment: 1 } } });
       await prisma.emailEvent.create({ data: { email: user.email, userId, type: "delivered", meta: { campaignId } } });
     } catch (err) {
+      // Quota exhaustion is temporary: leave the job queued so the worker can
+      // pick it up once the provider's daily window reopens.
+      if (err instanceof MailQuotaError) {
+        this.logger.warn(`email job deferred by provider quota: ${err.message}`);
+        await prisma.emailJob.update({ where: { id: jobRow.id }, data: { status: "queued", error: err.message } });
+        throw err;
+      }
       this.logger.error(`email job failed: ${(err as Error).message}`);
       await prisma.emailJob.update({ where: { id: jobRow.id }, data: { status: "failed", error: (err as Error).message } });
       throw err;
+    } finally {
+      await this.settleCampaign(campaignId);
     }
+  }
+
+  /** A campaign leaves `sending` as soon as the last of its jobs reaches a terminal state. */
+  private async settleCampaign(campaignId: string) {
+    const queued = await prisma.emailJob.count({ where: { campaignId, status: "queued" } });
+    if (queued > 0) return;
+    await prisma.campaign.updateMany({
+      where: { id: campaignId, status: "sending" },
+      data: { status: "sent" },
+    });
   }
 }

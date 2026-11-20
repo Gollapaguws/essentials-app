@@ -6,10 +6,14 @@ import { errorMessage } from "@/lib/errors";
 import { ConsolePage } from "@/components/console/ConsolePage";
 import { PageHeader } from "@/components/console/PageHeader";
 
+interface DeliveryCounts {
+  total: number; queued: number; sent: number; failed: number; skipped: number;
+}
 interface Campaign {
   id: string; name: string; flow: string; status: string; subject: string; sentCount: number; createdAt: string;
   contentHtml?: string | null;
   segment?: { name: string } | null;
+  delivery: DeliveryCounts;
   _count: { emailJobs: number };
 }
 interface CampaignPreview {
@@ -18,7 +22,15 @@ interface CampaignPreview {
 }
 interface Attribution {
   guestListJoins: number;
+  delivery: DeliveryCounts;
   campaign: { name: string; sentCount: number };
+}
+interface QueueStatus {
+  available: boolean;
+  paused?: boolean;
+  counts?: { wait?: number; active?: number; delayed?: number; failed?: number; completed?: number; paused?: number };
+  quota?: { limit: number; usedToday: number; waitMs: number } | null;
+  checkedAt?: string;
 }
 interface ImportResult {
   segmentId: string;
@@ -64,6 +76,9 @@ export default function EmailEngine() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
   const [attr, setAttr] = useState<Attribution | null>(null);
+  const [queue, setQueue] = useState<QueueStatus | null>(null);
+  const [queueBusy, setQueueBusy] = useState(false);
+  const [queueError, setQueueError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [listStatus, setListStatus] = useState<string | null>(null);
   const [listAttested, setListAttested] = useState(false);
@@ -101,7 +116,10 @@ export default function EmailEngine() {
     api.get<Campaign[]>("/email/campaigns").then(setCampaigns).catch((e) => setError(errorMessage(e)));
     api.get<Segment[]>("/email/segments", { cache: "no-store" }).then(setSegments).catch(() => {});
   };
-  useEffect(() => { load(); }, []);
+  const loadQueue = () => {
+    api.get<QueueStatus>("/email/queue", { cache: "no-store" }).then(setQueue).catch((e) => setQueueError(errorMessage(e)));
+  };
+  useEffect(() => { load(); loadQueue(); }, []);
 
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -413,6 +431,18 @@ export default function EmailEngine() {
       setImageStatus("Image inserted.");
     } catch (err) {
       setImageStatus(`Upload failed: ${errorMessage(err)}`);
+    }
+  };
+
+  const setQueuePaused = async (paused: boolean) => {
+    setQueueBusy(true);
+    setQueueError(null);
+    try {
+      setQueue(await api.post<QueueStatus>(`/email/queue/${paused ? "pause" : "resume"}`));
+    } catch (err) {
+      setQueueError(errorMessage(err));
+    } finally {
+      setQueueBusy(false);
     }
   };
 
@@ -791,19 +821,71 @@ export default function EmailEngine() {
           <div className="border border-neon/40 bg-surface rounded-xl p-4">
             <h2 className="font-bold text-neon">Attribution · {attr.campaign.name}</h2>
             <p className="mt-2 text-sm">
-              Guest-list joins: <strong>{attr.guestListJoins}</strong> · Sent: {attr.campaign.sentCount}
+              Guest-list joins: <strong>{attr.guestListJoins}</strong> · Delivered: {attr.delivery.sent.toLocaleString()} of {attr.delivery.total.toLocaleString()}
+              {attr.delivery.failed > 0 && <span className="text-red-400"> · Failed: {attr.delivery.failed.toLocaleString()}</span>}
+              {attr.delivery.queued > 0 && <span className="text-neutral-400"> · Queued: {attr.delivery.queued.toLocaleString()}</span>}
+              {attr.delivery.skipped > 0 && <span className="text-neutral-400"> · Skipped: {attr.delivery.skipped.toLocaleString()}</span>}
             </p>
           </div>
         )}
 
+        {queue?.available && (
+          <div className="border border-line bg-surface rounded-xl p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-bold text-neon tracking-widest text-sm">EMAIL QUEUE</h2>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={loadQueue}
+                  className="rounded-lg border border-line px-3 py-2 text-xs font-black tracking-widest text-neutral-300 hover:border-neon/60 hover:text-neon"
+                >
+                  REFRESH
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQueuePaused(!queue.paused)}
+                  disabled={queueBusy}
+                  className="rounded-lg border border-line px-3 py-2 text-xs font-black tracking-widest text-neutral-300 hover:border-neon/60 hover:text-neon disabled:opacity-50"
+                >
+                  {queueBusy ? "WORKING…" : queue.paused ? "RESUME" : "PAUSE"}
+                </button>
+              </div>
+            </div>
+            <p className="mt-2 text-sm">
+              Status: <strong className={queue.paused ? "text-amber-400" : "text-neon"}>{queue.paused ? "paused" : "running"}</strong>
+              {queue.quota && (
+                <span className="text-neutral-400">
+                  {" "}· Today: {queue.quota.usedToday.toLocaleString()} / {queue.quota.limit.toLocaleString()}
+                  {queue.quota.waitMs > 0 && <span className="text-amber-400"> · next window in {Math.ceil(queue.quota.waitMs / 3_600_000)}h</span>}
+                </span>
+              )}
+            </p>
+            <p className="mt-1 text-xs text-neutral-400">
+              Waiting {queue.counts?.wait?.toLocaleString() ?? 0} · Active {queue.counts?.active?.toLocaleString() ?? 0} · Delayed {queue.counts?.delayed?.toLocaleString() ?? 0} · Failed {queue.counts?.failed?.toLocaleString() ?? 0}
+            </p>
+            {queueError && <p className="mt-2 text-xs text-red-400">{queueError}</p>}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-bold text-neon tracking-widest text-sm">CAMPAIGNS</h2>
+          <button
+            type="button"
+            onClick={load}
+            className="rounded-lg border border-line px-3 py-2 text-xs font-black tracking-widest text-neutral-300 hover:border-neon/60 hover:text-neon"
+          >
+            REFRESH STATS
+          </button>
+        </div>
         <div className="border border-line rounded-xl overflow-x-auto">
-          <table className="w-full text-sm min-w-[640px]">
+          <table className="w-full text-sm min-w-[720px]">
             <thead className="bg-surface text-neutral-400 uppercase text-xs">
               <tr>
                 <th className="text-left px-4 py-3">Campaign</th>
                 <th className="text-left px-4 py-3">Flow</th>
                 <th className="text-left px-4 py-3">Segment</th>
                 <th className="text-left px-4 py-3">Status</th>
+                <th className="text-left px-4 py-3">Delivery</th>
                 <th className="text-left px-4 py-3">Sent</th>
                 <th className="text-left px-4 py-3">Attribution</th>
               </tr>
@@ -815,13 +897,19 @@ export default function EmailEngine() {
                   <td className="px-4 py-3 text-neutral-400">{c.flow}</td>
                   <td className="px-4 py-3 text-neutral-400">{c.segment?.name ?? "All"}</td>
                   <td className="px-4 py-3">{c.status}</td>
+                  <td className="px-4 py-3 tabular-nums">
+                    {c.delivery.sent.toLocaleString()} / {c.delivery.total.toLocaleString()}
+                    {c.delivery.failed > 0 && <span className="text-red-400"> · {c.delivery.failed.toLocaleString()} failed</span>}
+                    {c.delivery.queued > 0 && <span className="text-neutral-500"> · {c.delivery.queued.toLocaleString()} queued</span>}
+                    {c.delivery.skipped > 0 && <span className="text-neutral-500"> · {c.delivery.skipped.toLocaleString()} skipped</span>}
+                  </td>
                   <td className="px-4 py-3">{c.sentCount}</td>
                   <td className="px-4 py-3">
                     <button onClick={() => showAttribution(c.id)} className="text-neon underline">View</button>
                   </td>
                 </tr>
               ))}
-              {!campaigns.length && <tr><td colSpan={6} className="px-4 py-6 text-center text-neutral-500">No campaigns yet.</td></tr>}
+              {!campaigns.length && <tr><td colSpan={7} className="px-4 py-6 text-center text-neutral-500">No campaigns yet.</td></tr>}
             </tbody>
           </table>
       </div>

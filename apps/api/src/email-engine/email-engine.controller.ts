@@ -241,6 +241,27 @@ export class EmailEngineController {
     return this.engine.listCampaigns(user);
   }
 
+  /** Queue depth and today's send allowance, for the dashboard controls. */
+  @Get("queue")
+  @Auth("promoter")
+  queue(@CurrentUser() user: JwtUser) {
+    return this.engine.queueStatus(user);
+  }
+
+  /** Stop the worker from picking up more campaigns (large sends, deliverability issues). */
+  @Post("queue/pause")
+  @Auth("promoter")
+  pauseQueue(@CurrentUser() user: JwtUser) {
+    return this.engine.pauseQueue(user);
+  }
+
+  /** Resume a paused queue; daily quota pacing still applies. */
+  @Post("queue/resume")
+  @Auth("promoter")
+  resumeQueue(@CurrentUser() user: JwtUser) {
+    return this.engine.resumeQueue(user);
+  }
+
   @Get("campaigns/:id/attribution")
   @Auth("promoter")
   attribution(@CurrentUser() user: JwtUser, @Param("id") id: string) {
