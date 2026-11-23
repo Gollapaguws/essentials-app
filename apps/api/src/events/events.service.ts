@@ -517,6 +517,9 @@ export class EventsService {
             label: true,
             fee: true,
             startsAt: true,
+            role: true,
+            bpmRange: true,
+            genres: true,
             bookings: { where: { status: { not: "cancelled" } }, select: { status: true } },
           },
         },
@@ -532,6 +535,9 @@ export class EventsService {
         label: s.label,
         fee: s.fee,
         startsAt: s.startsAt,
+        role: s.role,
+        bpmRange: s.bpmRange,
+        genres: s.genres,
         taken: s.bookings.length > 0,
         // Committed spend is anything the promoter has agreed to pay: confirmed
         // gigs and completed ones (completed is the stricter state).

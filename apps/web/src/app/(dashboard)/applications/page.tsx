@@ -22,6 +22,9 @@ interface ExtendableSlot {
   label: string;
   startsAt: string;
   fee: number;
+  role?: string | null;
+  bpmRange?: string | null;
+  genres?: string | null;
 }
 
 interface Application {
@@ -325,7 +328,7 @@ export default function Applications() {
                         <option value="">Change slot…</option>
                         {a.event.extendableSlots.map((slot) => (
                           <option key={slot.id} value={slot.id}>
-                            {slot.label} · R{slot.fee.toLocaleString()}
+                            {slot.label} · {slot.role ? `${slot.role} · ` : ""}R{slot.fee.toLocaleString()}
                           </option>
                         ))}
                       </select>

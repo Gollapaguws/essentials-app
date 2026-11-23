@@ -1,5 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
-import { buildSlots, normalizePlan, slotFee } from "./slots";
+import { buildSlots, normalizePlan, phaseForOffset, slotFee } from "./slots";
 
 const eventDate = new Date("2027-03-13T00:00:00.000Z");
 
@@ -61,7 +61,45 @@ describe("slotFee", () => {
   });
 });
 
+describe("phaseForOffset", () => {
+  it("starts the night warm and climbs through the arc", () => {
+    expect(phaseForOffset(0)).toMatchObject({ role: "The Setter (Warm-Up)", bpmRange: "124–128" });
+    expect(phaseForOffset(99).role).toBe("The Setter (Warm-Up)");
+    expect(phaseForOffset(100)).toMatchObject({ role: "The Deep Bridge", bpmRange: "128–133" });
+    expect(phaseForOffset(200).role).toBe("The Rising Builder");
+    expect(phaseForOffset(300)).toMatchObject({ role: "The Peak Architect", bpmRange: "139–148" });
+    expect(phaseForOffset(400)).toMatchObject({ role: "The Closer (Euphoric)", bpmRange: "145 → 140 → 132" });
+  });
+
+  it("keeps a night longer than eight hours in the closing phase", () => {
+    expect(phaseForOffset(600).role).toBe("The Closer (Euphoric)");
+  });
+});
+
 describe("buildSlots", () => {
+  it("tags every slot with the phase it starts in", () => {
+    const slots = buildSlots(eventDate, {
+      djFeePerHour: 500,
+      budget: 0,
+      slotCount: 8,
+      slotMinutes: 60,
+      slotStartMinute: 20 * 60,
+    });
+
+    expect(slots.map((s) => s.role)).toEqual([
+      "The Setter (Warm-Up)",
+      "The Setter (Warm-Up)",
+      "The Deep Bridge",
+      "The Deep Bridge",
+      "The Rising Builder",
+      "The Peak Architect",
+      "The Peak Architect",
+      "The Closer (Euphoric)",
+    ]);
+    expect(slots[7].bpmRange).toBe("145 → 140 → 132");
+    expect(slots[5].genres).toContain("Peak Tech House");
+  });
+
   it("cuts the night into back-to-back slots from the start time, all at the same fee", () => {
     const slots = buildSlots(eventDate, {
       djFeePerHour: 500,

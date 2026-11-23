@@ -4,6 +4,17 @@ Notable changes to ESSENTIALS. Dates are UTC.
 
 ## 2026-11-23
 
+### Set-time arc on slots
+
+- **Every time slot now carries its place in the night**: The Setter (Warm-Up),
+  The Deep Bridge, The Rising Builder, The Peak Architect, The Closer (Euphoric),
+  each with its BPM band and assigned genres. Slots are tagged from their offset
+  from the night's first slot — 100 minutes per phase, 80 for the closer — and a
+  migration backfills existing slots, so old and new nights read the same.
+- DJs see the role and BPM band on each slot they can apply for (genres in the
+  tooltip), and promoters see the role under every slot in the night's fee list
+  and when moving a DJ between slots.
+
 ### Email systems removed
 
 - **The API no longer sends marketing email or manages mailboxes.**

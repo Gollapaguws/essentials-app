@@ -380,6 +380,12 @@ model EventSlot {
   endsAt   DateTime
   /// Display label, e.g. "20:00-21:00".
   label    String
+  /// Where this slot sits in the night's arc, e.g. "The Peak Architect".
+  role     String?
+  /// The BPM band the slot is booked for, e.g. "139–148".
+  bpmRange String?
+  /// Genre guidance for whoever takes the slot, e.g. "Techno · Psy Tech".
+  genres   String?
   /// This slot's share of the event budget, in whole currency units.
   fee      Int      @default(0)
   event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)

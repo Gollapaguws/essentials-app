@@ -14,6 +14,10 @@ interface OpenSlot {
   startsAt: string;
   endsAt: string;
   fee: number;
+  /** Where the slot sits in the night's arc. */
+  role?: string | null;
+  bpmRange?: string | null;
+  genres?: string | null;
   taken: boolean;
   /** How many DJs have applied; the promoter still only confirms one. */
   applicants: number;
@@ -178,10 +182,17 @@ export default function GigCalendar() {
                         title={
                           s.taken
                             ? "Another DJ holds this slot"
-                            : `Pays R${s.fee.toLocaleString()}${s.applicants ? ` · ${s.applicants} applied` : ""}`
+                            : `${[s.bpmRange ? `${s.bpmRange} BPM` : null, s.genres].filter(Boolean).join(" · ")} — pays R${s.fee.toLocaleString()}${s.applicants ? ` · ${s.applicants} applied` : ""}`
                         }
                       >
-                        {s.label} · R{s.fee.toLocaleString()}
+                        <span className="block">
+                          {s.label} · R{s.fee.toLocaleString()}
+                        </span>
+                        {(s.role || s.bpmRange) && (
+                          <span className="block text-[10px] text-neutral-500">
+                            {[s.role, s.bpmRange ? `${s.bpmRange} BPM` : null].filter(Boolean).join(" · ")}
+                          </span>
+                        )}
                         {s.applicants > 0 && !s.taken ? ` · ${s.applicants} applied` : ""}
                       </button>
                     );

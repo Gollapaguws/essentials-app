@@ -617,6 +617,9 @@ export class DjBookingService {
                 label: true,
                 startsAt: true,
                 fee: true,
+                role: true,
+                bpmRange: true,
+                genres: true,
                 bookings: {
                   where: { status: { not: "cancelled" } },
                   select: { artistId: true, status: true },
@@ -659,7 +662,15 @@ export class DjBookingService {
         .filter((slot) => slot.startsAt.getTime() > now)
         .filter((slot) => !slot.bookings.some((row) => row.artistId === b.artistId))
         .filter((slot) => !slot.bookings.some((row) => row.status === "confirmed" || row.status === "completed"))
-        .map(({ id, label, startsAt, fee }) => ({ id, label, startsAt, fee }));
+        .map(({ id, label, startsAt, fee, role, bpmRange, genres }) => ({
+          id,
+          label,
+          startsAt,
+          fee,
+          role,
+          bpmRange,
+          genres,
+        }));
 
       return {
         ...b,

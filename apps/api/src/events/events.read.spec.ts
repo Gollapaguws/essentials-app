@@ -9,7 +9,7 @@ import type { JwtUser } from "../common/roles.guard";
 
 jest.mock("@essentials/db", () => ({
   prisma: {
-    event: { findUnique: jest.fn() },
+    event: { findUnique: jest.fn(), findMany: jest.fn() },
     guestList: { findMany: jest.fn() },
   },
   EventStatus: { approved: "approved", live: "live" },
@@ -17,7 +17,7 @@ jest.mock("@essentials/db", () => ({
 }));
 
 const db = prisma as unknown as {
-  event: { findUnique: jest.Mock };
+  event: { findUnique: jest.Mock; findMany: jest.Mock };
   guestList: { findMany: jest.Mock };
 };
 
@@ -59,6 +59,7 @@ const service = () =>
 
 beforeEach(() => {
   db.event.findUnique.mockReset().mockResolvedValue(event);
+  db.event.findMany.mockReset().mockResolvedValue([]);
   db.guestList.findMany.mockReset().mockResolvedValue([]);
 });
 
@@ -97,6 +98,44 @@ describe("EventsService.detail", () => {
     await expect(service().setSlotFee(guest, "event-1", "slot-1", 500)).rejects.toBeInstanceOf(
       ForbiddenException,
     );
+  });
+});
+
+describe("EventsService.listForPromoter", () => {
+  it("carries each slot's place in the night into the budget view", async () => {
+    db.event.findMany.mockResolvedValue([
+      {
+        id: "event-1",
+        title: "Deep End",
+        date: new Date("2026-12-31T22:00:00.000Z"),
+        budget: 5000,
+        venue: { name: "The Vault" },
+        _count: { guestLists: 0, artistBookings: 1 },
+        slots: [
+          {
+            id: "slot-1",
+            label: "01:00–02:00",
+            fee: 500,
+            startsAt: new Date("2027-01-01T01:00:00.000Z"),
+            role: "The Peak Architect",
+            bpmRange: "139–148",
+            genres: "Techno · Psy Tech · Peak Tech House",
+            bookings: [{ status: "confirmed" }],
+          },
+        ],
+      },
+    ]);
+
+    const [row] = await service().listForPromoter(promoter);
+
+    expect(row.slots[0]).toMatchObject({
+      label: "01:00–02:00",
+      role: "The Peak Architect",
+      bpmRange: "139–148",
+      genres: "Techno · Psy Tech · Peak Tech House",
+      taken: true,
+      confirmed: true,
+    });
   });
 });
 

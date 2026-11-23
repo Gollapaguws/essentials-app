@@ -16,6 +16,9 @@ interface EventSlotRow {
   label: string;
   fee: number;
   startsAt: string;
+  role?: string | null;
+  bpmRange?: string | null;
+  genres?: string | null;
   taken: boolean;
   confirmed: boolean;
 }
@@ -688,7 +691,18 @@ export default function EventManager() {
                               const draft = slotDrafts[s.id] ?? s.fee;
                               return (
                                 <div key={s.id} className="flex flex-wrap items-center gap-2 text-xs">
-                                  <span className="text-neutral-400 w-32">{s.label}</span>
+                                  <span className="text-neutral-400 w-40">
+                                    {s.label}
+                                    {s.role && (
+                                      <span
+                                        className="block text-[10px] text-neutral-500"
+                                        title={s.genres ?? undefined}
+                                      >
+                                        {s.role}
+                                        {s.bpmRange ? ` · ${s.bpmRange}` : ""}
+                                      </span>
+                                    )}
+                                  </span>
                                   <input
                                     type="number"
                                     min={1}

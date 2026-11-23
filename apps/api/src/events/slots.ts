@@ -11,6 +11,61 @@ export interface SlotPlan {
   slotStartMinute: number;
 }
 
+/**
+ * The arc of an eight-hour night, in order. Each slot is tagged with the phase
+ * its start time falls in (offsets run from the first slot), so the promoter and
+ * the DJ both see what the set is for: a warm-up is not a closing set.
+ */
+export const SLOT_PHASES = [
+  {
+    minutes: 100,
+    role: "The Setter (Warm-Up)",
+    bpmRange: "124–128",
+    genres: "Minimal · Deep Progressive · Understated Tech House",
+  },
+  {
+    minutes: 100,
+    role: "The Deep Bridge",
+    bpmRange: "128–133",
+    genres: "Progressive · Rolling Tech House · Minimal",
+  },
+  {
+    minutes: 100,
+    role: "The Rising Builder",
+    bpmRange: "133–139",
+    genres: "Tech House · Progressive · Psy Tech · Techno",
+  },
+  {
+    minutes: 100,
+    role: "The Peak Architect",
+    bpmRange: "139–148",
+    genres: "Techno · Psy Tech · Peak Tech House",
+  },
+  {
+    minutes: 80,
+    role: "The Closer (Euphoric)",
+    bpmRange: "145 → 140 → 132",
+    genres: "Melodic · Trance · Progressive",
+  },
+] as const;
+
+export interface SlotPhase {
+  readonly role: string;
+  readonly bpmRange: string;
+  readonly genres: string;
+}
+
+/** The phase covering `offsetMinutes` after the first slot. A night longer than
+ * eight hours stays in the closing phase rather than falling off the table. */
+export function phaseForOffset(offsetMinutes: number): SlotPhase {
+  let remaining = Math.max(0, offsetMinutes);
+  for (const phase of SLOT_PHASES) {
+    if (remaining < phase.minutes) return phase;
+    remaining -= phase.minutes;
+  }
+  return SLOT_PHASES[SLOT_PHASES.length - 1];
+}
+
 /** What one slot pays: the hourly rate times its length in hours. */
 export function slotFee(djFeePerHour: number, slotMinutes: number) {
   return Math.round((djFeePerHour * slotMinutes) / 60);
@@ -77,10 +132,14 @@ export function buildSlots(eventDate: Date, plan: SlotPlan) {
   return Array.from({ length: plan.slotCount }, (_, index) => {
     const startsAt = new Date(firstStart + index * plan.slotMinutes * 60_000);
     const endsAt = new Date(startsAt.getTime() + plan.slotMinutes * 60_000);
+    const phase = phaseForOffset(index * plan.slotMinutes);
     return {
       startsAt,
       endsAt,
       label: `${hhmm(startsAt)}–${hhmm(endsAt)}`,
+      role: phase.role,
+      bpmRange: phase.bpmRange,
+      genres: phase.genres,
       fee,
     };
   });
