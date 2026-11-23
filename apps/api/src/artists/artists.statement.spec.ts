@@ -7,7 +7,7 @@ import type { JwtUser } from "../common/roles.guard";
 jest.mock("@essentials/db", () => ({
   prisma: {
     artistProfile: { findUnique: jest.fn() },
-    artistBooking: { findMany: jest.fn() },
+    artistBooking: { findMany: jest.fn(), findFirst: jest.fn() },
     event: { findMany: jest.fn() },
   },
   ArtistBookingStatus: { pending: "pending", confirmed: "confirmed", completed: "completed", cancelled: "cancelled" },
@@ -15,7 +15,7 @@ jest.mock("@essentials/db", () => ({
 
 const db = prisma as unknown as {
   artistProfile: { findUnique: jest.Mock };
-  artistBooking: { findMany: jest.Mock };
+  artistBooking: { findMany: jest.Mock; findFirst: jest.Mock };
   event: { findMany: jest.Mock };
 };
 
@@ -28,6 +28,7 @@ const promoter: JwtUser = { sub: "promoter-1", email: "p@example.com", role: "pr
 beforeEach(() => {
   db.artistProfile.findUnique.mockReset();
   db.artistBooking.findMany.mockReset();
+  db.artistBooking.findFirst.mockReset();
   db.event.findMany.mockReset();
 });
 
@@ -48,6 +49,101 @@ describe("statementMonth", () => {
     expect(statementMonth("2027-3")).toBeNull();
     expect(statementMonth("March")).toBeNull();
     expect(statementMonth(undefined)).toBeNull();
+  });
+});
+
+describe("ArtistsService.statements", () => {
+  it("groups a DJ's gigs by month and totals what was agreed, billed and paid", async () => {
+    db.artistProfile.findUnique.mockResolvedValue({ id: "artist-1", stageName: "DJ Nova" });
+    db.artistBooking.findMany.mockResolvedValue([
+      {
+        id: "b1",
+        startAt: new Date("2027-03-13T18:00:00.000Z"),
+        slot: "20:00–21:00",
+        performanceFee: 500,
+        travelFee: 100,
+        event: { title: "A", venue: { name: "V" } },
+        invoice: { number: "INV-1", status: "paid", total: 600, payments: [] },
+      },
+      {
+        id: "b2",
+        startAt: new Date("2027-03-27T18:00:00.000Z"),
+        slot: null,
+        performanceFee: 400,
+        travelFee: 0,
+        event: { title: "B", venue: { name: "W" } },
+        invoice: {
+          number: "INV-2",
+          status: "overdue",
+          total: 400,
+          payments: [{ status: "paid", amount: 150 }],
+        },
+      },
+      {
+        id: "b3",
+        startAt: new Date("2027-04-02T18:00:00.000Z"),
+        slot: null,
+        performanceFee: 300,
+        travelFee: 0,
+        event: { title: "C", venue: { name: "X" } },
+        invoice: null,
+      },
+    ]);
+
+    const data = await service().statements(artist);
+
+    expect(data.months.map((m) => m.key)).toEqual(["2027-04", "2027-03"]);
+    const march = data.months[1];
+    expect(march.agreed).toBe(1000);
+    expect(march.invoiced).toBe(1000);
+    expect(march.paid).toBe(750);
+    expect(march.outstanding).toBe(250);
+    expect(data.totals.agreed).toBe(1300);
+    expect(data.totals.outstanding).toBe(550);
+    expect(data.totals.gigs).toBe(3);
+  });
+
+  it("keeps one statement per DJ for a promoter", async () => {
+    db.artistBooking.findMany.mockResolvedValue([
+      {
+        id: "b1",
+        startAt: new Date("2027-03-13T18:00:00.000Z"),
+        slot: null,
+        performanceFee: 500,
+        travelFee: 0,
+        artist: { id: "a1", stageName: "DJ Nova", imageUrl: null },
+        event: { title: "A", venue: { name: "V" } },
+        invoice: null,
+      },
+      {
+        id: "b2",
+        startAt: new Date("2027-03-20T18:00:00.000Z"),
+        slot: null,
+        performanceFee: 400,
+        travelFee: 0,
+        artist: { id: "a2", stageName: "DJ Echo", imageUrl: null },
+        event: { title: "B", venue: { name: "W" } },
+        invoice: { number: "INV-2", status: "paid", total: 400, payments: [] },
+      },
+    ]);
+
+    const data = await service().promoterStatements(promoter);
+
+    expect(db.artistBooking.findMany.mock.calls[0][0].where).toMatchObject({
+      event: { promoterId: "promoter-1" },
+    });
+    expect(data.djs.map((d) => d.stageName)).toEqual(["DJ Echo", "DJ Nova"]);
+    expect(data.djs[0].paid).toBe(400);
+    expect(data.totals.agreed).toBe(900);
+    expect(data.totals.outstanding).toBe(500);
+  });
+
+  it("lets an admin see every promoter's DJ statements", async () => {
+    db.artistBooking.findMany.mockResolvedValue([]);
+
+    await service().promoterStatements({ sub: "a1", email: "a@example.com", role: "admin" });
+
+    expect(db.artistBooking.findMany.mock.calls[0][0].where).not.toHaveProperty("event");
   });
 });
 
@@ -140,6 +236,56 @@ describe("ArtistsService.statementCsv", () => {
 
     expect(db.event.findMany.mock.calls[0][0].where).not.toHaveProperty("promoterId");
     expect(res.send.mock.calls[0][0]).toContain("TOTAL,,,,,0,0,,,0,0");
+  });
+
+  it("filters a promoter's CSV to the chosen DJ only", async () => {
+    db.event.findMany.mockResolvedValue([
+      {
+        title: "Amapiano Sunrise",
+        date: new Date("2027-03-13T00:00:00.000Z"),
+        venue: { name: "The Warehouse" },
+        artistBookings: [
+          {
+            artistId: "a1",
+            slot: "20:00–21:00",
+            startAt: new Date("2027-03-13T18:00:00.000Z"),
+            performanceFee: 495,
+            travelFee: 120,
+            artist: { stageName: "DJ Nova" },
+            invoice: { number: "INV-7", status: "paid", total: 615 },
+          },
+          {
+            artistId: "a2",
+            slot: "21:00–22:00",
+            startAt: new Date("2027-03-13T20:00:00.000Z"),
+            performanceFee: 400,
+            travelFee: 0,
+            artist: { stageName: "DJ Echo" },
+            invoice: null,
+          },
+        ],
+      },
+    ]);
+    db.artistBooking.findFirst.mockResolvedValue({ id: "b2" });
+    const res = response();
+
+    await service().statementCsv(promoter, "2027-03", res as never, "a2");
+
+    const csv = res.send.mock.calls[0][0] as string;
+    expect(csv).toContain('"DJ Echo"');
+    expect(csv).not.toContain('"DJ Nova"');
+    expect(res.setHeader).toHaveBeenCalledWith(
+      "Content-Disposition",
+      'attachment; filename="statement-dj-echo-2027-03.csv"',
+    );
+  });
+
+  it("refuses a DJ who has never played for that promoter", async () => {
+    db.artistBooking.findFirst.mockResolvedValue(null);
+    await expect(
+      service().statementCsv(promoter, "2027-03", response() as never, "stranger"),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(db.event.findMany).not.toHaveBeenCalled();
   });
 
   it("is closed to roles that have no money on the platform", async () => {

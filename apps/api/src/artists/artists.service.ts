@@ -648,19 +648,229 @@ export class ArtistsService {
   }
 
   /**
+   * A DJ's own statements: every confirmed or played gig grouped by the month it
+   * happened, with the money agreed, billed and collected in each month.
+   */
+  async statements(user: JwtUser) {
+    if (user.role !== "artist") throw new ForbiddenException("Statements are for DJs");
+    const profile = await this.requireProfile(user);
+    const bookings = await prisma.artistBooking.findMany({
+      where: { artistId: profile.id, status: { in: ["confirmed", "completed"] } },
+      select: {
+        id: true,
+        startAt: true,
+        slot: true,
+        performanceFee: true,
+        travelFee: true,
+        event: { select: { title: true, venue: { select: { name: true } } } },
+        invoice: {
+          select: {
+            number: true,
+            status: true,
+            total: true,
+            payments: { select: { status: true, amount: true } },
+          },
+        },
+      },
+      orderBy: { startAt: "desc" },
+    });
+
+    const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+    const gigs = bookings.map((b) => {
+      const paid = b.invoice
+        ? b.invoice.status === "paid"
+          ? b.invoice.total
+          : sum(b.invoice.payments.filter((p) => p.status === "paid").map((p) => p.amount))
+        : 0;
+      return {
+        id: b.id,
+        startAt: b.startAt,
+        night: b.event.title,
+        venue: b.event.venue.name,
+        slot: b.slot,
+        fee: b.performanceFee,
+        travel: b.travelFee,
+        agreed: b.performanceFee + b.travelFee,
+        invoiced: b.invoice?.total ?? 0,
+        paid,
+        invoice: b.invoice ? { number: b.invoice.number, status: b.invoice.status } : null,
+      };
+    });
+
+    const byMonth = new Map<string, typeof gigs>();
+    for (const gig of gigs) {
+      const key = gig.startAt.toISOString().slice(0, 7);
+      byMonth.set(key, [...(byMonth.get(key) ?? []), gig]);
+    }
+    const months = [...byMonth.entries()]
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([key, list]) => ({
+        key,
+        gigs: list,
+        gigCount: list.length,
+        fee: sum(list.map((g) => g.fee)),
+        travel: sum(list.map((g) => g.travel)),
+        agreed: sum(list.map((g) => g.agreed)),
+        invoiced: sum(list.map((g) => g.invoiced)),
+        paid: sum(list.map((g) => g.paid)),
+        outstanding: sum(list.map((g) => g.agreed)) - sum(list.map((g) => g.paid)),
+      }));
+
+    return {
+      profile: { stageName: profile.stageName },
+      months,
+      totals: {
+        fee: sum(gigs.map((g) => g.fee)),
+        travel: sum(gigs.map((g) => g.travel)),
+        agreed: sum(gigs.map((g) => g.agreed)),
+        invoiced: sum(gigs.map((g) => g.invoiced)),
+        paid: sum(gigs.map((g) => g.paid)),
+        outstanding: sum(gigs.map((g) => g.agreed)) - sum(gigs.map((g) => g.paid)),
+        gigs: gigs.length,
+        months: months.length,
+      },
+    };
+  }
+
+  /**
+   * Promoter view: one statement per DJ across every night they have played at
+   * this promoter's events, grouped by month so a month can be handed over.
+   */
+  async promoterStatements(user: JwtUser) {
+    if (user.role !== "promoter" && user.role !== "admin") {
+      throw new ForbiddenException("Promoters only");
+    }
+    const bookings = await prisma.artistBooking.findMany({
+      where: {
+        status: { in: ["confirmed", "completed"] },
+        ...(user.role === "admin" ? {} : { event: { promoterId: user.sub } }),
+      },
+      select: {
+        id: true,
+        startAt: true,
+        slot: true,
+        performanceFee: true,
+        travelFee: true,
+        artist: { select: { id: true, stageName: true, imageUrl: true } },
+        event: { select: { title: true, venue: { select: { name: true } } } },
+        invoice: {
+          select: {
+            number: true,
+            status: true,
+            total: true,
+            payments: { select: { status: true, amount: true } },
+          },
+        },
+      },
+      orderBy: { startAt: "desc" },
+    });
+
+    const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+    const byArtist = new Map<
+      string,
+      { id: string; stageName: string; imageUrl: string | null; gigs: Array<Record<string, unknown>> }
+    >();
+
+    for (const b of bookings) {
+      const paid = b.invoice
+        ? b.invoice.status === "paid"
+          ? b.invoice.total
+          : sum(b.invoice.payments.filter((p) => p.status === "paid").map((p) => p.amount))
+        : 0;
+      const entry = byArtist.get(b.artist.id) ?? {
+        id: b.artist.id,
+        stageName: b.artist.stageName,
+        imageUrl: b.artist.imageUrl,
+        gigs: [],
+      };
+      entry.gigs.push({
+        id: b.id,
+        startAt: b.startAt,
+        night: b.event.title,
+        venue: b.event.venue.name,
+        slot: b.slot,
+        fee: b.performanceFee,
+        travel: b.travelFee,
+        agreed: b.performanceFee + b.travelFee,
+        invoiced: b.invoice?.total ?? 0,
+        paid,
+        invoice: b.invoice ? { number: b.invoice.number, status: b.invoice.status } : null,
+      });
+      byArtist.set(b.artist.id, entry);
+    }
+
+    const djs = [...byArtist.values()]
+      .map((entry) => {
+        const gigs = entry.gigs as Array<{ startAt: Date; fee: number; travel: number; agreed: number; invoiced: number; paid: number }>;
+        const months = new Map<string, typeof gigs>();
+        for (const gig of gigs) {
+          const key = gig.startAt.toISOString().slice(0, 7);
+          months.set(key, [...(months.get(key) ?? []), gig]);
+        }
+        const monthRows = [...months.entries()]
+          .sort(([a], [b]) => b.localeCompare(a))
+          .map(([key, list]) => ({
+            key,
+            gigCount: list.length,
+            agreed: sum(list.map((g) => g.agreed)),
+            invoiced: sum(list.map((g) => g.invoiced)),
+            paid: sum(list.map((g) => g.paid)),
+            outstanding: sum(list.map((g) => g.agreed)) - sum(list.map((g) => g.paid)),
+          }));
+        return {
+          id: entry.id,
+          stageName: entry.stageName,
+          imageUrl: entry.imageUrl,
+          gigs,
+          months: monthRows,
+          agreed: sum(gigs.map((g) => g.agreed)),
+          invoiced: sum(gigs.map((g) => g.invoiced)),
+          paid: sum(gigs.map((g) => g.paid)),
+          outstanding: sum(gigs.map((g) => g.agreed)) - sum(gigs.map((g) => g.paid)),
+        };
+      })
+      .sort((a, b) => a.stageName.localeCompare(b.stageName));
+
+    return {
+      djs,
+      totals: {
+        djs: djs.length,
+        gigs: sum(djs.map((d) => d.gigs.length)),
+        agreed: sum(djs.map((d) => d.agreed)),
+        invoiced: sum(djs.map((d) => d.invoiced)),
+        paid: sum(djs.map((d) => d.paid)),
+        outstanding: sum(djs.map((d) => d.outstanding)),
+      },
+    };
+  }
+
+  /**
    * One month of DJ money as a CSV: a DJ's own gigs, or — for a promoter or an
    * admin — every gig at their nights. Statements used to be assembled by hand
    * from the settlements screen every time a venue asked for the month.
    */
-  async statementCsv(user: JwtUser, month: string | undefined, res: Response) {
+  async statementCsv(user: JwtUser, month: string | undefined, res: Response, artistId?: string) {
     const range = month ? statementMonth(month) : statementMonth(new Date().toISOString().slice(0, 7));
     if (!range) throw new BadRequestException("month must be YYYY-MM");
 
     const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     type Row = {
-      date: Date; night: string; venue: string; dj: string; slot: string;
+      artistId: string; date: Date; night: string; venue: string; dj: string; slot: string;
       fee: number; travel: number; invoiceNumber: string; invoiceStatus: string; invoiced: number; paid: number;
     };
+    if (artistId) {
+      if (user.role === "artist") {
+        throw new ForbiddenException("A DJ can only download their own statement");
+      }
+      if (user.role === "promoter") {
+        const onNights = await prisma.artistBooking.findFirst({
+          where: { artistId, event: { promoterId: user.sub } },
+          select: { id: true },
+        });
+        if (!onNights) throw new ForbiddenException("That DJ has no gigs at your nights");
+      }
+    }
+
     let rows: Row[];
 
     if (user.role === "artist") {
@@ -679,6 +889,7 @@ export class ArtistsService {
         orderBy: { startAt: "asc" },
       });
       rows = bookings.map((b) => ({
+        artistId: profile.id,
         date: b.startAt,
         night: b.event.title,
         venue: b.event.venue.name,
@@ -704,6 +915,7 @@ export class ArtistsService {
           artistBookings: {
             where: { status: { in: ["confirmed", "completed"] } },
             select: {
+              artistId: true,
               slot: true,
               startAt: true,
               performanceFee: true,
@@ -718,6 +930,7 @@ export class ArtistsService {
       });
       rows = events.flatMap((e) =>
         e.artistBookings.map((b) => ({
+          artistId: b.artistId,
           date: b.startAt,
           night: e.title,
           venue: e.venue.name,
@@ -734,6 +947,8 @@ export class ArtistsService {
     } else {
       throw new ForbiddenException("Statements are for DJs, promoters and admins");
     }
+
+    if (artistId) rows = rows.filter((row) => row.artistId === artistId);
 
     const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
     const lines = [
@@ -756,8 +971,17 @@ export class ArtistsService {
       ["TOTAL", "", "", "", "", sum(rows.map((r) => r.fee)), sum(rows.map((r) => r.travel)), "", "", sum(rows.map((r) => r.invoiced)), sum(rows.map((r) => r.paid))].join(","),
     ];
 
+    const djSlug = artistId
+      ? (rows[0]?.dj ?? artistId)
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+      : "";
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="statement-${range.key}.csv"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="statement-${djSlug ? `${djSlug}-` : ""}${range.key}.csv"`,
+    );
     res.send(lines.join("\n"));
   }
 

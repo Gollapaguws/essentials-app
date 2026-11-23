@@ -58,6 +58,13 @@ const links: NavLink[] = [
     roles: ["promoter", "admin"],
   },
   {
+    href: "/statements",
+    label: "DJ Statements",
+    group: "NIGHT OPS",
+    hint: "One statement per DJ: monthly totals for agreed fees, invoices, payments and what is outstanding.",
+    roles: ["promoter", "admin"],
+  },
+  {
     href: "/promotions",
     label: "Promotions",
     group: "AUDIENCE",
@@ -91,6 +98,13 @@ const links: NavLink[] = [
     group: "STAGE",
     hint: "Played gigs and their money: raise the venue invoice, remind the venue, and track what is paid.",
     roles: ["artist", "admin"],
+  },
+  {
+    href: "/statements",
+    label: "Statements",
+    group: "STAGE",
+    hint: "Your gigs grouped by month: fees, travel, invoices and what the venue has paid.",
+    roles: ["artist"],
   },
   {
     href: "/artist/profile",

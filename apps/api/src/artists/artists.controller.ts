@@ -158,15 +158,30 @@ export class ArtistsController {
   }
 
   /** Artist: days blocked out, from today onwards. */
+  /** DJ: own statement dashboard, grouped by month. */
+  @Get("statements")
+  @Auth("artist")
+  statements(@CurrentUser() user: JwtUser) {
+    return this.artists.statements(user);
+  }
+
+  /** Promoter: one statement per DJ across their nights. */
+  @Get("statements/djs")
+  @Auth("promoter", "admin")
+  promoterStatements(@CurrentUser() user: JwtUser) {
+    return this.artists.promoterStatements(user);
+  }
+
   /** One month of DJ money for a DJ, promoter or admin, as a CSV statement. */
   @Get("statements.csv")
   @Auth("artist", "promoter", "admin")
   statement(
     @CurrentUser() user: JwtUser,
     @Query("month") month: string | undefined,
+    @Query("artistId") artistId: string | undefined,
     @Res() res: Response,
   ) {
-    return this.artists.statementCsv(user, month, res);
+    return this.artists.statementCsv(user, month, res, artistId);
   }
 
   @Get("blackouts")

@@ -58,6 +58,16 @@ Notable changes to ESSENTIALS. Dates are UTC.
   action. The CI guard permits `nodemailer` only in
   `apps/api/src/account-mail`.
 
+### Statements
+
+- **DJ statement dashboard** at `/statements`: every confirmed or played gig grouped
+  by month, with agreed fee, travel, what was invoiced, what the venue has paid and
+  what is still owed — each month downloadable as CSV.
+- **Promoter DJ statements** on the same route: one card per DJ across the
+  promoter's nights, with monthly totals and a per-DJ CSV download
+  (`/artists/statements.csv?artistId=…`). Access is checked against the promoter's
+  own events, and admins see every promoter's DJs.
+
 ### Off-site backups
 
 - **Nightly encrypted backup to IDrive e2** covers the Postgres dump, the phpList
