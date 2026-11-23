@@ -33,6 +33,10 @@ Notable changes to ESSENTIALS. Dates are UTC.
 - Provisioning runs validated system commands on the mail host and is gated by
   `MAILBOX_PROVISIONING=1`; a `UserMailbox` migration tracks ownership and every
   action writes an audit event. See `docs/mailbox-provisioning.md`.
+- **Aliases and a domain catch-all.** A mailbox can carry up to five extra local
+  parts, and one catch-all can route unknown `@essentialsedm.com` mail to a
+  chosen mailbox. Both are generated into `/etc/postfix/virtual-mailboxes` and
+  reloaded; the catch-all is off by default so unknown recipients still bounce.
 
 ### Transactional account mail
 

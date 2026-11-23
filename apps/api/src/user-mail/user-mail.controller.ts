@@ -11,7 +11,7 @@ import {
 import { Throttle } from "@nestjs/throttler";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
-import { CreateMailboxDto, SetMailboxStatusDto } from "./user-mail.dto";
+import { CreateMailboxDto, SetAliasesDto, SetMailboxStatusDto } from "./user-mail.dto";
 import { UserMailService } from "./user-mail.service";
 
 /** Admin-only: the mailbox belonging to one account. */
@@ -34,6 +34,16 @@ export class UserMailController {
     @CurrentUser() actor: JwtUser,
   ) {
     return this.mail.create(userId, dto.localpart, actor);
+  }
+
+  /** Replace the extra local parts that deliver to this mailbox. */
+  @Patch("aliases")
+  setAliases(
+    @Param("userId") userId: string,
+    @Body() dto: SetAliasesDto,
+    @CurrentUser() actor: JwtUser,
+  ) {
+    return this.mail.updateAliases(userId, dto.aliases, actor);
   }
 
   /** Set a new password and return it once; the old one stops working. */

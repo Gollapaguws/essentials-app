@@ -8,6 +8,7 @@ import {
 import { randomBytes } from "node:crypto";
 import { prisma } from "@essentials/db";
 import { AccountMailService } from "../account-mail/account-mail.service";
+import { AliasMapService, CATCH_ALL_KEY } from "./alias-map.service";
 import {
   MailboxProvisioner,
   isReservedLocalpart,
@@ -19,6 +20,7 @@ export interface MailboxView {
   id: string;
   address: string;
   localpart: string;
+  aliases: string[];
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -44,6 +46,7 @@ export class UserMailService {
   constructor(
     private readonly provisioner: MailboxProvisioner,
     private readonly accountMail: AccountMailService,
+    private readonly aliasMap: AliasMapService,
   ) {}
 
   async get(userId: string) {
@@ -101,6 +104,82 @@ export class UserMailService {
     // Settings go to the sign-in address, never the password.
     void this.accountMail.send(user.email, { kind: "mailbox-created", address: mailbox.address });
     return { mailbox: await this.view(mailbox), password };
+  }
+
+  /** Replace the extra local parts that deliver to this mailbox. */
+  async updateAliases(userId: string, input: string[], actor?: Actor) {
+    this.assertEnabled();
+    const user = await this.account(userId);
+    if (!user.mailbox) throw new NotFoundException("This account has no mailbox.");
+
+    const aliases = [...new Set(input.map(normaliseLocalpart).filter(Boolean))];
+    if (aliases.length > 5) throw new BadRequestException("A mailbox can have at most 5 aliases.");
+
+    const others = await prisma.userMailbox.findMany({
+      where: { NOT: { userId } },
+      select: { localpart: true, aliases: true },
+    });
+    const taken = new Set<string>();
+    for (const other of others) {
+      taken.add(other.localpart);
+      for (const alias of other.aliases) taken.add(alias);
+    }
+
+    for (const alias of aliases) {
+      if (alias === user.mailbox.localpart) {
+        throw new BadRequestException("The mailbox's own address does not need an alias.");
+      }
+      if (!isValidLocalpart(alias)) {
+        throw new BadRequestException(
+          `“${alias}” is not a valid address: use 1–30 letters, numbers, dots, dashes or underscores.`,
+        );
+      }
+      if (isReservedLocalpart(alias)) {
+        throw new BadRequestException(`${alias} is reserved by the mail server.`);
+      }
+      if (taken.has(alias)) {
+        throw new ConflictException(`${alias}@${this.provisioner.domain} is already in use.`);
+      }
+      if (await this.provisioner.userExists(alias)) {
+        throw new ConflictException(`${alias}@${this.provisioner.domain} already exists on the mail server.`);
+      }
+    }
+
+    const updated = await prisma.userMailbox.update({ where: { userId }, data: { aliases } });
+    await this.aliasMap.sync();
+    await this.audit(user.id, user.email, "mailbox_aliases_changed", { aliases, actor });
+    return { mailbox: await this.view(updated) };
+  }
+
+  async getCatchAll() {
+    const setting = await prisma.platformSetting.findUnique({ where: { key: CATCH_ALL_KEY } });
+    return { address: setting?.value || null, domain: this.provisioner.domain };
+  }
+
+  /** One domain-wide catch-all: everything unknown goes to this mailbox. */
+  async setCatchAll(addressInput: string | null, actor?: Actor) {
+    this.assertEnabled();
+    const address = addressInput?.trim().toLowerCase() || null;
+
+    if (!address) {
+      await prisma.platformSetting.deleteMany({ where: { key: CATCH_ALL_KEY } });
+      await this.aliasMap.sync();
+      return { address: null, domain: this.provisioner.domain };
+    }
+
+    const mailbox = await prisma.userMailbox.findUnique({ where: { address }, select: { userId: true } });
+    if (!mailbox) {
+      throw new BadRequestException("The catch-all must point at an existing provisioned mailbox.");
+    }
+
+    await prisma.platformSetting.upsert({
+      where: { key: CATCH_ALL_KEY },
+      create: { key: CATCH_ALL_KEY, value: address },
+      update: { value: address },
+    });
+    await this.aliasMap.sync();
+    await this.audit(mailbox.userId, address, "mailbox_catch_all_changed", { address, actor });
+    return { address, domain: this.provisioner.domain };
   }
 
   async resetPassword(userId: string, actor?: Actor) {
@@ -172,6 +251,7 @@ export class UserMailService {
     id: string;
     address: string;
     localpart: string;
+    aliases: string[];
     status: string;
     createdAt: Date;
     updatedAt: Date;

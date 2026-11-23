@@ -24,6 +24,24 @@ Prisma tracks the mailbox in `UserMailbox`; every action writes an `AuthEvent`
 (`mailbox_created`, `mailbox_password_reset`, `mailbox_disabled`,
 `mailbox_enabled`, `mailbox_deleted`).
 
+## Aliases and catch-all
+
+A mailbox can carry up to five extra local parts (for example `bookings@`). The
+dashboard also has one domain-wide catch-all: everything addressed to an unknown
+`@MAILBOX_DOMAIN` recipient is delivered to the chosen mailbox.
+
+Both are written to `/etc/postfix/virtual-mailboxes` and activated with
+`postmap` + `postfix reload`; the file is generated from the database and must
+not be edited by hand. Postfix loads it through:
+
+```
+virtual_alias_maps = hash:/etc/postfix/virtual-mailboxes
+```
+
+With the catch-all **off** (the default), unknown addresses are rejected exactly
+as before. Turning it on also captures role addresses that are not explicit
+mailboxes or aliases, so enable it deliberately.
+
 ## Host requirements
 
 - The API must run with permission to manage Unix accounts (the systemd unit on
@@ -36,6 +54,8 @@ Prisma tracks the mailbox in `UserMailbox`; every action writes an `AuthEvent`
 - `MAILBOX_PROVISIONING=1` and `MAILBOX_DOMAIN=essentialsedm.com` in the API env.
   With the flag unset the endpoints answer `503` and the dashboard shows that
   provisioning is off.
+- `virtual_alias_maps` includes `hash:/etc/postfix/virtual-mailboxes` (the API
+  creates and reloads the map; the Postfix setting must exist once).
 
 ## Deliberate limits
 

@@ -4,6 +4,8 @@ import {
   ServiceUnavailableException,
 } from "@nestjs/common";
 import { prisma } from "@essentials/db";
+import type { AliasMapService } from "./alias-map.service";
+import { renderAliasMap } from "./alias-map.service";
 import type { MailboxProvisioner } from "./mailbox.provisioner";
 import { isReservedLocalpart, isValidLocalpart, normaliseLocalpart } from "./mailbox.provisioner";
 import { UserMailService } from "./user-mail.service";
@@ -13,6 +15,7 @@ jest.mock("@essentials/db", () => ({
     user: { findUnique: jest.fn() },
     userMailbox: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -25,6 +28,7 @@ const db = prisma as unknown as {
   user: { findUnique: jest.Mock };
   userMailbox: {
     findUnique: jest.Mock;
+    findMany: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
@@ -48,12 +52,15 @@ function setup(overrides: Partial<Record<string, unknown>> = {}) {
     ...overrides,
   };
   const accountMail = { send: jest.fn().mockResolvedValue(true) };
+  const aliasMap = { sync: jest.fn().mockResolvedValue(true) };
   return {
     provisioner,
     accountMail,
+    aliasMap,
     service: new UserMailService(
       provisioner as unknown as MailboxProvisioner,
       accountMail as unknown as import("../account-mail/account-mail.service").AccountMailService,
+      aliasMap as unknown as AliasMapService,
     ),
   };
 }
@@ -63,6 +70,26 @@ beforeEach(() => {
   db.user.findUnique.mockResolvedValue(USER);
   db.userMailbox.findUnique.mockResolvedValue(null);
   db.authEvent.create.mockResolvedValue({});
+});
+
+describe("alias map", () => {
+  it("renders one line per alias plus the catch-all when set", () => {
+    const map = renderAliasMap(
+      [{ address: "dj@essentialsedm.com", aliases: ["bookings", "dj"] }],
+      "crew@essentialsedm.com",
+      "essentialsedm.com",
+    );
+
+    expect(map).toContain("bookings@essentialsedm.com\tdj@essentialsedm.com");
+    expect(map).toContain("dj@essentialsedm.com\tdj@essentialsedm.com");
+    expect(map).toContain("@essentialsedm.com\tcrew@essentialsedm.com");
+    expect(map.startsWith("# Managed")).toBe(true);
+  });
+
+  it("omits the catch-all line when it is off", () => {
+    const map = renderAliasMap([], null, "essentialsedm.com");
+    expect(map).not.toContain("@essentialsedm.com\t");
+  });
 });
 
 describe("local-part rules", () => {
@@ -106,10 +133,12 @@ describe("UserMailService", () => {
       userId: "u1",
       address: "dj@essentialsedm.com",
       localpart: "dj",
+      aliases: [],
       status: "active",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+    db.userMailbox.findMany.mockResolvedValue([]);
     db.userMailbox.create.mockResolvedValue(mailbox);
     const { service, provisioner, accountMail } = setup();
 
@@ -166,5 +195,50 @@ describe("UserMailService", () => {
 
     expect(provisioner.setLocked).toHaveBeenCalledWith("dj", true);
     expect(result.mailbox.status).toBe("disabled");
+  });
+
+  it("saves aliases and rewrites the Postfix map", async () => {
+    db.user.findUnique.mockResolvedValue({
+      ...USER,
+      mailbox: {
+        id: "m1",
+        userId: "u1",
+        address: "dj@essentialsedm.com",
+        localpart: "dj",
+        aliases: [],
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    db.userMailbox.findMany.mockResolvedValue([]);
+    db.userMailbox.update.mockResolvedValue({
+      id: "m1",
+      userId: "u1",
+      address: "dj@essentialsedm.com",
+      localpart: "dj",
+      aliases: ["bookings"],
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const { service, aliasMap } = setup();
+
+    const result = await service.updateAliases("u1", ["Bookings", "bookings"]);
+
+    expect(db.userMailbox.update).toHaveBeenCalledWith({
+      where: { userId: "u1" },
+      data: { aliases: ["bookings"] },
+    });
+    expect(aliasMap.sync).toHaveBeenCalled();
+    expect(result.mailbox.aliases).toEqual(["bookings"]);
+  });
+
+  it("refuses a catch-all that is not a provisioned mailbox", async () => {
+    db.userMailbox.findUnique.mockResolvedValue(null);
+    const { service } = setup();
+    await expect(service.setCatchAll("nobody@essentialsedm.com")).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 });

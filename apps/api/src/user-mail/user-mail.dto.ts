@@ -1,4 +1,12 @@
-import { IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from "class-validator";
 
 export class CreateMailboxDto {
   /** Optional local part; defaults to the sign-in address's local part. */
@@ -12,4 +20,20 @@ export class CreateMailboxDto {
 export class SetMailboxStatusDto {
   @IsIn(["active", "disabled"])
   status!: "active" | "disabled";
+}
+
+export class SetAliasesDto {
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsString({ each: true })
+  @MaxLength(30, { each: true })
+  aliases!: string[];
+}
+
+export class SetCatchAllDto {
+  /** Bare mailbox address, or null/omitted to turn the catch-all off. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(254)
+  address?: string | null;
 }

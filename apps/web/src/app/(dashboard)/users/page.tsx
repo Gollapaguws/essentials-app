@@ -25,6 +25,7 @@ interface Mailbox {
   id: string;
   address: string;
   localpart: string;
+  aliases: string[];
   status: "active" | "disabled";
   createdAt: string;
   updatedAt: string;
@@ -97,6 +98,9 @@ export default function Users() {
     password: string;
   } | null>(null);
   const [mailboxError, setMailboxError] = useState<string | null>(null);
+  const [aliasDraft, setAliasDraft] = useState("");
+  const [catchAll, setCatchAll] = useState<string | null>(null);
+  const [catchAllDraft, setCatchAllDraft] = useState("");
 
   const load = useCallback(async (search: string) => {
     setError(null);
@@ -228,7 +232,14 @@ export default function Users() {
     setMailboxLocalpart(user.email.split("@")[0]);
     setBusyId(user.id);
     try {
-      setMailboxState(await api.get<MailboxState>(`/users/${user.id}/mailbox`));
+      const [state, catchAllState] = await Promise.all([
+        api.get<MailboxState>(`/users/${user.id}/mailbox`),
+        api.get<{ address: string | null }>("/mailbox/catch-all"),
+      ]);
+      setMailboxState(state);
+      setAliasDraft(state.mailbox?.aliases.join(", ") ?? "");
+      setCatchAll(catchAllState.address);
+      setCatchAllDraft(catchAllState.address ?? "");
     } catch (err) {
       setMailboxError(errorMessage(err) ?? "Could not load the mailbox.");
     } finally {
@@ -260,9 +271,56 @@ export default function Users() {
         mailbox: result.mailbox,
       }));
       setMailboxCredentials({ address: result.mailbox.address, password: result.password });
+      setAliasDraft("");
       void load(q);
     } catch (err) {
       setMailboxError(errorMessage(err) ?? "Could not create the mailbox.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const saveAliases = async () => {
+    if (!mailboxFor || !mailboxState?.mailbox) return;
+    setBusyId(mailboxFor.id);
+    setMailboxError(null);
+    try {
+      const result = await api.patch<{ mailbox: Mailbox }>(
+        `/users/${mailboxFor.id}/mailbox/aliases`,
+        {
+          aliases: aliasDraft
+            .split(",")
+            .map((alias) => alias.trim())
+            .filter(Boolean),
+        },
+      );
+      setMailboxState((prev) => (prev ? { ...prev, mailbox: result.mailbox } : prev));
+      setAliasDraft(result.mailbox.aliases.join(", "));
+      setNotice(`${result.mailbox.address} — aliases updated.`);
+      void load(q);
+    } catch (err) {
+      setMailboxError(errorMessage(err) ?? "Could not save the aliases.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const saveCatchAll = async (address: string | null) => {
+    setBusyId(mailboxFor?.id ?? "catch-all");
+    setMailboxError(null);
+    try {
+      const result = await api.patch<{ address: string | null }>("/mailbox/catch-all", {
+        address,
+      });
+      setCatchAll(result.address);
+      setCatchAllDraft(result.address ?? "");
+      setNotice(
+        result.address
+          ? `Catch-all now delivers unknown mail to ${result.address}.`
+          : "Domain catch-all is off.",
+      );
+    } catch (err) {
+      setMailboxError(errorMessage(err) ?? "Could not change the catch-all.");
     } finally {
       setBusyId(null);
     }
@@ -565,6 +623,63 @@ export default function Users() {
                     {formatBytes(mailboxState.mailbox.usedBytes)} stored
                   </span>
                 </div>
+                <div className="border-t border-line pt-3 space-y-2">
+                  <p className="text-[11px] uppercase tracking-widest text-neutral-500">Aliases</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      className={`${field} flex-1 min-w-[220px]`}
+                      placeholder="bookings, press (comma separated)"
+                      value={aliasDraft}
+                      onChange={(e) => setAliasDraft(e.target.value)}
+                    />
+                    <button
+                      disabled={busyId === mailboxFor.id}
+                      onClick={saveAliases}
+                      className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-line text-neutral-300 hover:border-neon hover:text-neon disabled:opacity-40"
+                    >
+                      SAVE ALIASES
+                    </button>
+                  </div>
+                  <p className="text-neutral-600 text-[11px]">
+                    Extra @{mailboxState.domain} addresses that deliver to this mailbox.
+                  </p>
+                </div>
+
+                <div className="border-t border-line pt-3 space-y-2">
+                  <p className="text-[11px] uppercase tracking-widest text-neutral-500">
+                    Domain catch-all
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      className={`${field} flex-1 min-w-[220px]`}
+                      placeholder={`crew@${mailboxState.domain}`}
+                      value={catchAllDraft}
+                      onChange={(e) => setCatchAllDraft(e.target.value)}
+                    />
+                    <button
+                      disabled={busyId === mailboxFor.id || !catchAllDraft.trim()}
+                      onClick={() => void saveCatchAll(catchAllDraft.trim())}
+                      className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-line text-neutral-300 hover:border-neon hover:text-neon disabled:opacity-40"
+                    >
+                      SAVE
+                    </button>
+                    {catchAll && (
+                      <button
+                        disabled={busyId === mailboxFor.id}
+                        onClick={() => void saveCatchAll(null)}
+                        className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-red-500/60 text-red-400 hover:bg-red-500/10 disabled:opacity-40"
+                      >
+                        OFF
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-neutral-600 text-[11px]">
+                    {catchAll
+                      ? `Unknown @${mailboxState.domain} addresses currently go to ${catchAll}.`
+                      : "Off — unknown addresses are rejected, as before."}
+                  </p>
+                </div>
+
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     disabled={busyId === mailboxFor.id}

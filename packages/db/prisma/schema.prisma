@@ -569,6 +569,8 @@ model UserMailbox {
   userId    String   @unique
   address   String   @unique
   localpart String   @unique
+  // Extra local parts that deliver to this mailbox; the login address is `localpart`.
+  aliases   String[] @default([])
   status    String   @default("active") // active | disabled
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
