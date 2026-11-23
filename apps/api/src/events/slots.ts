@@ -16,7 +16,15 @@ export interface SlotPlan {
  * its start time falls in (offsets run from the first slot), so the promoter and
  * the DJ both see what the set is for: a warm-up is not a closing set.
  */
-export const SLOT_PHASES = [
+export interface SlotPhase {
+  /** How long the phase runs before the next one starts. */
+  minutes: number;
+  readonly role: string;
+  readonly bpmRange: string;
+  readonly genres: string;
+}
+
+export const SLOT_PHASES: readonly SlotPhase[] = [
   {
     minutes: 100,
     role: "The Setter (Warm-Up)",
@@ -47,23 +55,20 @@ export const SLOT_PHASES = [
     bpmRange: "145 → 140 → 132",
     genres: "Melodic · Trance · Progressive",
   },
-] as const;
-
-export interface SlotPhase {
-  readonly role: string;
-  readonly bpmRange: string;
-  readonly genres: string;
-}
+];
 
 /** The phase covering `offsetMinutes` after the first slot. A night longer than
- * eight hours stays in the closing phase rather than falling off the table. */
-export function phaseForOffset(offsetMinutes: number): SlotPhase {
+ * the whole arc stays in the closing phase rather than falling off the table. */
+export function phaseForOffset(
+  offsetMinutes: number,
+  phases: readonly SlotPhase[] = SLOT_PHASES,
+): SlotPhase {
   let remaining = Math.max(0, offsetMinutes);
-  for (const phase of SLOT_PHASES) {
+  for (const phase of phases) {
     if (remaining < phase.minutes) return phase;
     remaining -= phase.minutes;
   }
-  return SLOT_PHASES[SLOT_PHASES.length - 1];
+  return phases[phases.length - 1] ?? SLOT_PHASES[SLOT_PHASES.length - 1];
 }
 
 /** What one slot pays: the hourly rate times its length in hours. */
@@ -124,7 +129,11 @@ const hhmm = (date: Date) =>
  * `slotStartMinute`. Every slot pays the same hourly rate for its length, so the
  * promoter's budget is a ceiling to compare against, not a pot to divide.
  */
-export function buildSlots(eventDate: Date, plan: SlotPlan) {
+export function buildSlots(
+  eventDate: Date,
+  plan: SlotPlan,
+  phases: readonly SlotPhase[] = SLOT_PHASES,
+) {
   const dayStart = Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate());
   const firstStart = dayStart + plan.slotStartMinute * 60_000;
   const fee = slotFee(plan.djFeePerHour, plan.slotMinutes);
@@ -132,7 +141,7 @@ export function buildSlots(eventDate: Date, plan: SlotPlan) {
   return Array.from({ length: plan.slotCount }, (_, index) => {
     const startsAt = new Date(firstStart + index * plan.slotMinutes * 60_000);
     const endsAt = new Date(startsAt.getTime() + plan.slotMinutes * 60_000);
-    const phase = phaseForOffset(index * plan.slotMinutes);
+    const phase = phaseForOffset(index * plan.slotMinutes, phases);
     return {
       startsAt,
       endsAt,

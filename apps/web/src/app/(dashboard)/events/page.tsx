@@ -86,6 +86,19 @@ interface SlotForm {
   slotStart: string;
 }
 
+interface ArcPhase {
+  minutes: number;
+  role: string;
+  bpmRange: string;
+  genres: string;
+}
+
+interface NightArcResponse {
+  phases: ArcPhase[];
+  custom: boolean;
+  defaults: ArcPhase[];
+}
+
 const field = "bg-bg border border-line rounded-lg px-3 py-2";
 const EMPTY_SLOTS: SlotForm = { eventId: null, budget: 5000, djFeePerHour: 500, slotCount: 4, slotMinutes: 60, slotStart: "20:00" };
 
@@ -129,6 +142,12 @@ export default function EventManager() {
   const [notice, setNotice] = useState<string | null>(null);
   const { me } = useAuth();
   const isAdmin = me?.user.role === "admin";
+  // Promoters shape the arc their own slot plans are tagged with.
+  const canEditArc = isAdmin || me?.user.role === "promoter";
+  const [arc, setArc] = useState<ArcPhase[] | null>(null);
+  const [arcDefaults, setArcDefaults] = useState<ArcPhase[]>([]);
+  const [arcNotice, setArcNotice] = useState<string | null>(null);
+  const [arcSaving, setArcSaving] = useState(false);
 
   const selectedVenue = venues.find((v) => v.id === form.venueId) ?? null;
   // Managing the venue means there is nobody else to approve the night: the API
@@ -149,6 +168,42 @@ export default function EventManager() {
     if (!focusId) return;
     document.getElementById(`event-${focusId}`)?.scrollIntoView({ block: "center" });
   }, [focusId, events.length]);
+
+  useEffect(() => {
+    if (!canEditArc) {
+      setArc(null);
+      return;
+    }
+    api
+      .get<NightArcResponse>("/events/night-arc")
+      .then((r) => {
+        setArc(r.phases);
+        setArcDefaults(r.defaults);
+      })
+      .catch(() => setArc(null));
+  }, [canEditArc]);
+
+  const saveArc = async () => {
+    if (!arc) return;
+    setArcSaving(true);
+    setArcNotice(null);
+    setError(null);
+    try {
+      const saved = await api.patch<NightArcResponse>("/events/night-arc", { phases: arc });
+      setArc(saved.phases);
+      setArcNotice("Saved — new slot plans use this arc.");
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setArcSaving(false);
+    }
+  };
+
+  const editPhase = (index: number, patch: Partial<ArcPhase>) => {
+    setArc((current) =>
+      current ? current.map((phase, i) => (i === index ? { ...phase, ...patch } : phase)) : current,
+    );
+  };
 
   const pickVenue = (venueId: string) => {
     const venue = venues.find((v) => v.id === venueId) ?? null;
@@ -382,6 +437,76 @@ export default function EventManager() {
               budget ceiling, so confirmations there are not capped.
             </p>
           )}
+        </section>
+      )}
+
+      {canEditArc && arc && (
+        <section className="console-panel console-panel-body space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-bold text-neon uppercase tracking-wider">Night arc</h2>
+            <p className="text-xs text-neutral-500">
+              Each slot is tagged by where it starts. Changes apply to plans you make from now on;
+              nights already planned keep their tags.
+            </p>
+          </div>
+          <div className="hidden md:grid md:grid-cols-[5rem_1fr_7rem_1.5fr] gap-2 text-[10px] uppercase tracking-widest text-neutral-500">
+            <span>Minutes</span>
+            <span>Role</span>
+            <span>BPM</span>
+            <span>Genres</span>
+          </div>
+          {arc.map((phase, i) => (
+            <div key={i} className="grid grid-cols-1 md:grid-cols-[5rem_1fr_7rem_1.5fr] gap-2">
+              <input
+                type="number"
+                min={15}
+                max={240}
+                aria-label={`Phase ${i + 1} minutes`}
+                className={`${field} w-full`}
+                value={phase.minutes}
+                onChange={(e) => editPhase(i, { minutes: +e.target.value })}
+              />
+              <input
+                aria-label={`Phase ${i + 1} role`}
+                maxLength={60}
+                className={`${field} w-full`}
+                value={phase.role}
+                onChange={(e) => editPhase(i, { role: e.target.value })}
+              />
+              <input
+                aria-label={`Phase ${i + 1} BPM range`}
+                maxLength={40}
+                className={`${field} w-full`}
+                value={phase.bpmRange}
+                onChange={(e) => editPhase(i, { bpmRange: e.target.value })}
+              />
+              <input
+                aria-label={`Phase ${i + 1} genres`}
+                maxLength={160}
+                className={`${field} w-full`}
+                value={phase.genres}
+                onChange={(e) => editPhase(i, { genres: e.target.value })}
+              />
+            </div>
+          ))}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void saveArc()}
+              disabled={arcSaving}
+              className="console-btn console-btn-primary"
+            >
+              {arcSaving ? "SAVING…" : "SAVE NIGHT ARC"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setArc(arcDefaults.map((phase) => ({ ...phase })))}
+              className="console-btn console-btn-secondary"
+            >
+              RESET TO DEFAULT
+            </button>
+            {arcNotice && <span className="text-neon text-xs">{arcNotice}</span>}
+          </div>
         </section>
       )}
 

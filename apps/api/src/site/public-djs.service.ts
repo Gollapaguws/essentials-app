@@ -58,7 +58,7 @@ export class PublicDjsService {
       select: {
         slot: true,
         startAt: true,
-        slotRef: { select: { label: true } },
+        slotRef: { select: { label: true, role: true, bpmRange: true } },
         event: {
           select: {
             id: true,
@@ -80,6 +80,8 @@ export class PublicDjsService {
         date: b.event.date,
         venue: b.event.venue,
         time: b.slotRef?.label ?? b.slot ?? null,
+        role: b.slotRef?.role ?? null,
+        bpm: b.slotRef?.bpmRange ?? null,
       })),
     };
   }

@@ -30,6 +30,12 @@ export default function LineupStrip({ events = [] }) {
                         <>
                           <span className="noir-dj-name">{dj.name}</span>
                           {dj.time && <span className="noir-dj-time">{dj.time}</span>}
+                          {dj.role && (
+                            <span className="noir-micro">
+                              {dj.role}
+                              {dj.bpm ? ` · ${dj.bpm} BPM` : ""}
+                            </span>
+                          )}
                         </>
                       );
                       return dj.id ? (

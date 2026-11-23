@@ -100,6 +100,7 @@ model User {
   artistProfile   ArtistProfile?
   artistNotes     ArtistNote[]
   mailbox         UserMailbox?
+  nightArc        PromoterNightArc?
 
   @@index([role])
 }
@@ -513,6 +514,16 @@ model SiteEvent {
 /// Platform-wide values an admin sets once. `ArtistProfile.travelRatePerKm` is a
 /// copy of the travel rate kept for invoices already priced; this table is the
 /// source of truth, so a new profile can never land on an old rate.
+/// A promoter's own version of the night's arc: five phases, each with its
+/// length in minutes and the role, BPM band and genres slots in it are booked for.
+model PromoterNightArc {
+  promoterId String   @id
+  /// [{ minutes, role, bpmRange, genres }] in order.
+  phases     Json
+  updatedAt  DateTime @updatedAt
+  promoter   User     @relation(fields: [promoterId], references: [id], onDelete: Cascade)
+}
+
 model PlatformSetting {
   key       String   @id
   value     String

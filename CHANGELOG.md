@@ -11,9 +11,16 @@ Notable changes to ESSENTIALS. Dates are UTC.
   each with its BPM band and assigned genres. Slots are tagged from their offset
   from the night's first slot — 100 minutes per phase, 80 for the closer — and a
   migration backfills existing slots, so old and new nights read the same.
+- **The arc is editable per promoter.** A promoter can change any phase's length
+  (15–240 minutes), name, BPM band or genres on the Events page; the arc is saved
+  to their account and used for plans made or re-planned after that. Existing
+  nights keep the tags they were planned with, and "reset to default" restores
+  the published arc. The default remains 100/100/100/100/80 minutes.
 - DJs see the role and BPM band on each slot they can apply for (genres in the
   tooltip), and promoters see the role under every slot in the night's fee list
   and when moving a DJ between slots.
+- The public site's lineup (home strip and event page) and DJ profile sets show
+  the role and BPM alongside the set time, as does the mobile gig list.
 
 ### Email systems removed
 

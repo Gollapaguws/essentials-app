@@ -6,12 +6,14 @@ jest.mock("@essentials/db", () => ({
   prisma: {
     event: { findUnique: jest.fn(), create: jest.fn() },
     eventGroupChat: { findUnique: jest.fn(), create: jest.fn() },
+    promoterNightArc: { findUnique: jest.fn() },
   },
 }));
 
 const db = prisma as unknown as {
   event: { findUnique: jest.Mock; create: jest.Mock };
   eventGroupChat: { findUnique: jest.Mock; create: jest.Mock };
+  promoterNightArc: { findUnique: jest.Mock };
 };
 
 const promoter: JwtUser = { sub: "promoter-1", email: "p@example.com", role: "promoter" };
@@ -42,6 +44,7 @@ function event(over: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   db.event.findUnique.mockReset().mockResolvedValue(event());
+  db.promoterNightArc.findUnique.mockReset().mockResolvedValue(null);
   db.event.create.mockReset().mockImplementation(({ data }) => ({ id: "event-2", ...data }));
   db.eventGroupChat.findUnique.mockReset().mockResolvedValue(null);
   db.eventGroupChat.create.mockReset().mockResolvedValue({ id: "chat-1" });

@@ -100,6 +100,8 @@ export default function DjProfile() {
                           <span className="noir-micro">
                             {set.venue?.name}
                             {set.time ? ` · ${set.time}` : ""}
+                            {set.role ? ` · ${set.role}` : ""}
+                            {set.bpm ? ` · ${set.bpm} BPM` : ""}
                           </span>
                         </Link>
                       ))}

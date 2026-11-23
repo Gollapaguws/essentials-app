@@ -170,19 +170,24 @@ export class SiteContentService {
       select: {
         eventId: true,
         slot: true,
-        slotRef: { select: { label: true } },
+        slotRef: { select: { label: true, role: true, bpmRange: true } },
         artist: { select: { id: true, stageName: true } },
       },
       orderBy: { startAt: "asc" },
     });
 
-    const byEvent = new Map<string, { id: string; name: string; time: string | null }[]>();
+    const byEvent = new Map<
+      string,
+      { id: string; name: string; time: string | null; role: string | null; bpm: string | null }[]
+    >();
     for (const booking of bookings) {
       const list = byEvent.get(booking.eventId) ?? [];
       list.push({
         id: booking.artist.id,
         name: booking.artist.stageName,
         time: booking.slotRef?.label ?? booking.slot ?? null,
+        role: booking.slotRef?.role ?? null,
+        bpm: booking.slotRef?.bpmRange ?? null,
       });
       byEvent.set(booking.eventId, list);
     }

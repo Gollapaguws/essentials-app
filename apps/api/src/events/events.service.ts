@@ -7,7 +7,8 @@ import { ConfigService } from "@nestjs/config";
 import { LoyaltyService } from "../loyalty/loyalty.service";
 import { DjBookingService } from "../artists/dj-booking.service";
 import { VenuesService } from "../venues/venues.service";
-import { buildSlots, normalizePlan } from "./slots";
+import { buildSlots, normalizePlan, SLOT_PHASES } from "./slots";
+import { loadNightArc, normalizeNightArc, parseNightArc } from "./night-arc";
 
 export interface EventUpdateInput {
   title?: string;
@@ -352,13 +353,40 @@ export class EventsService {
         slotCount: plan?.slotCount ?? null,
         slotMinutes: plan?.slotMinutes ?? null,
         slotStartMinute: plan?.slotStartMinute ?? null,
-        ...(plan ? { slots: { create: buildSlots(date, plan) } } : {}),
+        ...(plan ? { slots: { create: buildSlots(date, plan, await loadNightArc(user.sub)) } } : {}),
       },
       include: { slots: { orderBy: { startsAt: "asc" } } },
     });
     await prisma.eventGroupChat.create({ data: { eventId: created.id } });
     if (selfManaged) this.venues.announceApproval(created);
     return created;
+  }
+
+  /** The promoter's own night arc, or the platform default until they save one. */
+  async nightArc(user: JwtUser) {
+    if (user.role !== "promoter" && user.role !== "admin") {
+      throw new ForbiddenException("Promoters only");
+    }
+    const arc = await prisma.promoterNightArc.findUnique({ where: { promoterId: user.sub } });
+    return {
+      phases: arc ? parseNightArc(arc.phases) : SLOT_PHASES,
+      custom: !!arc,
+      defaults: SLOT_PHASES,
+    };
+  }
+
+  /** Save the arc future slot plans are tagged with. Existing slots keep their tags. */
+  async saveNightArc(user: JwtUser, phases: unknown) {
+    if (user.role !== "promoter" && user.role !== "admin") {
+      throw new ForbiddenException("Promoters only");
+    }
+    const normalized = normalizeNightArc(phases);
+    await prisma.promoterNightArc.upsert({
+      where: { promoterId: user.sub },
+      create: { promoterId: user.sub, phases: normalized as unknown as Prisma.InputJsonValue },
+      update: { phases: normalized as unknown as Prisma.InputJsonValue },
+    });
+    return { phases: normalized, custom: true, defaults: SLOT_PHASES };
   }
 
   /**
@@ -415,7 +443,12 @@ export class EventsService {
 
     await prisma.$transaction([
       prisma.eventSlot.deleteMany({ where: { eventId } }),
-      prisma.eventSlot.createMany({ data: buildSlots(event.date, plan).map((s) => ({ ...s, eventId })) }),
+      prisma.eventSlot.createMany({
+        data: buildSlots(event.date, plan, await loadNightArc(event.promoterId)).map((s) => ({
+          ...s,
+          eventId,
+        })),
+      }),
       prisma.event.update({
         where: { id: eventId },
         data: {

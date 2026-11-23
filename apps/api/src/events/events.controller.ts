@@ -104,6 +104,20 @@ export class EventsController {
     return this.events.budgetOverview(user);
   }
 
+  /** Promoter: the night arc their slot plans are tagged with. */
+  @Get("night-arc")
+  @Auth("promoter", "admin")
+  nightArc(@CurrentUser() user: JwtUser) {
+    return this.events.nightArc(user);
+  }
+
+  /** Promoter: save the five phases (length, role, BPM band, genres) for future plans. */
+  @Patch("night-arc")
+  @Auth("promoter", "admin")
+  saveNightArc(@CurrentUser() user: JwtUser, @Body("phases") phases: unknown) {
+    return this.events.saveNightArc(user, phases);
+  }
+
   @Get(":id")
   detail(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.events.detail(id, user);

@@ -3,6 +3,7 @@ import { prisma, type Event } from "@essentials/db";
 import type { JwtUser } from "../common/roles.guard";
 import type { Response } from "express";
 import { buildSlots } from "./slots";
+import { loadNightArc } from "./night-arc";
 
 /** Phase 4.5 promoter QoL: event cloning, guest-list export, capacity pacing. */
 @Injectable()
@@ -68,7 +69,9 @@ export class EventToolsService {
         slotCount: event.slotCount,
         slotMinutes: event.slotMinutes,
         slotStartMinute: event.slotStartMinute,
-        ...(plan ? { slots: { create: buildSlots(date, plan) } } : {}),
+        ...(plan
+          ? { slots: { create: buildSlots(date, plan, await loadNightArc(event.promoterId)) } }
+          : {}),
       },
     });
     if (await prisma.eventGroupChat.findUnique({ where: { eventId: cloned.id } }).then((c) => !c)) {

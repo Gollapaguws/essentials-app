@@ -12,6 +12,7 @@ jest.mock("@essentials/db", () => ({
     event: { findUnique: jest.fn(), update: jest.fn() },
     artistBooking: { count: jest.fn(), aggregate: jest.fn() },
     eventSlot: { deleteMany: jest.fn(), createMany: jest.fn() },
+    promoterNightArc: { findUnique: jest.fn() },
     $transaction: jest.fn(),
   },
   EventStatus: {
@@ -29,6 +30,7 @@ const db = prisma as unknown as {
   event: { findUnique: jest.Mock; update: jest.Mock };
   artistBooking: { count: jest.Mock; aggregate: jest.Mock };
   eventSlot: { deleteMany: jest.Mock; createMany: jest.Mock };
+  promoterNightArc: { findUnique: jest.Mock };
   $transaction: jest.Mock;
 };
 
@@ -73,6 +75,7 @@ beforeEach(() => {
   db.artistBooking.aggregate.mockReset().mockResolvedValue({ _sum: { performanceFee: 0 } });
   db.eventSlot.deleteMany.mockReset();
   db.eventSlot.createMany.mockReset();
+  db.promoterNightArc.findUnique.mockReset().mockResolvedValue(null);
   db.$transaction.mockReset().mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops));
 });
 

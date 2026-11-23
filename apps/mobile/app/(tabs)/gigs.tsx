@@ -17,6 +17,9 @@ interface OpenSlot {
   id: string;
   label: string;
   fee: number;
+  /** Where the slot sits in the night's arc. */
+  role?: string | null;
+  bpmRange?: string | null;
   taken: boolean;
   applicants: number;
 }
@@ -155,6 +158,12 @@ export default function Gigs() {
                   <Text style={[s.slotText, slot.taken && { color: colors.muted, textDecorationLine: "line-through" }]}>
                     {slot.label}
                   </Text>
+                  {slot.role ? (
+                    <Text style={[s.slotRole, slot.taken && { color: colors.muted }]}>
+                      {slot.role}
+                      {slot.bpmRange ? ` · ${slot.bpmRange} BPM` : ""}
+                    </Text>
+                  ) : null}
                   <Text style={[s.slotFee, slot.taken && { color: colors.muted }]}>
                     {rand(slot.fee)}
                     {slot.applicants > 0 && !slot.taken ? ` · ${slot.applicants} applied` : ""}
@@ -235,6 +244,7 @@ const s = StyleSheet.create({
   slotTaken: { borderColor: colors.border },
   slotBusy: { opacity: 0.5 },
   slotText: { color: colors.text, fontWeight: "700", fontSize: 12 },
+  slotRole: { color: colors.muted, fontSize: 10 },
   slotFee: { color: colors.neon, fontSize: 11 },
   status: { fontSize: 11, fontWeight: "800", textTransform: "uppercase" },
   fee: { color: colors.text, fontWeight: "800" },
