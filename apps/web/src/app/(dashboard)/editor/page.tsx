@@ -11,7 +11,7 @@ const MAX_UPLOAD = 120 * 1024 * 1024;
 interface FrontPageEvent { title: string; displayDate: string; city: string; venue: string; doors: string; price: string; status?: string }
 interface Visual { src: string; label: string }
 interface FrontPage {
-  tagline?: string; ctaLabel?: string; city?: string;
+  tagline?: string; heroPitch?: string; ctaLabel?: string; city?: string;
   quote?: string; manifestoP1?: string; manifestoP2?: string;
   events?: FrontPageEvent[];
   footerLeft?: string; footerRight?: string;
@@ -170,6 +170,8 @@ export default function FrontPageEditor() {
           <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Hero</h2>
           <div><span className={label}>Tagline</span>
             <textarea className={`${input} mt-1 h-20`} value={c.tagline ?? ""} onChange={(e) => set({ tagline: e.target.value })} /></div>
+          <div><span className={label}>Hero pitch (optional — replaces the tagline when set)</span>
+            <textarea className={`${input} mt-1 h-32`} value={c.heroPitch ?? ""} onChange={(e) => set({ heroPitch: e.target.value })} /></div>
           <div className="grid md:grid-cols-3 gap-3">
             <div><span className={label}>CTA label</span>
               <input className={`${input} mt-1`} value={c.ctaLabel ?? ""} onChange={(e) => set({ ctaLabel: e.target.value })} /></div>

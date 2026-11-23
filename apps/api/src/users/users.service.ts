@@ -12,6 +12,7 @@ import { SupabaseAdminService } from "../auth/supabase-admin.service";
 import { DashboardSessionService } from "../auth/dashboard-session.service";
 import { ArtistsService } from "../artists/artists.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { AccountMailService } from "../account-mail/account-mail.service";
 import { TelegramService } from "../telegram/telegram.service";
 import type { CreateUserDto, SetRoleDto, UpdateProfileDto } from "./users.dto";
 
@@ -37,6 +38,7 @@ const USER_SELECT = {
   telegramChatId: true,
   createdAt: true,
   artistProfile: { select: { stageName: true } },
+  mailbox: { select: { address: true, status: true } },
   managedVenues: {
     select: { id: true, name: true, capacity: true },
     orderBy: { createdAt: "desc" },
@@ -56,6 +58,7 @@ interface UserRow {
   telegramChatId: string | null;
   createdAt: Date;
   artistProfile: { stageName: string } | null;
+  mailbox: { address: string; status: string } | null;
   managedVenues: { id: string; name: string; capacity: number }[];
 }
 
@@ -93,6 +96,7 @@ export class UsersService {
     private readonly telegram: TelegramService,
     private readonly admin: SupabaseAdminService,
     private readonly sessions: DashboardSessionService,
+    private readonly accountMail: AccountMailService,
   ) {}
 
   /**
@@ -153,6 +157,9 @@ export class UsersService {
         },
       })
       .catch(() => undefined);
+
+    // Best-effort: the account exists even if the relay does not take the notice.
+    void this.accountMail.send(email, { kind: "account-created", role });
 
     return {
       user: shape(await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: USER_SELECT })),
@@ -217,6 +224,8 @@ export class UsersService {
       .catch((err: unknown) =>
         this.logger.warn(`mfa_reset audit event was not stored: ${(err as Error).message}`),
       );
+
+    void this.accountMail.send(existing.email, { kind: "sign-in-reset" });
 
     return {
       user: shape(await prisma.user.findUniqueOrThrow({ where: { id }, select: USER_SELECT })),
@@ -294,6 +303,8 @@ export class UsersService {
       .catch((err: unknown) =>
         this.logger.warn(`MFA exemption audit event was not stored: ${(err as Error).message}`),
       );
+
+    void this.accountMail.send(existing.email, { kind: "mfa-changed", enabled: !disabled });
 
     return shape(await prisma.user.findUniqueOrThrow({ where: { id }, select: USER_SELECT }));
   }
@@ -376,6 +387,12 @@ export class UsersService {
         })
         .catch(() => undefined);
 
+      void this.accountMail.send(existing.email, {
+        kind: "role-changed",
+        from: existing.role,
+        to: role,
+      });
+
       // A new DJ is invited to the bot right away: gig calls and confirmations
       // then arrive as Telegram messages instead of sitting in the bell feed.
       if (role === "artist") {
@@ -433,7 +450,7 @@ export class UsersService {
         userId,
         "telegram_onboarding",
         "Gig alerts go to your inbox",
-        "The ESSENTIALS bot is not configured yet, so DJ calls and confirmations arrive by email. An admin can enable Telegram later.",
+        "The SONUS bot is not configured yet, so DJ calls and confirmations arrive as in-app notifications. An admin can enable Telegram later.",
       );
       return;
     }
@@ -441,9 +458,9 @@ export class UsersService {
     await this.notifications.deliver([userId], {
       kind: "telegram_onboarding",
       title: "Bring DJ calls to Telegram",
-      body: `${label} is on the ESSENTIALS roster. Connect Telegram once and DJ calls, gig confirmations and invoices arrive as messages. Open the link, then press Start.`,
+      body: `${label} is on the SONUS roster. Connect Telegram once and DJ calls, gig confirmations and invoices arrive as messages. Open the link, then press Start.`,
       link: url,
-      channels: ["inapp", "email", "telegram"],
+      channels: ["inapp", "telegram"],
     });
   }
 

@@ -16,13 +16,27 @@ export default function Profile() {
   const [tastes, setTastes] = useState<string[]>([]);
   const [vibe, setVibe] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const toggle = (t: string) => setTastes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
-  const finish = () => {
-    // TODO(phase-1 polish): PATCH /api/me with profile; local state kept until then.
-    router.replace("/(tabs)/events");
+  /** Save the card on the account, so setup survives the next launch. */
+  const finish = async () => {
+    setError(null);
+    setSaving(true);
+    try {
+      await api.patch("/auth/me", {
+        name: name.trim(),
+        musicTastes: tastes,
+        ...(vibe ? { vibeTag: vibe } : {}),
+      });
+      router.replace("/(tabs)/events");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save your profile. Try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const choosePhoto = async () => {
@@ -94,8 +108,8 @@ export default function Profile() {
           </Pressable>
         ))}
       </View>
-      <Pressable style={s.button} onPress={finish} disabled={!name || !vibe || uploading}>
-        <Text style={s.buttonText}>ENTER</Text>
+      <Pressable style={s.button} onPress={finish} disabled={!name || !vibe || uploading || saving}>
+        <Text style={s.buttonText}>{saving ? "SAVING…" : "ENTER"}</Text>
       </Pressable>
     </View>
   );

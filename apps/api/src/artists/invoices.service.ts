@@ -189,8 +189,8 @@ export class InvoicesService {
       .join("");
     const bank = bankDetailsHtml(invoice.artist);
     const payment = bank
-      ? "using the bank details above or the payment link sent by ESSENTIALS"
-      : "via the payment link sent by ESSENTIALS";
+      ? "using the bank details above or the payment link sent by SONUS"
+      : "via the payment link sent by SONUS";
     return `<html><head><title>${escapeHtml(invoice.number)}</title><style>
       body{font-family:Helvetica,Arial,sans-serif;color:#0A0A0A;padding:48px;max-width:640px;margin:auto}
       h1{letter-spacing:3px;color:#00B24A;margin:0}
@@ -203,7 +203,7 @@ export class InvoicesService {
       .bank p{margin:4px 0;font-size:14px}
       .bank .muted{font-size:12px;color:#666;margin-top:10px}
     </style></head><body>
-      <h1>ESSENTIALS</h1><div class="bar"></div>
+      <h1>SONUS</h1><div class="bar"></div>
       <p><strong>Invoice ${escapeHtml(invoice.number)}</strong><br/>
       Artist: ${escapeHtml(invoice.artist.stageName)} (${escapeHtml(invoice.artist.user.email)})<br/>
       Gig: ${escapeHtml(invoice.venue?.name ?? "Venue")}${invoice.venue?.address ? `, ${escapeHtml(invoice.venue.address)}` : ""}<br/>
@@ -239,7 +239,7 @@ export class InvoicesService {
       title: `Invoice ${invoice.number} is due`,
       body: `${invoice.artist.stageName} is waiting on ${invoice.venue.name} for invoice ${invoice.number} — R${invoice.total.toLocaleString()}.`,
       link: `${(this.config.get<string>("APP_URL") ?? "https://essentialsedm.com").replace(/\/$/, "")}/venue`,
-      channels: ["inapp", "email"],
+      channels: ["inapp"],
     });
     return { ...result, invoice: { id: invoice.id, number: invoice.number, total: invoice.total } };
   }

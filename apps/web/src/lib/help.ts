@@ -129,7 +129,7 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
           "Play the night. Do not invoice yet: a confirmed gig is not billable.",
           "Wait for the promoter to mark the gig played. They do that in DJ Applications after the set ends. Only then does the gig appear on Earnings (/earnings) with INVOICE VENUE next to it.",
           "Raise the invoice. Earnings → INVOICE VENUE sends one invoice to the venue for the agreed fee, with your bank details and a printable PDF. A gig can only be billed once.",
-          "Get paid. The venue pays through the payment link on the invoice (Stripe or PayFast) or by bank transfer. The invoice stays invoiced until the provider clears it, then shows paid. While it is unpaid, REMIND VENUE nudges the venue manager in-app and by email.",
+          "Get paid. The venue pays through the payment link on the invoice (Stripe or PayFast) or by bank transfer. The invoice stays invoiced until the provider clears it, then shows paid. While it is unpaid, REMIND VENUE nudges the venue manager in-app.",
         ],
         points: [
           "The fee is the amount agreed with the promoter. There is no commission line, and return travel from your home base to the venue is added at the platform rate.",
@@ -142,7 +142,7 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         title: "Invoices at a glance",
         points: [
           "Earnings splits your gigs into not yet invoiced, invoiced and waiting, and paid.",
-          "Unpaid invoices have REMIND VENUE, which nudges the venue manager in-app and by email.",
+          "Unpaid invoices have REMIND VENUE, which nudges the venue manager in-app.",
           "The printable invoice can be opened and saved as a PDF, and carries your bank details and the invoice number the venue must quote.",
         ],
       },
@@ -151,7 +151,6 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         points: [
           "The bell feed lives under Notifications: DJ calls, confirmations, declines and invoice notices.",
           "Telegram can be linked from the Account tab in the mobile app; once linked, gig alerts also arrive there.",
-          "Email carries the messages that matter when you are not in the app.",
         ],
       },
       {
@@ -161,7 +160,6 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         points: [
           "What's new (/whats-new) lists every change that shipped, newest first. It is built from the release notes on each visit, so it cannot fall behind the app.",
           "It is members only. A guest account sees a members-only notice instead of the notes, and the menu entry does not appear.",
-          "A new release is mailed to members once. Notes already published are never mailed again, and unsubscribing from any ESSENTIALS mail stops these too.",
         ],
       },
       {
@@ -183,7 +181,7 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
     summary:
       "Running a night end to end: the venue, the lineup and fees, the guest list, the door, and settling with DJs afterwards.",
     screens:
-      "Analytics · Events · Email Engine · Venue Portal · Artists · Promotions · Insights · DJ Applications · Door · Settlements · Social Hub · Notifications · Account",
+      "Analytics · Events · Venue Portal · Artists · Promotions · Insights · DJ Applications · Door · Settlements · Social Hub · Notifications · Account",
     topics: [
       {
         title: "Before you can create a night",
@@ -231,9 +229,6 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
       {
         title: "Reaching the crowd",
         points: [
-          "Email Engine holds segments (filters over taste, attendance and vibe) and campaigns (welcome series, weekly drop, reminders, winback, one-off), with attribution showing which RSVPs a send produced.",
-          "Importing a mailing list requires a tick confirming every contact opted in; without it the upload is refused. The attestation is stored with the segment, an address that unsubscribed stays unsubscribed, and consent can still be withdrawn later.",
-          "Unsubscribe and preference links are signed and expire; a hand-edited link will not work. Preferences can be re-enabled from the resubscribe link.",
           "Promotions are per-event codes — discount, free entry or bottle upgrade — with a use cap and optional expiry.",
           "Insights covers guest lifetime value and cohort retention; Analytics shows RSVPs, check-ins and pacing for the next night.",
           "Social Hub generates copy, queues posts per platform and can publish immediately.",
@@ -246,7 +241,6 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         points: [
           "What's new (/whats-new) lists every change that shipped, newest first, and builds itself from the release notes — so the page and the dashboard cannot disagree.",
           "It is members only: promoters, DJs, venue managers and admins get in; a guest account sees a members-only notice and the menu entry is hidden.",
-          "A new release lands one email to members. Notes already published are not re-sent, and an unsubscribe stops these along with the rest of the mail.",
           "It is about what changed, not how to run a night — the manuals above stay the place for that.",
         ],
       },
@@ -349,7 +343,6 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
           "The site's What's new page lists every change that shipped, built from the release notes rather than written by hand.",
         points: [
           "What's new (/whats-new) is members only: a guest account sees a members-only notice, and the menu entry is hidden for guests and signed-out visitors.",
-          "A new release is mailed to members once. Published notes are never re-sent, and an unsubscribe stops these with the rest of the mail.",
           "Nothing in this manual changes without a line there, so when a screen looks different, check What's new first.",
         ],
       },
@@ -371,7 +364,7 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
     summary:
       "Accounts and roles, the platform rates, the security trail, the public site's content, and what to do with what support hands over.",
     screens:
-      "Everything above, plus Users · Audit · Settings · Mailboxes · Streaming · Front Page",
+      "Everything above, plus Users · Audit · Settings · Streaming · Front Page",
     topics: [
       {
         title: "Accounts and roles",
@@ -412,10 +405,9 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         title: "Content and delivery",
         points: [
           "Front Page edits the curated lineup, broadcasts and site copy; media uploads are capped at 10 MB and must be real images. Approved events with a future date are added to the lineup automatically, after the curated entries.",
-          "What's new on the site is read from CHANGELOG.md on every request, and a new release date mails members once — see the What's new topic above before changing the file.",
-          "Mailboxes lists the inboxes the API watches for replies, with their passwords.",
+          "What's new on the site is read from CHANGELOG.md on every request — see the What's new topic above before changing the file.",
           "Streaming shows restream targets and their status; the public broadcast and room chat sit on the front page. Room chat clears every day at midnight, South African time.",
-          "Notifications test sends through the real delivery path — bell, email, Telegram — and reports what each channel reached.",
+          "Notifications test sends through the real delivery path — bell and Telegram — and reports what each channel reached.",
         ],
       },
       {
@@ -433,15 +425,12 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
           "The site's /whats-new page is built from CHANGELOG.md. The API parses the file on every request and re-reads it when it changes, so a new dated section shows up as soon as the file is deployed — no site rebuild and no API restart.",
           "Only dated `## YYYY-MM-DD` headings open a release; the `###` headings become sections and the bullets become items. The page shows the three newest releases.",
           "The page is members only: signed-out visitors are sent to sign-in, guest accounts see a members-only notice, and the entry is hidden from both in the menu.",
-          "When a new release date appears, every member (every role except guest, minus unsubscribes) is mailed once. WhatsNewBroadcast records the release, so a restart, a redeploy or a second instance cannot send it twice.",
-          "Editing an existing release does not mail anyone — only a new date does. The release that shipped with the feature is recorded as already announced.",
-          "If CHANGELOG.md cannot be found, the page shows an empty state and no mail goes out; the API logs a warning at boot.",
         ],
       },
       {
         title: "When something looks wrong",
         points: [
-          "A customer stuck on a password screen has never chosen their own password; the Users page can set one while mail is down.",
+          "A customer stuck on a password screen has never chosen their own password; the Users page can set one for them.",
           "A DJ with no artist profile sees empty Gig Calendar and Earnings pages — the fix is on their My Profile, not in support.",
           "Before blaming a browser, check the known-issues list in the support manual: if it is listed there, say so plainly and offer no fix or time.",
           "Still stuck? Email " + CONTACT + ".",

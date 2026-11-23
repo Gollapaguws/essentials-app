@@ -12,7 +12,7 @@ export default function AuthLayout({ title, subtitle = null, footer = null, chil
       <main className="noir-door">
         <div className="noir-door-pass">
           <aside className="noir-door-brand">
-            <p className="noir-door-mark">ESSENTIALS</p>
+            <p className="noir-door-mark">SONUS</p>
             <p className="noir-door-line">
               One list.
               <br />

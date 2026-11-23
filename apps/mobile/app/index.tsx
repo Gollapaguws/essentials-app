@@ -62,7 +62,7 @@ export default function Welcome() {
 
   return (
     <View style={s.wrap}>
-      <Text style={[type.display, { color: colors.neon }]}>ESSENTIALS</Text>
+      <Text style={[type.display, { color: colors.neon }]}>SONUS</Text>
       <Text style={[type.body, { color: colors.muted, marginTop: 8 }]}>THE LIST IS THE NIGHT.</Text>
 
       <TextInput
@@ -76,7 +76,7 @@ export default function Welcome() {
       />
       <FieldHint
         label="Which email?"
-        hint="The address on your ESSENTIALS account. New guests create an account on the ESSENTIALS website first; admin, promoter and venue roles are assigned by an admin afterwards."
+        hint="The address on your SONUS account. New guests create an account on the SONUS website first; admin, promoter and venue roles are assigned by an admin afterwards."
       />
       <TextInput
         style={s.input}
@@ -104,7 +104,7 @@ export default function Welcome() {
       </Pressable>
       <FieldHint
         label="Using Google"
-        hint="Signs in with the Google account already on this device. First time here? It creates your ESSENTIALS guest account."
+        hint="Signs in with the Google account already on this device. First time here? It creates your SONUS guest account."
       />
 
       {error && <Text style={{ color: colors.danger, marginTop: 12 }}>{error}</Text>}

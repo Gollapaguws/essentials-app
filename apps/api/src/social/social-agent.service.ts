@@ -50,7 +50,7 @@ export class SocialAgentService {
     const tone = data.tone ?? "hype, energetic nightlife brand voice";
     const platformList = data.platforms.length ? data.platforms.join(", ") : "all platforms";
     const hashtagRule = data.includeHashtags === false ? "No hashtags." : "Add 2-4 punchy hashtags at the end.";
-    const prompt = `You write social media copy for ESSENTIALS, a South African nightlife / music events brand (underground rooms, house, techno, amapiano, hip-hop).
+    const prompt = `You write social media copy for SONUS, a South African nightlife / music events brand (underground rooms, house, techno, amapiano, hip-hop).
 
 Write ONE post for each of these platforms: ${platformList}.
 Topic: ${data.topic}

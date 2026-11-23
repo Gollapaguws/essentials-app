@@ -5,8 +5,8 @@ import SiteFooter from "@/components/SiteFooter";
 import { api } from "@/lib/auth";
 import { useAuth } from "@/lib/AuthContext";
 
-const LAST_UPDATED = "14 November 2026";
-const POLICY_VERSION = "2026-11-14";
+const LAST_UPDATED = "23 November 2026";
+const POLICY_VERSION = "2026-11-23";
 const PRIVACY_EMAIL = "privacy@essentialsedm.com";
 
 const requestMailto = (subject) =>
@@ -64,7 +64,7 @@ function DataExport() {
   );
 }
 
-/** Public privacy notice. This is the notice referenced by the consent checkbox. */
+/** Public privacy notice. */
 export default function Privacy() {
   return (
     <div className="noir">
@@ -83,22 +83,20 @@ export default function Privacy() {
             <section>
               <h2>Who is responsible</h2>
               <p>
-                ESSENTIALS is the responsible party for the personal information described in this
+                SONUS is the responsible party for the personal information described in this
                 notice. Our Information Officer can be reached at{" "}
                 <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a>.
               </p>
               <p>
                 This notice covers essentialsedm.com, guest accounts, event lists and door passes,
-                the DJ, promoter and venue dashboards, live chat, and the email we send. It explains
+                the DJ, promoter and venue dashboards, live chat, and the notifications we send. It explains
                 what we collect, why we collect it, who we share it with, how long we keep it, and
                 the choices and rights you have.
               </p>
               <p>
                 We process personal information under the Protection of Personal Information Act,
                 4 of 2013 (POPIA). Where the General Data Protection Regulation (GDPR) or UK GDPR
-                applies, we also honour the additional rights those laws give you. Our electronic
-                marketing follows the Consumer Protection Act, 68 of 2008 (CPA) and the Electronic
-                Communications and Transactions Act, 25 of 2002 (ECTA).
+                applies, we also honour the additional rights those laws give you.
               </p>
             </section>
 
@@ -108,15 +106,15 @@ export default function Privacy() {
                 <li>
                   <strong>Account details:</strong> your email address, name, profile photo and
                   sign-in identifiers. Passwords are handled by our authentication provider and are
-                  never stored by ESSENTIALS in readable form.
+                  never stored by SONUS in readable form.
                 </li>
                 <li>
                   <strong>Event activity:</strong> RSVPs, guest-list entries, door check-ins, event
                   attendance, loyalty visits and referral activity.
                 </li>
                 <li>
-                  <strong>Preferences:</strong> the music tastes and vibe you choose, email consent,
-                  and your live-chat display name.
+                  <strong>Preferences:</strong> the music tastes and vibe you choose, notification
+                  settings, and your live-chat display name.
                 </li>
                 <li>
                   <strong>DJ, promoter and venue business records:</strong> stage and venue details,
@@ -125,7 +123,12 @@ export default function Privacy() {
                 </li>
                 <li>
                   <strong>Communications:</strong> messages you send us, support requests, and the
-                  transactional and marketing email associated with your account.
+                  account, booking and event notifications associated with your account.
+                </li>
+                <li>
+                  <strong>Mailbox content:</strong> if we provision an @essentialsedm.com mailbox for
+                  you, the messages stored in it and mailbox usage data. The mailbox is separate
+                  from your sign-in email address.
                 </li>
                 <li>
                   <strong>Technical and security data:</strong> IP address, device and browser
@@ -167,28 +170,28 @@ export default function Privacy() {
                 process information to respond to a lawful request from a court, regulator or law
                 enforcement agency.
               </p>
-              <h3>To send marketing email</h3>
+              <h3>To send you service notifications</h3>
               <p>
-                We send event and release email only when you have given us a clear, separate
-                opt-in. Account notices, door passes, booking updates and security messages are
-                transactional and are not marketing. You can withdraw marketing consent at any time.
+                We send account notices, door passes, booking updates and security messages through
+                the dashboard and, if you connect it, Telegram. Security notices — a new account, a
+                change of access, a sign-in reset or a change to two-step verification — are also
+                emailed to the address on your account. These are service messages, never marketing.
+                You can disconnect Telegram at any time in your settings.
               </p>
             </section>
 
             <section>
-              <h2>Marketing and your choices</h2>
+              <h2>Notifications and your choices</h2>
               <p>
-                We use an unticked consent box for the newsletter. Creating an account, RSVPing or
-                signing in does not automatically add you to marketing email. Under the CPA and
-                ECTA, electronic marketing requires your opt-in, and every marketing message
-                includes a working unsubscribe link.
+                SONUS does not send promotional messages or run mailing lists. Creating an account,
+                RSVPing or signing in does not add you to any list.
               </p>
               <p>
-                You can unsubscribe from any marketing email, use the preference link in the message,
-                or email <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a>. We action
-                unsubscribe requests promptly and keep a record so we do not contact you again.
-                Transactional messages about an account, booking, invoice or security event may
-                still be sent where necessary.
+                Account notices, door passes, booking updates and security messages are service
+                messages. They appear in the dashboard and, if you connect Telegram in settings, may
+                be delivered there; security notices are also emailed to the address on your account.
+                You can disconnect Telegram at any time; service messages about your account,
+                bookings, invoices or security remain available in the dashboard.
               </p>
             </section>
 
@@ -211,13 +214,13 @@ export default function Privacy() {
             <section>
               <h2>Who we share it with</h2>
               <p>
-                We share personal information only where needed to run ESSENTIALS:
+                We share personal information only where needed to run SONUS:
               </p>
               <ul>
                 <li>
                   <strong>Service providers:</strong> authentication and database hosting, website
-                  and media hosting, email delivery and mailing-list infrastructure, and payment
-                  providers. They process information on our instructions.
+                  and media hosting, notification delivery, and payment providers. They process
+                  information on our instructions.
                 </li>
                 <li>
                   <strong>Event participants:</strong> a promoter or venue sees the guest-list details
@@ -253,8 +256,9 @@ export default function Privacy() {
                   reasonable period afterwards, then deleted or de-identified.
                 </li>
                 <li>
-                  Consent and unsubscribe records are kept while consent is active and for a
-                  reasonable period after it is withdrawn, so we can prove we honoured your choice.
+                  Notification preferences and delivery records are kept while your account is
+                  active and for a reasonable period afterwards, so we can honour your settings and
+                  show what was sent.
                 </li>
                 <li>
                   Invoice, payment and tax records are kept for the period required by tax and
@@ -297,9 +301,8 @@ export default function Privacy() {
                 <li>ask whether we hold personal information about you and receive a copy;</li>
                 <li>ask us to correct information that is inaccurate, incomplete or out of date;</li>
                 <li>ask us to delete information that we no longer have a lawful reason to keep;</li>
-                <li>object to processing based on legitimate interests, including direct marketing;</li>
+                <li>object to processing based on legitimate interests;</li>
                 <li>ask us to restrict processing while a request is being resolved;</li>
-                <li>withdraw marketing consent at any time;</li>
                 <li>
                   receive your information in a portable format where GDPR/UK GDPR applies; and
                 </li>
@@ -307,8 +310,8 @@ export default function Privacy() {
               </ul>
               <p>
                 To make a request, use the export button below, email{" "}
-                <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a>, or use the unsubscribe link
-                in any marketing email. We may need to verify your identity before acting. We aim to
+                <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a>. We may need to verify your
+                identity before acting. We aim to
                 respond within 30 days, or within one month where GDPR/UK GDPR applies. If we need
                 more time, we will tell you why.
               </p>
@@ -343,7 +346,7 @@ export default function Privacy() {
             <section>
               <h2>Children</h2>
               <p>
-                ESSENTIALS events and accounts are for people aged 18 and over. We do not knowingly
+                SONUS events and accounts are for people aged 18 and over. We do not knowingly
                 collect personal information from children. If you believe a child has given us
                 personal information, contact <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a>{" "}
                 and we will delete it.

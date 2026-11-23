@@ -1,4 +1,4 @@
-/** ESSENTIALS dark nightlife theme — #0A0A0A / #00FF66, high-energy type. */
+/** SONUS dark nightlife theme — #0A0A0A / #00FF66, high-energy type. */
 export const colors = {
   bg: "#0A0A0A",
   surface: "#141414",

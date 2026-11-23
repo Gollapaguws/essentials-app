@@ -32,7 +32,7 @@ function sameSecret(provided: string, expected: string): boolean {
 }
 
 const HELP = [
-  "ESSENTIALS bot 🎧",
+  "SONUS bot 🎧",
   "",
   "Tap Connect Telegram in your dashboard to link this chat, then DJ calls,",
   "gig confirmations and invoices arrive here.",
@@ -102,7 +102,7 @@ export class TelegramController {
       if (!code) {
         await this.telegram.sendMessage(
           chat,
-          "Open your ESSENTIALS dashboard and tap <b>Connect Telegram</b> to get a link.",
+          "Open your SONUS dashboard and tap <b>Connect Telegram</b> to get a link.",
         );
         return { ok: true };
       }

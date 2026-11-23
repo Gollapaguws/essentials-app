@@ -129,8 +129,7 @@ export default function Register() {
 
           <p className="noir-auth-note">
             By creating an account you agree to our <Link to="/privacy">Privacy Notice</Link>. We use
-            your email for your door pass and account notices. Event and release emails are separate
-            and opt-in only.
+            your email for sign-in, your door pass and account notices.
           </p>
         </div>
       )}

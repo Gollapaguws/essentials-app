@@ -1,4 +1,4 @@
-// ESSENTIALS — Prisma schema
+// SONUS — Prisma schema
 // Phase 1 implemented; Phase 2-4 fields are present but UI/API is added later.
 
 generator client {
@@ -38,22 +38,6 @@ enum GuestListStatus {
   attending
   waitlisted
   checked_in
-}
-
-enum CampaignStatus {
-  draft
-  scheduled
-  sending
-  sent
-}
-
-enum ConsentChannel {
-  email
-}
-
-enum ConsentStatus {
-  granted
-  revoked
 }
 
 enum ArtistBookingStatus {
@@ -115,8 +99,7 @@ model User {
   referralsGiven  Referral[]     @relation("Referrer")
   artistProfile   ArtistProfile?
   artistNotes     ArtistNote[]
-  consentRecords  Consent[]
-  emailEvents     EmailEvent[]
+  mailbox         UserMailbox?
 
   @@index([role])
 }
@@ -167,7 +150,6 @@ model Event {
   promoter                User            @relation("EventPromoter", fields: [promoterId], references: [id])
   guestLists              GuestList[]
   groupChat               EventGroupChat?
-  campaigns               Campaign[]
   artistBookings          ArtistBooking[]
   slots                   EventSlot[]
   matches                 Match[]
@@ -187,8 +169,6 @@ model GuestList {
   status           GuestListStatus @default(attending)
   qrCode           String?         @unique // signed token, rendered as QR on door pass
   headcount        Int             @default(1)
-  sourceCampaignId String?
-  sourceCampaign   Campaign?       @relation(fields: [sourceCampaignId], references: [id])
   event            Event           @relation(fields: [eventId], references: [id])
   user             User            @relation(fields: [userId], references: [id])
   checkedInAt      DateTime?
@@ -255,79 +235,6 @@ model Referral {
   createdAt    DateTime @default(now())
 
   @@index([referrerId])
-}
-
-// ===== Email engine (Phase 1) =====
-model Campaign {
-  id            String         @id @default(cuid())
-  name          String
-  flow          String // welcome_series | weekly_drop | reminder_24h | reminder_1h | winback | one_off
-  status        CampaignStatus @default(draft)
-  segmentId     String?
-  segment       EmailSegment?  @relation(fields: [segmentId], references: [id])
-  eventId       String?
-  event         Event?         @relation(fields: [eventId], references: [id])
-  subject       String
-  // Promoter-pasted HTML body. Empty means the flow's built-in template is used.
-  contentHtml   String?        @db.Text
-  sentCount     Int            @default(0)
-  createdAt     DateTime       @default(now())
-  emailJobs     EmailJob[]
-  guestLists    GuestList[]
-
-  @@index([flow, status])
-}
-
-model EmailSegment {
-  id        String     @id @default(cuid())
-  name      String
-  // JSON filter: {musicTastes:[], minAttendedEvents, vibeTag, ...}
-  filter    Json       @default("{}")
-  campaigns Campaign[]
-  createdAt DateTime   @default(now())
-}
-
-model EmailJob {
-  id         String   @id @default(cuid())
-  campaignId String
-  userId     String
-  status     String   @default("queued") // queued | sent | failed | skipped
-  error      String?
-  campaign   Campaign @relation(fields: [campaignId], references: [id])
-  createdAt  DateTime @default(now())
-
-  @@index([campaignId, status])
-}
-
-model EmailEvent {
-  id        String   @id @default(cuid())
-  userId    String?
-  email     String
-  type      String // delivered | open | click | bounce | unsubscribe
-  meta      Json     @default("{}")
-  user      User?    @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-
-  @@index([email, type])
-}
-
-/// Evidence of an email-marketing choice. A grant records the notice version
-/// the person agreed to; a revocation records when it was withdrawn. Account
-/// and event notices are transactional and do not depend on this record.
-model Consent {
-  id            String         @id @default(cuid())
-  userId        String?
-  email         String
-  channel       ConsentChannel @default(email)
-  status        ConsentStatus  @default(granted)
-  source        String // site_footer | signup | import_attested | preference_center | mailing_list_manager
-  policyVersion String         @default("2026-11-14")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  revokedAt     DateTime?
-  User          User?          @relation(fields: [userId], references: [id])
-
-  @@unique([email, channel])
 }
 
 // ===== Phase 2: promotions engine =====
@@ -596,15 +503,16 @@ model SiteEvent {
   @@index([day])
 }
 
-// ===== What's new (changelog) announcements =====
-// One row per changelog release mailed to members, keyed by its date.
-model WhatsNewBroadcast {
-  release   String   @id
-  sentCount Int      @default(0)
-  sentAt    DateTime @default(now())
+// ===== Front-page content (admin editor) =====
+/// Platform-wide values an admin sets once. `ArtistProfile.travelRatePerKm` is a
+/// copy of the travel rate kept for invoices already priced; this table is the
+/// source of truth, so a new profile can never land on an old rate.
+model PlatformSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
-// ===== Front-page content (admin editor) =====
 model SiteContent {
   key       String   @id // "front_page"
   value     Json
@@ -654,6 +562,22 @@ model SocialPost {
 }
 
 // ===== DJ booking flow (event → notify artists → apply → confirm) =====
+/// A real mail account on mail.essentialsedm.com, provisioned by an admin.
+/// The password is never stored here; it is returned once and can only be reset.
+model UserMailbox {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  address   String   @unique
+  localpart String   @unique
+  status    String   @default("active") // active | disabled
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
 model Notification {
   id        String   @id @default(cuid())
   userId    String

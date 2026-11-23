@@ -146,17 +146,29 @@ async function sendTelegram(text) {
   return sent;
 }
 
-/** The local relay needs no auth; keep this optional so the watch never blocks on it. */
+/**
+ * The local relay needs no auth; a personal mailbox on Bluehost does (465 SSL/TLS
+ * or 587 STARTTLS). Same env as the API, so switching providers keeps alerts working.
+ */
 async function sendEmail(subject, text) {
   if (!ALERT_EMAIL || !process.env.SMTP_HOST) return false;
   try {
     const { createTransport } = await import("nodemailer");
+    const host = process.env.SMTP_HOST;
+    const port = Number(process.env.SMTP_PORT || (process.env.SMTP_USER ? 465 : 25));
+    const secure = process.env.SMTP_SECURE
+      ? ["1", "true", "yes"].includes(process.env.SMTP_SECURE.toLowerCase())
+      : port === 465;
+    const local = ["127.0.0.1", "localhost", "::1"].includes(host);
     const transport = createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT ?? 25),
-      secure: false,
-      ignoreTLS: true,
-      tls: { rejectUnauthorized: false },
+      host,
+      port,
+      secure,
+      auth: process.env.SMTP_USER
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS ?? "" }
+        : undefined,
+      requireTLS: !secure && !local,
+      tls: { rejectUnauthorized: !local },
     });
     await transport.sendMail({
       from: process.env.MAIL_FROM ?? `ESSENTIALS <noreply@essentialsedm.com>`,

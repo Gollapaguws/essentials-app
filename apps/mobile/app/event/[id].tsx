@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ScrollView, Text, View, Pressable, StyleSheet, Linking, Platform } from "react-native";
+import { ScrollView, Text, TextInput, View, Pressable, StyleSheet, Linking, Platform } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { colors, type } from "../../theme";
 import { api, type EventSummary, type RsvpResult } from "@essentials/api-client";
@@ -21,12 +21,26 @@ interface EventDetailResponse extends EventSummary {
   venue: EventSummary["venue"] & { address?: string | null };
 }
 
+interface ChatMessage {
+  id: string;
+  body: string;
+  createdAt: string;
+  isIcebreaker: boolean;
+  mine: boolean;
+  author: { id: string; name: string; avatar?: string | null };
+}
+
 /** Event detail: venue + map link, lineup, capacity, live headcount, RSVP + waitlist. */
 export default function EventDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [event, setEvent] = useState<EventDetailResponse | null>(null);
   const [rsvpState, setRsvpState] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The night's chat. Null means the caller is not in the room (403) or it is loading.
+  const [chat, setChat] = useState<ChatMessage[] | null>(null);
+  const [chatDraft, setChatDraft] = useState("");
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [sendingChat, setSendingChat] = useState(false);
 
   const load = async () => {
     try {
@@ -37,11 +51,41 @@ export default function EventDetail() {
       setRsvpState(detail.myRsvp?.status ?? null);
     } catch { setError("Couldn't load this event."); }
   };
+
+  const loadChat = async () => {
+    try {
+      const room = await api.get<{ messages: ChatMessage[] }>(`/events/${id}/chat`);
+      setChat(room.messages);
+    } catch {
+      // Not on the list: the room is not theirs to read, and no box is shown.
+      setChat(null);
+    }
+  };
+
+  const sendChat = async () => {
+    const body = chatDraft.trim();
+    if (!body) return;
+    setSendingChat(true);
+    setChatError(null);
+    try {
+      const saved = await api.post<ChatMessage>(`/events/${id}/chat`, { body });
+      setChat((prev) => [...(prev ?? []), saved]);
+      setChatDraft("");
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : "Could not send that message.");
+    } finally {
+      setSendingChat(false);
+    }
+  };
   useEffect(() => {
     setEvent(null);
     setRsvpState(null);
     setError(null);
+    setChat(null);
+    setChatDraft("");
+    setChatError(null);
     load();
+    loadChat();
   }, [id]);
 
   const rsvp = async () => {
@@ -98,6 +142,44 @@ export default function EventDetail() {
       ))}
       {event.dressCode && <><Text style={[s.section, { color: colors.muted }]}>DRESS CODE</Text><Text style={{ color: colors.text }}>{event.dressCode}</Text></>}
 
+      {chat && (
+        <View style={{ marginTop: 24 }}>
+          <Text style={[s.section, { color: colors.muted }]}>NIGHT CHAT</Text>
+          <View style={s.chatBox}>
+            {chat.slice(-20).map((m) => (
+              <View key={m.id} style={m.mine ? s.chatMine : s.chatTheirs}>
+                <Text style={[s.chatAuthor, m.isIcebreaker && { color: colors.neon }]}>
+                  {m.isIcebreaker ? "ICEBREAKER · " : ""}
+                  {m.mine ? "You" : m.author.name}
+                </Text>
+                <Text style={{ color: colors.text }}>{m.body}</Text>
+              </View>
+            ))}
+            {!chat.length && (
+              <Text style={{ color: colors.muted, fontSize: 12 }}>No messages yet — say hello.</Text>
+            )}
+          </View>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+            <TextInput
+              value={chatDraft}
+              onChangeText={setChatDraft}
+              placeholder="Message the room"
+              placeholderTextColor={colors.muted}
+              maxLength={500}
+              style={s.chatInput}
+            />
+            <Pressable
+              onPress={sendChat}
+              disabled={sendingChat || !chatDraft.trim()}
+              style={[s.sendButton, (!chatDraft.trim() || sendingChat) && { opacity: 0.5 }]}
+            >
+              <Text style={s.sendText}>{sendingChat ? "…" : "SEND"}</Text>
+            </Pressable>
+          </View>
+          {chatError && <Text style={{ color: colors.danger, marginTop: 8 }}>{chatError}</Text>}
+        </View>
+      )}
+
       {canRsvp && (
         <View style={{ marginTop: 24 }}>
           {!rsvpState ? (
@@ -126,4 +208,11 @@ const s = StyleSheet.create({
   lineupRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   button: { backgroundColor: colors.neon, borderRadius: 10, padding: 16, alignItems: "center" },
   buttonText: { color: colors.bg, fontWeight: "900", letterSpacing: 2 },
+  chatBox: { gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  chatTheirs: { gap: 2 },
+  chatMine: { gap: 2, alignItems: "flex-end" },
+  chatAuthor: { color: colors.muted, fontSize: 10, letterSpacing: 1, fontWeight: "800", textTransform: "uppercase" },
+  chatInput: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, color: colors.text, backgroundColor: colors.surface },
+  sendButton: { backgroundColor: colors.neon, borderRadius: 10, paddingHorizontal: 16, justifyContent: "center" },
+  sendText: { color: colors.bg, fontWeight: "900", letterSpacing: 1 },
 });

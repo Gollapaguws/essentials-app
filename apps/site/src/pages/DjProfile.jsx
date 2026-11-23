@@ -82,7 +82,7 @@ export default function DjProfile() {
                 </div>
 
                 <div>
-                  <span className="noir-micro">ESSENTIALS DJ</span>
+                  <span className="noir-micro">SONUS DJ</span>
                   <h1 className="noir-h2">{dj.stageName}</h1>
                   {dj.bio ? (
                     <p className="noir-note">{dj.bio}</p>

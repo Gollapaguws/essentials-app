@@ -1,0 +1,74 @@
+# phpList — the newsletter engine behind newsletters.essentialsedm.com.
+#
+# Runs its own MariaDB so the app's Postgres is untouched. The web container is
+# published on loopback only; nginx terminates TLS for the public hostname.
+# Copy this directory to /opt/phplist, fill .env, then `docker compose up -d`.
+name: phplist
+
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MARIADB_DATABASE: ${PHPLIST_DATABASE_NAME:?set PHPLIST_DATABASE_NAME in .env}
+      MARIADB_USER: ${PHPLIST_DATABASE_USER:?set PHPLIST_DATABASE_USER in .env}
+      MARIADB_PASSWORD: ${PHPLIST_DATABASE_PASSWORD:?set PHPLIST_DATABASE_PASSWORD in .env}
+      MARIADB_ROOT_PASSWORD: ${PHPLIST_DATABASE_ROOT_PASSWORD:?set PHPLIST_DATABASE_ROOT_PASSWORD in .env}
+    volumes:
+      - ./data/db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  phplist:
+    image: phplist/phplist:3.7.0
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Loopback only: the public entry point is nginx (TLS + security headers).
+    ports:
+      - "127.0.0.1:8092:80"
+    environment:
+      PHPLIST_DATABASE_HOST: db
+      PHPLIST_DATABASE_PORT: "3306"
+      PHPLIST_DATABASE_NAME: ${PHPLIST_DATABASE_NAME}
+      PHPLIST_DATABASE_USER: ${PHPLIST_DATABASE_USER}
+      PHPLIST_DATABASE_PASSWORD: ${PHPLIST_DATABASE_PASSWORD}
+      PHPLIST_SECRET: ${PHPLIST_SECRET:?set PHPLIST_SECRET in .env}
+      # Read once, on the first boot only, to create the initial admin account.
+      ADMIN_NAME: ${ADMIN_NAME:-ESSENTIALS}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-newsletters@essentialsedm.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      # The host Postfix listener created by deploy/phplist/install-relay.sh.
+      PHPLIST_SMTP_HOST: ${PHPLIST_SMTP_HOST:-172.16.9.1}
+      PHPLIST_SMTP_PORT: ${PHPLIST_SMTP_PORT:-2525}
+      PHPLIST_BOUNCE_ADDRESS: ${PHPLIST_BOUNCE_ADDRESS:-bounce@essentialsedm.com}
+      # Dedicated bounce mailbox (Dovecot on this host), polled over IMAPS.
+      PHPLIST_BOUNCE_IMAP_HOST: ${PHPLIST_BOUNCE_IMAP_HOST:-mail.essentialsedm.com}
+      PHPLIST_BOUNCE_IMAP_USER: ${PHPLIST_BOUNCE_IMAP_USER:-bounce@essentialsedm.com}
+      PHPLIST_BOUNCE_IMAP_PASSWORD: ${PHPLIST_BOUNCE_IMAP_PASSWORD:?set PHPLIST_BOUNCE_IMAP_PASSWORD in .env}
+      PHPLIST_BOUNCE_IMAP_PORT: ${PHPLIST_BOUNCE_IMAP_PORT:-993/imap/ssl}
+    # The host's /etc/hosts maps mail.essentialsedm.com to 127.0.1.1, which is
+    # useless inside the container. Point it at the bridge gateway, where the
+    # host's Dovecot listens; TLS still validates the mail.essentialsedm.com cert.
+    extra_hosts:
+      - "mail.essentialsedm.com:172.16.9.1"
+    volumes:
+      - ./config.php:/etc/phplist/config.php:ro
+      # Uploaded campaign images. The bundled artwork stays in lists/images.
+      - ./data/uploadimages:/var/www/phpList3/public_html/lists/uploadimages
+
+networks:
+  default:
+    # Pinned so the Postfix relay listener can bind this exact gateway and
+    # accept only this network (see postfix-relay.cf).
+    ipam:
+      config:
+        - subnet: 172.16.9.0/24

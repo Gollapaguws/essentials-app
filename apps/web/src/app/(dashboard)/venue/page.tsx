@@ -23,6 +23,17 @@ interface Analytics {
   perEvent: { name: string; rsvps: number; checkedIn: number; status: string }[];
 }
 
+interface RevenueNight {
+  id: string; title: string; date: string; status: string;
+  promoterPct: number; venuePct: number;
+  djFees: number; invoiced: number; paid: number; owed: number;
+  unbilledGigs: number; unbilledFees: number;
+}
+interface Revenue {
+  nights: RevenueNight[];
+  totals: { nights: number; djFees: number; invoiced: number; paid: number; owed: number; unbilledGigs: number };
+}
+
 const field = "bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-neon";
 
 /** Phase 2 venue portal: location, approval workflow, door ops, analytics. */
@@ -32,6 +43,7 @@ export default function VenuePortal() {
   const [pending, setPending] = useState<PendingEvent[]>([]);
   const [logs, setLogs] = useState<DoorLog[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [revenue, setRevenue] = useState<Revenue | null>(null);
   const [details, setDetails] = useState({ name: "", address: "", lat: "", lng: "" });
   const [busyDetails, setBusyDetails] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -53,6 +65,7 @@ export default function VenuePortal() {
     api.get<PendingEvent[]>("/venues/events/pending").then(setPending).catch((e) => setError(errorMessage(e)));
     api.get<DoorLog[]>(`/venues/${id}/door-logs`).then(setLogs).catch(() => {});
     api.get<Analytics>(`/venues/${id}/analytics`).then(setAnalytics).catch(() => {});
+    api.get<Revenue>(`/venues/${id}/revenue`).then(setRevenue).catch(() => {});
   };
 
   const refreshVenues = async (keepId?: string) => {
@@ -418,6 +431,61 @@ export default function VenuePortal() {
                 </tbody>
               </table>
             </div>
+          </section>
+        )}
+
+        {/* DJ money the venue owes */}
+        {showOps && revenue && revenue.nights.length > 0 && (
+          <section className="border border-line bg-surface rounded-xl p-4 space-y-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-bold text-neon uppercase text-sm tracking-wider">DJ fees &amp; invoices</h2>
+              <p className="text-xs text-neutral-500">
+                R{revenue.totals.paid.toLocaleString()} paid ·{" "}
+                <span className={revenue.totals.owed > 0 ? "text-yellow-400" : "text-neon"}>
+                  R{revenue.totals.owed.toLocaleString()} owed
+                </span>
+                {revenue.totals.unbilledGigs > 0 && ` · ${revenue.totals.unbilledGigs} played gig${revenue.totals.unbilledGigs === 1 ? "" : "s"} not invoiced yet`}
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[720px]">
+                <thead className="text-neutral-400 uppercase text-[10px] tracking-widest">
+                  <tr>
+                    <th className="text-left py-2">Night</th>
+                    <th className="text-right py-2">Split</th>
+                    <th className="text-right py-2">DJ fees</th>
+                    <th className="text-right py-2">Invoiced</th>
+                    <th className="text-right py-2">Paid</th>
+                    <th className="text-right py-2">Owed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {revenue.nights.map((n) => (
+                    <tr key={n.id} className="border-t border-line">
+                      <td className="py-2">
+                        <span className="font-bold">{n.title}</span>
+                        <span className="text-neutral-500 text-xs"> · {new Date(n.date).toLocaleDateString()}</span>
+                      </td>
+                      <td className="py-2 text-right text-neutral-400 text-xs tabular-nums">
+                        {n.venuePct}% venue / {n.promoterPct}% promoter
+                      </td>
+                      <td className="py-2 text-right tabular-nums">R{n.djFees.toLocaleString()}</td>
+                      <td className="py-2 text-right tabular-nums text-neutral-400">R{n.invoiced.toLocaleString()}</td>
+                      <td className="py-2 text-right tabular-nums text-neon">R{n.paid.toLocaleString()}</td>
+                      <td className={`py-2 text-right tabular-nums ${n.owed > 0 ? "text-yellow-400" : "text-neutral-500"}`}>
+                        R{n.owed.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {revenue.totals.unbilledGigs > 0 && (
+              <p className="text-xs text-neutral-500">
+                A played gig only turns into a bill once its DJ invoices it. The split above is the one the night was
+                booked on; the venue&apos;s share of door and table takings is settled separately.
+              </p>
+            )}
           </section>
         )}
 

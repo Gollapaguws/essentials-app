@@ -37,7 +37,7 @@ const event = {
   capacity: 100,
   promoterId: "promoter-1",
   venue: { id: "venue-1", name: "The Vault", managerId: "venue-1", lat: 0, lng: 0, amenities: [] },
-  promoter: { id: "promoter-1", name: "ESSENTIALS" },
+  promoter: { id: "promoter-1", name: "SONUS" },
   guestLists: [
     {
       id: "entry-1",

@@ -27,6 +27,20 @@ jobs:
       - name: Check production audit
         run: npm run audit:prod
 
+  no-email-systems:
+    name: No in-platform email systems
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check for email providers, modules and endpoints
+        run: npm run check:no-email
+
   typecheck:
     name: Typecheck (api, web, mobile, site)
     runs-on: ubuntu-latest

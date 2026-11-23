@@ -18,6 +18,23 @@ interface RegisteredUser {
   createdAt: string;
   stageName: string | null;
   venue: { id: string; name: string; capacity: number } | null;
+  mailbox: { address: string; status: string } | null;
+}
+
+interface Mailbox {
+  id: string;
+  address: string;
+  localpart: string;
+  status: "active" | "disabled";
+  createdAt: string;
+  updatedAt: string;
+  usedBytes: number | null;
+}
+
+interface MailboxState {
+  enabled: boolean;
+  domain: string;
+  mailbox: Mailbox | null;
 }
 
 type FormKind = "artist" | "venue_manager";
@@ -44,6 +61,14 @@ const ROLE_LABEL: Record<string, string> = {
 
 const field = "bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-neon";
 
+function formatBytes(bytes: number | null): string {
+  if (bytes === null) return "—";
+  if (bytes === 0) return "0 KB";
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
 /** Admin: every registered account, its role, and the DJ/venue profile behind it. */
 export default function Users() {
   const { me } = useAuth();
@@ -64,6 +89,14 @@ export default function Users() {
     password: string;
     factorsRemoved: number;
   } | null>(null);
+  const [mailboxFor, setMailboxFor] = useState<RegisteredUser | null>(null);
+  const [mailboxState, setMailboxState] = useState<MailboxState | null>(null);
+  const [mailboxLocalpart, setMailboxLocalpart] = useState("");
+  const [mailboxCredentials, setMailboxCredentials] = useState<{
+    address: string;
+    password: string;
+  } | null>(null);
+  const [mailboxError, setMailboxError] = useState<string | null>(null);
 
   const load = useCallback(async (search: string) => {
     setError(null);
@@ -181,6 +214,130 @@ export default function Users() {
       setNotice(`${updated.email} — two-step verification ${disabling ? "is off" : "is required again"}.`);
     } catch (err) {
       setError(errorMessage(err) ?? "Could not change two-step verification.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  /** Mailbox administration for one account, kept in its own small panel. */
+  const openMailbox = async (user: RegisteredUser) => {
+    setMailboxFor(user);
+    setMailboxState(null);
+    setMailboxCredentials(null);
+    setMailboxError(null);
+    setMailboxLocalpart(user.email.split("@")[0]);
+    setBusyId(user.id);
+    try {
+      setMailboxState(await api.get<MailboxState>(`/users/${user.id}/mailbox`));
+    } catch (err) {
+      setMailboxError(errorMessage(err) ?? "Could not load the mailbox.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const closeMailbox = () => {
+    setMailboxFor(null);
+    setMailboxState(null);
+    setMailboxCredentials(null);
+    setMailboxError(null);
+  };
+
+  const createMailbox = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mailboxFor) return;
+    setBusyId(mailboxFor.id);
+    setMailboxError(null);
+    setMailboxCredentials(null);
+    try {
+      const result = await api.post<{ mailbox: Mailbox; password: string }>(
+        `/users/${mailboxFor.id}/mailbox`,
+        { localpart: mailboxLocalpart.trim() },
+      );
+      setMailboxState((prev) => ({
+        enabled: prev?.enabled ?? true,
+        domain: prev?.domain ?? "",
+        mailbox: result.mailbox,
+      }));
+      setMailboxCredentials({ address: result.mailbox.address, password: result.password });
+      void load(q);
+    } catch (err) {
+      setMailboxError(errorMessage(err) ?? "Could not create the mailbox.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const resetMailboxPassword = async () => {
+    if (!mailboxFor || !mailboxState?.mailbox) return;
+    if (
+      !window.confirm(
+        `Reset the mailbox password for ${mailboxState.mailbox.address}? The old password stops working immediately.`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(mailboxFor.id);
+    setMailboxError(null);
+    setMailboxCredentials(null);
+    try {
+      const result = await api.post<{ password: string }>(
+        `/users/${mailboxFor.id}/mailbox/password`,
+        {},
+      );
+      setMailboxCredentials({
+        address: mailboxState.mailbox.address,
+        password: result.password,
+      });
+    } catch (err) {
+      setMailboxError(errorMessage(err) ?? "Could not reset the mailbox password.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const toggleMailbox = async () => {
+    if (!mailboxFor || !mailboxState?.mailbox) return;
+    const disabling = mailboxState.mailbox.status === "active";
+    if (
+      disabling &&
+      !window.confirm(
+        `Disable ${mailboxState.mailbox.address}? Mailbox sign-in stops; stored mail is kept.`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(mailboxFor.id);
+    setMailboxError(null);
+    try {
+      const result = await api.patch<{ mailbox: Mailbox }>(`/users/${mailboxFor.id}/mailbox`, {
+        status: disabling ? "disabled" : "active",
+      });
+      setMailboxState((prev) => (prev ? { ...prev, mailbox: result.mailbox } : prev));
+      setNotice(`${result.mailbox.address} — mailbox ${disabling ? "disabled" : "active"}.`);
+      void load(q);
+    } catch (err) {
+      setMailboxError(errorMessage(err) ?? "Could not change the mailbox status.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const deleteMailbox = async () => {
+    if (!mailboxFor || !mailboxState?.mailbox) return;
+    const address = mailboxState.mailbox.address;
+    if (!window.confirm(`Delete ${address} and every message stored in it? This cannot be undone.`)) {
+      return;
+    }
+    setBusyId(mailboxFor.id);
+    setMailboxError(null);
+    try {
+      await api.del(`/users/${mailboxFor.id}/mailbox`);
+      closeMailbox();
+      setNotice(`${address} — mailbox deleted.`);
+      void load(q);
+    } catch (err) {
+      setMailboxError(errorMessage(err) ?? "Could not delete the mailbox.");
     } finally {
       setBusyId(null);
     }
@@ -340,6 +497,129 @@ export default function Users() {
           )}
         </section>
 
+        {mailboxFor && (
+          <section className="border border-line rounded-xl p-4 space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-neon uppercase tracking-wider">Mailbox</h2>
+                <p className="text-neutral-500 text-xs mt-1">
+                  {mailboxFor.email} · the mailbox is an address on the mail server, separate from
+                  the sign-in email.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeMailbox}
+                className="text-neutral-500 text-xs tracking-widest hover:text-neutral-300"
+              >
+                CLOSE
+              </button>
+            </div>
+
+            {mailboxError && <p className="text-red-400 text-sm">{mailboxError}</p>}
+            {!mailboxState && !mailboxError && (
+              <p className="text-neutral-500 text-xs">Loading…</p>
+            )}
+
+            {mailboxState && !mailboxState.enabled && (
+              <p className="text-yellow-300 text-sm">
+                Mailbox provisioning is not enabled on this server (MAILBOX_PROVISIONING).
+              </p>
+            )}
+
+            {mailboxState?.enabled && !mailboxState.mailbox && (
+              <form onSubmit={createMailbox} className="flex flex-wrap items-center gap-2">
+                <input
+                  className={field}
+                  placeholder="name"
+                  value={mailboxLocalpart}
+                  onChange={(e) => setMailboxLocalpart(e.target.value)}
+                  required
+                />
+                <span className="text-neutral-500 text-sm">@{mailboxState.domain}</span>
+                <button
+                  disabled={busyId === mailboxFor.id || !mailboxLocalpart.trim()}
+                  className="bg-neon text-bg font-black rounded-lg px-3 py-2 text-xs tracking-widest disabled:opacity-50"
+                >
+                  {busyId === mailboxFor.id ? "CREATING…" : "CREATE MAILBOX"}
+                </button>
+              </form>
+            )}
+
+            {mailboxState?.mailbox && (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <code className="bg-bg border border-line rounded px-2 py-1 text-sm">
+                    {mailboxState.mailbox.address}
+                  </code>
+                  <span
+                    className={
+                      mailboxState.mailbox.status === "active"
+                        ? "text-neon text-xs uppercase tracking-widest"
+                        : "text-yellow-400 text-xs uppercase tracking-widest"
+                    }
+                  >
+                    {mailboxState.mailbox.status}
+                  </span>
+                  <span className="text-neutral-500 text-xs">
+                    {formatBytes(mailboxState.mailbox.usedBytes)} stored
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    disabled={busyId === mailboxFor.id}
+                    onClick={resetMailboxPassword}
+                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 disabled:opacity-40"
+                  >
+                    RESET PASSWORD
+                  </button>
+                  <button
+                    disabled={busyId === mailboxFor.id}
+                    onClick={toggleMailbox}
+                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-line text-neutral-300 hover:border-neon hover:text-neon disabled:opacity-40"
+                  >
+                    {mailboxState.mailbox.status === "active" ? "DISABLE" : "ENABLE"}
+                  </button>
+                  <button
+                    disabled={busyId === mailboxFor.id}
+                    onClick={deleteMailbox}
+                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-red-500/60 text-red-400 hover:bg-red-500/10 disabled:opacity-40"
+                  >
+                    DELETE
+                  </button>
+                </div>
+              </>
+            )}
+
+            {mailboxCredentials && (
+              <div className="border border-neon/40 rounded-lg p-3">
+                <p className="text-neon text-sm">
+                  Mailbox ready for {mailboxCredentials.address}.
+                </p>
+                <p className="text-neutral-400 text-xs mt-1">
+                  Password — shown once, stored nowhere. Pass it on out of band; reset it here if
+                  it is lost.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <code className="bg-bg border border-line rounded px-2 py-1 text-sm">
+                    {mailboxCredentials.password}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(mailboxCredentials.password)}
+                    className="text-[11px] tracking-widest text-neutral-400 hover:text-neon"
+                  >
+                    COPY
+                  </button>
+                </div>
+                <p className="text-neutral-500 text-xs mt-2">
+                  Mail client: IMAP mail.essentialsedm.com, port 993, SSL.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
         {notice && <p className="text-neon text-sm">{notice}</p>}
         {error && <p className="text-red-400 text-sm">{error}</p>}
 
@@ -387,6 +667,14 @@ export default function Users() {
                     <td className="px-4 py-3">
                       <p className="font-bold">{u.name ?? u.email.split("@")[0]}</p>
                       <p className="text-neutral-500 text-xs">{u.email}</p>
+                      {u.mailbox && (
+                        <p className="text-neutral-500 text-[11px] mt-0.5">
+                          mailbox {u.mailbox.address}
+                          {u.mailbox.status === "disabled" && (
+                            <span className="text-yellow-400"> · disabled</span>
+                          )}
+                        </p>
+                      )}
                       <p className="text-neutral-600 text-[11px] mt-0.5">
                         {u.linked ? "signed in" : "not signed in yet"} · joined{" "}
                         {new Date(u.createdAt).toLocaleDateString()} ·{" "}
@@ -460,6 +748,14 @@ export default function Users() {
                           className="rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest border border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 disabled:opacity-40"
                         >
                           RESET SIGN-IN
+                        </button>
+                        <button
+                          disabled={busyId === u.id}
+                          onClick={() => void openMailbox(u)}
+                          title="Provision or manage this person's mail server mailbox"
+                          className="rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest border border-line text-neutral-400 hover:border-neon hover:text-neon disabled:opacity-40"
+                        >
+                          {u.mailbox ? "MAILBOX" : "ADD MAILBOX"}
                         </button>
                         {hasProfile && (
                           <button

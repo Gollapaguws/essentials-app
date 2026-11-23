@@ -2,15 +2,15 @@ import { Controller, Get, Post, Body, Param, Delete, Patch, Query, HttpCode, Use
 import { SupabaseAuthGuard } from "../auth/supabase-auth.guard";
 import { EventsService } from "./events.service";
 import { EventToolsService } from "./event-tools.service";
+import { GroupChatService, MAX_MESSAGE_LENGTH } from "./group-chat.service";
 import type { Response } from "express";
 import { Res } from "@nestjs/common";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
-import { IsArray, IsDateString, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
+import { IsArray, IsBoolean, IsDateString, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
 
 class RsvpDto {
   @IsOptional() @IsInt() @Min(1) headcount?: number;
-  @IsOptional() @IsString() sourceCampaignId?: string;
 }
 
 class CreateEventDto {
@@ -57,6 +57,12 @@ class SlotFeeDto {
   @IsInt() @Min(1) fee!: number;
 }
 
+class ChatMessageDto {
+  @IsString() @MinLength(1) @MaxLength(MAX_MESSAGE_LENGTH) body!: string;
+  /** Staff only: mark this message as the room's icebreaker. */
+  @IsOptional() @IsBoolean() icebreaker?: boolean;
+}
+
 class RepeatDto {
   /** How many extra weekly copies to create. */
   @IsInt() @Min(1) weeks!: number;
@@ -74,7 +80,11 @@ class SlotPlanDto {
 @Controller("events")
 @UseGuards(SupabaseAuthGuard)
 export class EventsController {
-  constructor(private events: EventsService, private tools: EventToolsService) {}
+  constructor(
+    private events: EventsService,
+    private tools: EventToolsService,
+    private chat: GroupChatService,
+  ) {}
 
   @Get()
   feed() {
@@ -87,6 +97,13 @@ export class EventsController {
     return this.events.mine(user);
   }
 
+  /** Promoter/venue/admin: money promised and room left across every upcoming night. */
+  @Get("budgets")
+  @Auth("promoter", "venue_manager", "admin")
+  budgets(@CurrentUser() user: JwtUser) {
+    return this.events.budgetOverview(user);
+  }
+
   @Get(":id")
   detail(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.events.detail(id, user);
@@ -94,7 +111,7 @@ export class EventsController {
 
   @Post(":id/rsvp")
   rsvp(@Param("id") id: string, @CurrentUser() user: JwtUser, @Body() dto: RsvpDto) {
-    return this.events.rsvp(id, user, dto.headcount ?? 1, dto.sourceCampaignId);
+    return this.events.rsvp(id, user, dto.headcount ?? 1);
   }
 
   @Delete(":id/rsvp")
@@ -111,6 +128,19 @@ export class EventsController {
   @Auth("promoter", "venue_manager", "door", "admin")
   checkIn(@CurrentUser() user: JwtUser, @Body("qrToken") qrToken: string) {
     return this.events.checkIn(qrToken, user);
+  }
+
+  /** The night's group chat. Members only: the list, the promoter, the venue, admins. */
+  @Get(":id/chat")
+  chatMessages(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.chat.messages(user, id);
+  }
+
+  /** Post to the night's chat. Staff can mark a message as an icebreaker. */
+  @Post(":id/chat")
+  @HttpCode(201)
+  chatPost(@Param("id") id: string, @CurrentUser() user: JwtUser, @Body() dto: ChatMessageDto) {
+    return this.chat.post(user, id, dto.body, dto.icebreaker ?? false);
   }
 
   /** Promoter/venue/door staff: the door list, searchable by guest name or email. */

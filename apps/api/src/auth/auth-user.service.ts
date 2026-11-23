@@ -96,6 +96,25 @@ export class AuthUserService {
     await prisma.user.update({ where: { id: userId }, data: { avatar } });
   }
 
+  /**
+   * The signed-in account's own profile card. An empty name clears it rather
+   * than storing whitespace, and an absent field is left exactly as it was.
+   */
+  async updateMe(
+    userId: string,
+    data: { name?: string; musicTastes?: string[]; vibeTag?: "Chill" | "Party" | "Networking" },
+  ) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(data.name !== undefined ? { name: data.name.trim() || null } : {}),
+        ...(data.musicTastes !== undefined ? { musicTastes: data.musicTastes } : {}),
+        ...(data.vibeTag !== undefined ? { vibeTag: data.vibeTag } : {}),
+      },
+      select: { id: true, name: true, avatar: true, musicTastes: true, vibeTag: true },
+    });
+  }
+
   /** The owner has chosen their own password: drop the first-login gate. */
   async clearPasswordReset(userId: string): Promise<void> {
     await prisma.user.update({

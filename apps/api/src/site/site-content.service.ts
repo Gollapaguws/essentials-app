@@ -5,6 +5,8 @@ import { ArrayMaxSize, IsArray, IsIn, IsOptional, IsString, MaxLength, MinLength
 /** Editable front-page content schema (validated on save). */
 export class FrontPageContent {
   @IsOptional() @IsString() @MinLength(2) @MaxLength(300) tagline?: string;
+  /** Longer hero paragraph; when set it replaces the tagline on the front page. */
+  @IsOptional() @IsString() @MinLength(2) @MaxLength(900) heroPitch?: string;
   @IsOptional() @IsString() @MinLength(2) @MaxLength(60) ctaLabel?: string;
   @IsOptional() @IsString() @MinLength(4) @MaxLength(40) city?: string;
   @IsOptional() @IsString() @MinLength(4) @MaxLength(120) quote?: string;

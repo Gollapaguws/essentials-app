@@ -126,7 +126,7 @@ export class LiveGateway {
         if (!this.live.startIngest()) throw new Error("A broadcast is already live");
         this.live.setBroadcaster(
           role === "admin"
-            ? { bookingId: null, stageName: "ESSENTIALS", title: "Studio broadcast" }
+            ? { bookingId: null, stageName: "SONUS", title: "Studio broadcast" }
             : { bookingId: active!.id, stageName: active!.stageName, title: active!.title },
         );
         this.ingestClients += 1;

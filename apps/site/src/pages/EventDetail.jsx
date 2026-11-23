@@ -125,7 +125,7 @@ export default function EventDetail() {
               {event.description && <p className="noir-note">{event.description}</p>}
 
               <p className="noir-note">
-                Your door pass lives in the ESSENTIALS app.{" "}
+                Your door pass lives in the SONUS app.{" "}
                 <Link to="/register" className="noir-quiet-link">
                   Get on the list
                 </Link>{" "}

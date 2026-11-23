@@ -208,6 +208,69 @@ export class VenuesService {
     });
   }
 
+  /**
+   * What this room owes the DJs who played it: fees agreed per night, what has
+   * been invoiced, what is still unpaid, and the promoter/venue split that night
+   * was booked on. Money a venue can act on, unlike a raw event count.
+   */
+  async revenue(user: JwtUser, venueId: string) {
+    await this.assertManager(venueId, user);
+    const events = await prisma.event.findMany({
+      where: { venueId },
+      select: {
+        id: true,
+        title: true,
+        date: true,
+        status: true,
+        revenueSplitPromoterPct: true,
+        artistBookings: {
+          where: { status: { in: ["confirmed", "completed"] } },
+          select: { performanceFee: true, invoice: { select: { status: true, total: true } } },
+        },
+      },
+      orderBy: { date: "desc" },
+    });
+
+    const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+    const rows = events.map((e) => {
+      const fees = sum(e.artistBookings.map((b) => b.performanceFee));
+      const invoiced = sum(e.artistBookings.map((b) => b.invoice?.total ?? 0));
+      // A paid invoice is settled in full; otherwise only its paid payments count.
+      const paid = sum(
+        e.artistBookings.map((b) => (b.invoice?.status === "paid" ? b.invoice.total : 0)),
+      );
+      const unbilled = e.artistBookings.filter((b) => !b.invoice);
+      return {
+        id: e.id,
+        title: e.title,
+        date: e.date,
+        status: e.status,
+        promoterPct: e.revenueSplitPromoterPct,
+        venuePct: 100 - e.revenueSplitPromoterPct,
+        djFees: fees,
+        invoiced,
+        paid,
+        /** Billed and not yet paid — the venue's outstanding DJ debt. */
+        owed: invoiced - paid,
+        /** Played gigs the DJ has not invoiced yet, so nothing is owed on them yet. */
+        unbilledGigs: unbilled.length,
+        unbilledFees: sum(unbilled.map((b) => b.performanceFee)),
+      };
+    });
+
+    return {
+      nights: rows,
+      totals: {
+        nights: rows.length,
+        djFees: sum(rows.map((r) => r.djFees)),
+        invoiced: sum(rows.map((r) => r.invoiced)),
+        paid: sum(rows.map((r) => r.paid)),
+        owed: sum(rows.map((r) => r.owed)),
+        unbilledGigs: sum(rows.map((r) => r.unbilledGigs)),
+      },
+    };
+  }
+
   /** Venue analytics: how each night at this room filled and turned up. */
   async analytics(user: JwtUser, venueId: string) {
     await this.assertManager(venueId, user);

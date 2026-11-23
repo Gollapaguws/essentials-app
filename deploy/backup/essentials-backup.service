@@ -1,0 +1,12 @@
+[Unit]
+Description=ESSENTIALS encrypted off-site backup to IDrive e2
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/essentials-idrive-backup
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

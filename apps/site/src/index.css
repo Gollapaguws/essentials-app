@@ -574,6 +574,16 @@
   opacity: 0.82;
 }
 
+/* Longer hero paragraph: tracked-out uppercase is unreadable at this length. */
+.noir-pitch {
+  max-width: 760px;
+  font-size: clamp(14px, 1.05vw, 17px);
+  line-height: 1.75;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  opacity: 0.88;
+}
+
 .noir-btn {
   display: inline-flex;
   align-items: center;
@@ -1296,6 +1306,19 @@ a.noir-dj:hover .noir-dj-name {
   color: #ffd166;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.noir-foot a.noir-foot-newsletter {
+  text-decoration: none;
+  border-bottom: 1px solid rgba(201, 149, 51, 0.45);
+  padding-bottom: 2px;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.noir-foot a.noir-foot-newsletter:hover,
+.noir-foot a.noir-foot-newsletter:focus-visible {
+  color: #ffd166;
+  border-bottom-color: #ffd166;
 }
 
 .noir-foot {

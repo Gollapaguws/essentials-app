@@ -2,7 +2,6 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { prisma } from "@essentials/db";
 import { NotificationsService } from "./notifications.service";
-import type { MailService } from "../mail/mail.service";
 import type { TelegramService } from "../telegram/telegram.service";
 
 jest.mock("@essentials/db", () => ({
@@ -11,8 +10,6 @@ jest.mock("@essentials/db", () => ({
     user: { findUnique: jest.fn(), findMany: jest.fn() },
   },
 }));
-
-jest.mock("../mail/templates", () => ({ wrapTemplate: (html: string) => html }));
 
 const db = prisma as unknown as {
   notification: { createMany: jest.Mock };
@@ -28,19 +25,13 @@ const DJ = {
   artistProfile: { stageName: "REM-OD" },
 };
 
-function serviceFor(overrides: { mailSend?: jest.Mock; telegramSend?: jest.Mock } = {}) {
-  const mail = { send: overrides.mailSend ?? jest.fn().mockResolvedValue(undefined) };
+function serviceFor(overrides: { telegramSend?: jest.Mock } = {}) {
   const telegram = { sendMessage: overrides.telegramSend ?? jest.fn().mockResolvedValue(true) };
   const config = {
     get: (key: string) => (key === "APP_URL" ? "https://essentials.example/dashboard/" : undefined),
   } as unknown as ConfigService;
   return {
-    service: new NotificationsService(
-      mail as unknown as MailService,
-      telegram as unknown as TelegramService,
-      config,
-    ),
-    mail,
+    service: new NotificationsService(telegram as unknown as TelegramService, config),
     telegram,
   };
 }
@@ -67,13 +58,13 @@ describe("NotificationsService.sendTest", () => {
 
   it("writes the bell row and reports one delivery per channel", async () => {
     db.user.findUnique.mockResolvedValue(DJ);
-    db.user.findMany.mockResolvedValue([{ id: DJ.id, email: DJ.email, name: null, telegramChatId: "12345" }]);
-    const { service, mail, telegram } = serviceFor();
+    db.user.findMany.mockResolvedValue([{ id: DJ.id, telegramChatId: "12345" }]);
+    const { service, telegram } = serviceFor();
 
     const result = await service.sendTest(DJ.id);
 
-    expect(result.channels).toEqual({ inapp: 1, email: 1, telegram: 1 });
-    expect(result.delivered).toBe(2);
+    expect(result.channels).toEqual({ inapp: 1, telegram: 1 });
+    expect(result.delivered).toBe(1);
     expect(result.recipient.stageName).toBe("REM-OD");
     expect(db.notification.createMany).toHaveBeenCalledWith({
       data: [
@@ -86,16 +77,5 @@ describe("NotificationsService.sendTest", () => {
       ],
     });
     expect(telegram.sendMessage).toHaveBeenCalledWith("12345", expect.stringContaining("TEST NOTIFICATION"));
-    expect(mail.send).toHaveBeenCalledWith(expect.objectContaining({ to: DJ.email, subject: "TEST NOTIFICATION" }));
-  });
-
-  it("still counts the bell row when the mail provider fails", async () => {
-    db.user.findUnique.mockResolvedValue(DJ);
-    db.user.findMany.mockResolvedValue([{ id: DJ.id, email: DJ.email, name: null, telegramChatId: "12345" }]);
-    const { service } = serviceFor({ mailSend: jest.fn().mockRejectedValue(new Error("smtp down")) });
-
-    const result = await service.sendTest(DJ.id);
-
-    expect(result.channels).toEqual({ inapp: 1, email: 0, telegram: 1 });
   });
 });

@@ -5,6 +5,7 @@ import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { doorSummary, recentEntries } from "@/lib/door";
 
 interface EventRow {
   id: string;
@@ -116,18 +117,8 @@ export default function Door() {
   };
 
   const selected = events.find((e) => e.id === eventId) ?? null;
-  const onList = allGuests.filter((g) => g.status !== "waitlisted");
-  const inside = allGuests.filter((g) => g.status === "checked_in");
-  // Party size is what the room sees, not the number of list entries.
-  const insidePeople = inside.reduce((n, g) => n + (g.headcount || 1), 0);
-  const today = new Date().toDateString();
-  const todayEntries = inside.filter(
-    (g) => g.checkedInAt && new Date(g.checkedInAt).toDateString() === today,
-  ).length;
-  const recent = [...inside]
-    .filter((g) => g.checkedInAt)
-    .sort((a, b) => +new Date(b.checkedInAt!) - +new Date(a.checkedInAt!))
-    .slice(0, 5);
+  const { onList, inside: insidePeople, today: todayEntries } = doorSummary(allGuests);
+  const recent = recentEntries(allGuests);
 
   return (
     <>
@@ -165,7 +156,7 @@ export default function Door() {
 
         {selected && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Stat label="On list" value={onList.length} />
+            <Stat label="On list" value={onList} />
             <Stat label="Inside" value={insidePeople} />
             <Stat label="Today" value={todayEntries} />
             <Stat label="Capacity" value={selected.capacity} />

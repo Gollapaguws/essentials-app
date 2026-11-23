@@ -10,7 +10,6 @@ export const JOTFORM_AGENT_SRC =
 const SCREENS: Record<string, string> = {
   "/": "Analytics",
   "/events": "Events",
-  "/email": "Email Engine",
   "/venue": "Venue Portal",
   "/artists": "Artists",
   "/promotions": "Promotions",
@@ -20,7 +19,6 @@ const SCREENS: Record<string, string> = {
   "/go-live": "Go Live",
   "/insights": "Insights",
   "/editor": "Front Page",
-  "/mailboxes": "Mailboxes",
   "/simulcast": "Streaming",
   "/social": "Social Hub",
   "/gig-calendar": "Gig Calendar",

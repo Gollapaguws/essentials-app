@@ -12,10 +12,16 @@ export class PublicDjsService {
 
   async list() {
     const profiles = await prisma.artistProfile.findMany({
+      // The roster is a poster: a DJ with no photo has nothing to put on it, so
+      // those profiles are left off the front page. They are not deleted, and a
+      // direct link to the profile still works.
+      where: { imageUrl: { not: null } },
       select: { id: true, stageName: true, bio: true, imageUrl: true },
       orderBy: { stageName: "asc" },
     });
-    if (!profiles.length) return [];
+    // An empty string is a cleared photo, not a photo.
+    const published = profiles.filter((p) => p.imageUrl?.trim());
+    if (!published.length) return [];
 
     // A DJ with dates on the poster is the one to lead with, so count the
     // confirmed nights still ahead of us in one read.
@@ -30,14 +36,9 @@ export class PublicDjsService {
     const upcoming = new Map<string, number>();
     for (const b of bookings) upcoming.set(b.artistId, (upcoming.get(b.artistId) ?? 0) + 1);
 
-    return profiles
+    return published
       .map((p) => ({ ...p, upcoming: upcoming.get(p.id) ?? 0 }))
-      .sort(
-        (a, b) =>
-          Number(Boolean(b.imageUrl)) - Number(Boolean(a.imageUrl)) ||
-          b.upcoming - a.upcoming ||
-          a.stageName.localeCompare(b.stageName),
-      );
+      .sort((a, b) => b.upcoming - a.upcoming || a.stageName.localeCompare(b.stageName));
   }
 
   async detail(id: string) {

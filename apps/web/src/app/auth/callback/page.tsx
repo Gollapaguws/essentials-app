@@ -58,7 +58,7 @@ function CallbackInner() {
   return (
     <main className="min-h-screen grid place-items-center px-6">
       <div className="text-center space-y-4">
-        <h1 className="text-neon text-2xl font-black tracking-widest">ESSENTIALS</h1>
+        <h1 className="text-neon text-2xl font-black tracking-widest">SONUS</h1>
         {error ? (
           <>
             <p className="text-neutral-400">{error}</p>

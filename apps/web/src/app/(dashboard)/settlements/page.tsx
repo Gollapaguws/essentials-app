@@ -8,6 +8,7 @@ import { ConsolePage } from "@/components/console/ConsolePage";
 import { PageHeader } from "@/components/console/PageHeader";
 import { Panel } from "@/components/console/Panel";
 import { Badge } from "@/components/console/Badge";
+import { DownloadButton } from "@/components/DownloadButton";
 
 interface Gig {
   id: string;
@@ -52,6 +53,8 @@ const rand = (v: number) => `R${v.toLocaleString()}`;
 export default function Settlements() {
   const [data, setData] = useState<Settlements | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The month a statement download covers; defaults to this one.
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
     api
@@ -68,7 +71,25 @@ export default function Settlements() {
         eyebrow="Night ops / Money"
         title="SETTLEMENTS"
         description="DJ fees you have agreed per night, what the DJs have invoiced the venue, what has been paid, and what is still outstanding."
-        actions={<Badge tone="info">{totals?.nights ?? 0} nights</Badge>}
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge tone="info">{totals?.nights ?? 0} nights</Badge>
+            <label className="text-[10px] uppercase tracking-widest text-neutral-500">
+              Statement month
+              <input
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value || month)}
+                className="ml-2 bg-bg border border-line rounded-lg px-2 py-1 text-xs text-neutral-200"
+              />
+            </label>
+            <DownloadButton
+              path={`/artists/statements.csv?month=${month}`}
+              filename={`statement-${month}.csv`}
+              label="DOWNLOAD STATEMENT"
+            />
+          </div>
+        }
       />
 
       {error && <p className="text-red-400 text-sm">{error}</p>}

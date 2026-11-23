@@ -11,6 +11,7 @@ dist/
 *.bak-*
 *.bak.*
 *.log
+backups/
 coverage/
 .turbo/
 dist/

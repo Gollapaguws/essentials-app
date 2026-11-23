@@ -153,7 +153,7 @@ export default function Account() {
                 ? "Disconnecting stops Telegram messages. In-app notifications and email keep working."
                 : telegram && !telegram.configured
                   ? "The bot is not configured on this server yet, so alerts still arrive by email and in the app."
-                  : "Opens Telegram with the ESSENTIALS bot. Press Start and this chat is linked to your account."
+                  : "Opens Telegram with the SONUS bot. Press Start and this chat is linked to your account."
             }
           />
         </View>

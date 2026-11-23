@@ -32,17 +32,27 @@ beforeEach(() => {
 describe("PublicDjsService", () => {
   const service = () => new PublicDjsService();
 
-  it("leads with DJs who have a photo", async () => {
+  it("leaves DJs with no photo off the front page", async () => {
     db.artistProfile.findMany.mockResolvedValue([
       { ...profile, id: "b", stageName: "B", imageUrl: null },
+      { ...profile, id: "c", stageName: "C", imageUrl: "  " },
       { ...profile, id: "a", stageName: "A" },
     ]);
-    db.artistBooking.findMany.mockResolvedValue([{ artistId: "b" }]);
+    db.artistBooking.findMany.mockResolvedValue([{ artistId: "b" }, { artistId: "a" }]);
 
     const rows = await service().list();
 
-    expect(rows.map((r) => r.id)).toEqual(["a", "b"]);
-    expect(rows[1].upcoming).toBe(1);
+    expect(rows.map((r) => r.id)).toEqual(["a"]);
+    expect(rows[0].upcoming).toBe(1);
+    // The database already drops nulls; a blank photo is a cleared one.
+    expect(db.artistProfile.findMany.mock.calls[0][0].where).toEqual({ imageUrl: { not: null } });
+  });
+
+  it("asks for no bookings when every profile is unpublished", async () => {
+    db.artistProfile.findMany.mockResolvedValue([{ ...profile, id: "b", imageUrl: null }]);
+
+    await expect(service().list()).resolves.toEqual([]);
+    expect(db.artistBooking.findMany).not.toHaveBeenCalled();
   });
 
   it("exposes only what a guest may see on a profile", async () => {

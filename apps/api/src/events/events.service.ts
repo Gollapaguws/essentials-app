@@ -151,8 +151,8 @@ export class EventsService {
     }));
   }
 
-  /** RSVP with capacity enforcement -> waitlist when full. Records campaign attribution. */
-  async rsvp(eventId: string, user: JwtUser, headcount = 1, sourceCampaignId?: string) {
+  /** RSVP with capacity enforcement -> waitlist when full. */
+  async rsvp(eventId: string, user: JwtUser, headcount = 1) {
     if (user.role !== "guest" && user.role !== "admin") throw new ForbiddenException("Guests only");
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) throw new NotFoundException("Event not found");
@@ -170,13 +170,12 @@ export class EventsService {
 
     const entry = await prisma.guestList.upsert({
       where: { eventId_userId: { eventId, userId: user.sub } },
-      update: { status, headcount, sourceCampaignId: sourceCampaignId ?? existing?.sourceCampaignId },
+      update: { status, headcount },
       create: {
         eventId,
         userId: user.sub,
         status,
         headcount,
-        sourceCampaignId,
         qrCode: status === "attending" ? this.signQr(eventId, user.sub) : null,
       },
     });
@@ -544,6 +543,82 @@ export class EventsService {
         committed: slots.filter((s) => s.confirmed).reduce((sum, s) => sum + s.fee, 0),
       };
     });
+  }
+
+  /**
+   * Every upcoming night's DJ budget in one place: what is promised, what is
+   * left, and which nights are already over the ceiling. Promoters plan several
+   * weeks ahead, and the per-event view cannot answer "how much room do I have
+   * left across the month".
+   */
+  async budgetOverview(user: JwtUser) {
+    if (user.role !== "promoter" && user.role !== "venue_manager" && user.role !== "admin") {
+      throw new ForbiddenException("Promoters only");
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const where: Prisma.EventWhereInput = {
+      date: { gte: today },
+      status: { in: [EventStatus.approved, EventStatus.live, EventStatus.pending_venue_approval] },
+      ...(user.role === "admin"
+        ? {}
+        : user.role === "venue_manager"
+          ? { venue: { managerId: user.sub } }
+          : { promoterId: user.sub }),
+    };
+    const events = await prisma.event.findMany({
+      where,
+      select: {
+        id: true,
+        title: true,
+        date: true,
+        budget: true,
+        venue: { select: { name: true } },
+        slots: {
+          select: {
+            id: true,
+            fee: true,
+            bookings: {
+              where: { status: { in: ["confirmed", "completed"] } },
+              select: { performanceFee: true },
+            },
+          },
+        },
+      },
+      orderBy: { date: "asc" },
+    });
+
+    const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+    const nights = events.map((e) => {
+      const committed = sum(e.slots.flatMap((s) => s.bookings.map((b) => b.performanceFee)));
+      const budgeted = e.budget > 0;
+      return {
+        id: e.id,
+        title: e.title,
+        date: e.date,
+        venue: e.venue.name,
+        budget: e.budget,
+        committed,
+        // Null rather than zero: an unbudgeted night has no ceiling to be under.
+        remaining: budgeted ? e.budget - committed : null,
+        overBudget: budgeted && committed > e.budget,
+        slots: e.slots.length,
+        confirmedSlots: e.slots.filter((s) => s.bookings.length > 0).length,
+      };
+    });
+
+    const budgeted = nights.filter((n) => n.budget > 0);
+    return {
+      nights,
+      totals: {
+        nights: nights.length,
+        budget: sum(budgeted.map((n) => n.budget)),
+        committed: sum(nights.map((n) => n.committed)),
+        remaining: sum(budgeted.map((n) => n.budget - n.committed)),
+        overBudgetNights: nights.filter((n) => n.overBudget).length,
+        unbudgetedNights: nights.length - budgeted.length,
+      },
+    };
   }
 
   private canManage(promoterId: string, venueManagerId: string | null | undefined, user: JwtUser) {

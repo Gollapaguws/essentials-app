@@ -75,6 +75,13 @@ export class VenuesController {
     return this.venues.doorLogs(user, venueId);
   }
 
+  /** Venue manager: DJ fees per night, invoiced and still owed. */
+  @Get(":venueId/revenue")
+  @Auth("venue_manager", "admin")
+  revenue(@CurrentUser() user: JwtUser, @Param("venueId") venueId: string) {
+    return this.venues.revenue(user, venueId);
+  }
+
   @Get(":venueId/analytics")
   @Auth("venue_manager", "admin")
   analytics(@CurrentUser() user: JwtUser, @Param("venueId") venueId: string) {

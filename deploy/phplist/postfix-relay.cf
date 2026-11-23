@@ -1,0 +1,17 @@
+# phpList -> host Postfix relay.
+#
+# Append to /etc/postfix/master.cf, then `postfix check && systemctl reload postfix`.
+# The listener is bound to the compose network's gateway (172.16.9.1) and accepts
+# only containers on that network, so nothing on the internet can relay through
+# it. Mail leaves as mail.essentialsedm.com, which is what the domain's SPF `a`
+# and DKIM signing are configured for.
+#
+#   service type  private unpriv  chroot  wakeup  maxproc command
+172.16.9.1:2525  inet  n       -       y       -       -       smtpd
+  -o syslog_name=postfix/phplist
+  -o mynetworks=172.16.9.0/24
+  -o smtpd_tls_security_level=none
+  -o smtpd_client_restrictions=permit_mynetworks,reject
+  -o smtpd_helo_restrictions=permit_mynetworks,reject
+  -o smtpd_relay_restrictions=permit_mynetworks,defer_unauth_destination
+  -o smtpd_recipient_restrictions=permit_mynetworks,reject

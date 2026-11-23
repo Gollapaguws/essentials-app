@@ -100,7 +100,6 @@ export class SiteStatsService {
         guestLists: { include: { event: { select: { title: true, date: true } } } },
         loyaltyVisits: true,
         referralsGiven: { select: { refereeEmail: true, rewardIssued: true, createdAt: true } },
-        consentRecords: true,
         artistProfile: {
           include: {
             bookings: {

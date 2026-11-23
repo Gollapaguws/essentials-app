@@ -194,8 +194,7 @@ export class DashboardSessionService {
         }),
       });
     } catch (e) {
-      // Never reveal whether the address exists; the mail server being down is
-      // already surfaced by the login page's /mail/status check.
+      // Never reveal whether the address exists.
       this.logger.warn(`recovery mail failed: ${(e as Error).message}`);
     }
   }

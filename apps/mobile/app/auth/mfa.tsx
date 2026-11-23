@@ -104,7 +104,7 @@ export default function Mfa() {
     <View style={s.wrap}>
       <Text style={[type.title, { color: colors.text }]}>Two-step verification</Text>
       <Text style={{ color: colors.muted, marginTop: 8 }}>
-        Add ESSENTIALS to your authenticator app to keep staff tools protected.
+        Add SONUS to your authenticator app to keep staff tools protected.
       </Text>
 
       {uri && (
@@ -137,7 +137,7 @@ export default function Mfa() {
       />
       <FieldHint
         label="Which code?"
-        hint="The 6 digits your authenticator app (Google Authenticator, 1Password, Authy) shows for ESSENTIALS. It changes every 30 seconds, so type it as it appears."
+        hint="The 6 digits your authenticator app (Google Authenticator, 1Password, Authy) shows for SONUS. It changes every 30 seconds, so type it as it appears."
       />
       <Pressable style={s.button} onPress={verify} disabled={busy || code.length !== 6}>
         <Text style={s.buttonText}>{busy ? "CHECKING…" : "VERIFY"}</Text>

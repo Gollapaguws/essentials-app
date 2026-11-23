@@ -42,6 +42,20 @@ interface ApplicationRow {
   event: { title: string; date: string; budget: number; committed: number };
 }
 
+interface BudgetNight {
+  id: string; title: string; date: string; venue: string;
+  budget: number; committed: number; remaining: number | null;
+  overBudget: boolean; slots: number; confirmedSlots: number;
+}
+
+interface BudgetOverview {
+  nights: BudgetNight[];
+  totals: {
+    nights: number; budget: number; committed: number; remaining: number;
+    overBudgetNights: number; unbudgetedNights: number;
+  };
+}
+
 const APP_STATUS: Record<string, string> = {
   pending: "text-yellow-400",
   confirmed: "text-neon",
@@ -98,6 +112,8 @@ export default function EventManager() {
   // Per-slot fee overrides, keyed by slot id, for the expanded plan panel.
   const [slotDrafts, setSlotDrafts] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
+  // Money across every upcoming night, not just the one being planned.
+  const [budgetOverview, setBudgetOverview] = useState<BudgetOverview | null>(null);
   // ?focus=<id> is how the ⌘K palette points at one night in a long table.
   const [focusId, setFocusId] = useState<string | null>(null);
   // One event's DJ applications, opened inline from its row.
@@ -121,6 +137,8 @@ export default function EventManager() {
     setFocusId(new URLSearchParams(window.location.search).get("focus"));
     load();
     api.get<VenueOption[]>("/venues/options").then(setVenues).catch((e) => setError(errorMessage(e)));
+    // A door-only account can read the night list but not the budgets.
+    api.get<BudgetOverview>("/events/budgets").then(setBudgetOverview).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -266,7 +284,7 @@ export default function EventManager() {
 
   /** Admin only: approval already sends the DJ call, so this is the explicit re-send. */
   const resendDjCall = async (event: EventRow) => {
-    if (!window.confirm(`Send the DJ call for ${event.title} to every DJ?\n\nThey get an in-app notification, an email and a Telegram message where linked.`)) return;
+    if (!window.confirm(`Send the DJ call for ${event.title} to every DJ?\n\nThey get an in-app notification and a Telegram message where linked.`)) return;
     setError(null);
     setNotice(null);
     try {
@@ -306,6 +324,63 @@ export default function EventManager() {
       />
       {error && <p className="text-red-400 text-sm">{error}</p>}
       {notice && <p className="text-neon text-sm">{notice}</p>}
+
+      {budgetOverview && budgetOverview.nights.length > 0 && (
+        <section className="console-panel console-panel-body space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-bold text-neon uppercase tracking-wider">Remaining budget · upcoming nights</h2>
+            <p className="text-xs text-neutral-500">
+              {budgetOverview.totals.nights} night{budgetOverview.totals.nights === 1 ? "" : "s"} ·{" "}
+              R{budgetOverview.totals.committed.toLocaleString()} committed ·{" "}
+              <span className={budgetOverview.totals.remaining < 0 ? "text-yellow-400" : "text-neon"}>
+                R{budgetOverview.totals.remaining.toLocaleString()} {budgetOverview.totals.remaining < 0 ? "over" : "left"}
+              </span>
+              {budgetOverview.totals.budget > 0 ? ` of R${budgetOverview.totals.budget.toLocaleString()}` : ""}
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead className="text-neutral-500 uppercase text-[10px] tracking-widest">
+                <tr>
+                  <th className="text-left py-2">Night</th>
+                  <th className="text-left py-2">Date</th>
+                  <th className="text-right py-2">Slots filled</th>
+                  <th className="text-right py-2">Committed</th>
+                  <th className="text-right py-2">Room left</th>
+                </tr>
+              </thead>
+              <tbody>
+                {budgetOverview.nights.map((n) => (
+                  <tr key={n.id} className="border-t border-line">
+                    <td className="py-2">
+                      <span className="font-bold">{n.title}</span>
+                      <span className="text-neutral-500 text-xs"> · {n.venue}</span>
+                    </td>
+                    <td className="py-2 text-neutral-400">{new Date(n.date).toLocaleDateString()}</td>
+                    <td className="py-2 text-right tabular-nums text-neutral-400">{n.confirmedSlots}/{n.slots}</td>
+                    <td className="py-2 text-right tabular-nums">R{n.committed.toLocaleString()}</td>
+                    <td className={`py-2 text-right tabular-nums ${n.overBudget ? "text-yellow-400" : n.remaining == null ? "text-neutral-500" : "text-neon"}`}>
+                      {n.remaining == null ? "no ceiling" : n.overBudget ? `R${Math.abs(n.remaining).toLocaleString()} over` : `R${n.remaining.toLocaleString()}`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {budgetOverview.totals.overBudgetNights > 0 && (
+            <p className="text-yellow-400 text-xs">
+              {budgetOverview.totals.overBudgetNights} night{budgetOverview.totals.overBudgetNights === 1 ? " is" : "s are"} over
+              the ceiling — raise the budget on that night or decline a DJ before confirming anyone else.
+            </p>
+          )}
+          {budgetOverview.totals.unbudgetedNights > 0 && (
+            <p className="text-neutral-500 text-xs">
+              {budgetOverview.totals.unbudgetedNights} night{budgetOverview.totals.unbudgetedNights === 1 ? " has" : "s have"} no
+              budget ceiling, so confirmations there are not capped.
+            </p>
+          )}
+        </section>
+      )}
 
       <form onSubmit={create} className="console-panel console-panel-body space-y-3">
           <div className="grid md:grid-cols-4 gap-3 items-end">

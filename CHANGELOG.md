@@ -2,6 +2,55 @@
 
 Notable changes to ESSENTIALS. Dates are UTC.
 
+## 2026-11-23
+
+### Email systems removed
+
+- **The API no longer sends marketing email or manages mailboxes.**
+  Campaigns, segments, delivery jobs, consent records, newsletter signup,
+  mailboxes, unsubscribe handling and the dashboard email screens are gone.
+  Mailboxes and mail routing remain on the cPanel host, outside this app. One
+  transactional path (security notices) is allowed — see below.
+- A Prisma migration drops the email tables and campaign attribution, and a CI
+  guard fails if other email providers, modules or endpoints are reintroduced.
+
+### Newsletter engine
+
+- **Newsletters run on phpList 3.7 at `newsletters.essentialsedm.com`.** Signup
+  is double opt-in, and unsubscribe, bounce and campaign handling stay in
+  phpList; the public site footer links to its subscribe page. The app keeps no
+  copy of the audience.
+- phpList relays through the host Postfix (SPF and DKIM apply), and bounces are
+  read from the dedicated `bounce@essentialsedm.com` mailbox over IMAPS.
+
+### User mailboxes
+
+- **Admins can provision real `@essentialsedm.com` mailboxes from the Users
+  page.** Each mailbox is separate from the sign-in email, gets a one-time
+  password, and can be reset, disabled (IMAP/POP/SMTP AUTH locked) or deleted
+  with its stored mail. The dashboard shows the mailbox address and its current
+  disk usage.
+- Provisioning runs validated system commands on the mail host and is gated by
+  `MAILBOX_PROVISIONING=1`; a `UserMailbox` migration tracks ownership and every
+  action writes an audit event. See `docs/mailbox-provisioning.md`.
+
+### Transactional account mail
+
+- **Security notices are emailed from `no-reply@essentialsedm.com`.** A new
+  account, a role change, a sign-in reset and a two-step verification change
+  now notify the address on the account through the local Postfix relay. This is
+  separate from phpList: no campaigns, no audience and no unsubscribe link.
+- Delivery is best-effort — a relay failure is logged and never fails the admin
+  action. The CI guard permits `nodemailer` only in
+  `apps/api/src/account-mail`.
+
+### Privacy notice
+
+- **`/privacy` no longer describes marketing email, newsletters or
+  unsubscribe links.** It explains that SONUS sends service notifications
+  through the dashboard and Telegram, keeps the POPIA/GDPR rights, and is now
+  version `2026-11-23`. The registration copy was updated to match.
+
 ## 2026-11-16
 
 ### Door staff

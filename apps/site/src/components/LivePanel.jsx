@@ -175,7 +175,7 @@ export default function LivePanel({ idleLoop = "" }) {
         </div>
 
         <figcaption className="noir-stream-foot">
-          <span className="noir-micro">ESSENTIALS — ROOM FEED</span>
+          <span className="noir-micro">SONUS — ROOM FEED</span>
           <span className="noir-micro">{showPlayer ? "MUTED BY DEFAULT" : showIdleLoop ? "REEL" : "NO SIGNAL"}</span>
         </figcaption>
       </figure>

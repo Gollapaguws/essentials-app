@@ -481,7 +481,7 @@ export default function ArtistProfilePage() {
                   value={profile?.travelRatePerKm ?? form.travelRatePerKm}
                   readOnly
                 />
-                <p className="text-[11px] text-neutral-500 mt-1">Standard rate set by ESSENTIALS — not editable.</p>
+                <p className="text-[11px] text-neutral-500 mt-1">Standard rate set by SONUS — not editable.</p>
               </div>
             </div>
 

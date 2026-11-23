@@ -66,7 +66,7 @@ export class LiveController {
               }
             : {
                 id: "studio",
-                stageName: "ESSENTIALS",
+                stageName: "SONUS",
                 title: "Studio broadcast",
                 startsAt: null,
                 endsAt: null,

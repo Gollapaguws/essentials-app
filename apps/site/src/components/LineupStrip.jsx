@@ -89,7 +89,7 @@ export default function LineupStrip({ events = [] }) {
         <>
           <span className="noir-micro noir-lbl-block">Lineup</span>
           <p className="noir-note">
-            The next ESSENTIALS room is still being built. Get on the list and you
+            The next SONUS room is still being built. Get on the list and you
             will hear about it before anyone else.
           </p>
         </>

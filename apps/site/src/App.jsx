@@ -24,7 +24,7 @@ import Privacy from './pages/Privacy';
 import WhatsNew from './pages/WhatsNew';
 
 /**
- * ESSENTIALS public site — marketing front page.
+ * SONUS public site — marketing front page.
  * Served at essentialsedm.com. Auth-gated app lives in apps/web (dashboard)
  * and the mobile app; this page is public.
  */

@@ -58,13 +58,6 @@ const links: NavLink[] = [
     roles: ["promoter", "admin"],
   },
   {
-    href: "/email",
-    label: "Email Engine",
-    group: "AUDIENCE",
-    hint: "Campaigns and guest segments, plus which RSVPs each send brought in.",
-    roles: ["promoter", "admin"],
-  },
-  {
     href: "/promotions",
     label: "Promotions",
     group: "AUDIENCE",
@@ -146,13 +139,6 @@ const links: NavLink[] = [
     label: "Front Page",
     group: "PLATFORM",
     hint: "Edit the public front page: lineup, broadcasts and site copy.",
-    roles: ["admin"],
-  },
-  {
-    href: "/mailboxes",
-    label: "Mailboxes",
-    group: "PLATFORM",
-    hint: "Inboxes the API watches for replies, and the password for each mailbox.",
     roles: ["admin"],
   },
   {
@@ -314,7 +300,7 @@ export function TopNav() {
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-line/80 bg-[#0b0b0b]/95 backdrop-blur-xl lg:flex">
         <div className="border-b border-line/70 px-4 pb-4 pt-5">
           <Link href="/" className="group flex items-baseline gap-2">
-            <span className="text-[15px] font-black tracking-[0.2em] text-neon transition group-hover:opacity-80">ESSENTIALS</span>
+            <span className="text-[15px] font-black tracking-[0.2em] text-neon transition group-hover:opacity-80">SONUS</span>
             <span className="text-[8px] font-black tracking-[0.22em] text-neutral-700">/ EDM</span>
           </Link>
           <p className="mt-1 text-[9px] font-bold tracking-[0.3em] text-neutral-600">CONTROL ROOM</p>
@@ -343,7 +329,7 @@ export function TopNav() {
             <span className="h-px w-4 bg-current" />
             <span className="h-px w-4 bg-current" />
           </button>
-          <Link href="/" className="text-sm font-black tracking-[0.18em] text-neon">ESSENTIALS</Link>
+          <Link href="/" className="text-sm font-black tracking-[0.18em] text-neon">SONUS</Link>
           <span className="rounded-full border border-line px-2 py-0.5 text-[8px] font-black tracking-[0.18em] text-neutral-600">CONSOLE</span>
           <button
             onClick={search}
@@ -361,7 +347,7 @@ export function TopNav() {
           <aside className="relative flex h-full w-[min(19rem,88vw)] flex-col border-r border-line bg-[#0b0b0b] shadow-2xl">
             <div className="flex items-center justify-between border-b border-line/70 px-4 py-4">
               <div>
-                <Link href="/" onClick={() => setOpen(false)} className="text-sm font-black tracking-[0.18em] text-neon">ESSENTIALS</Link>
+                <Link href="/" onClick={() => setOpen(false)} className="text-sm font-black tracking-[0.18em] text-neon">SONUS</Link>
                 <p className="mt-0.5 text-[8px] font-bold tracking-[0.28em] text-neutral-600">CONTROL ROOM</p>
               </div>
               <button

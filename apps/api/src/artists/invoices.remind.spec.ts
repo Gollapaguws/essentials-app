@@ -43,7 +43,7 @@ describe("InvoicesService.remind", () => {
       expect.objectContaining({
         title: "Invoice ESS-2027-ABC123 is due",
         body: expect.stringContaining("R495"),
-        channels: ["inapp", "email"],
+        channels: ["inapp"],
       }),
     );
     expect(result.invoice).toMatchObject({ number: "ESS-2027-ABC123", total: 495 });

@@ -14,6 +14,10 @@ const basePath =
 const nextConfig = {
   reactStrictMode: true,
   basePath,
+  // Stamped into every page at build time. An open tab compares it with the
+  // build the server is serving and offers a reload, so a deploy cannot leave a
+  // dashboard pointing at chunks that no longer exist.
+  env: { NEXT_PUBLIC_BUILD_ID: process.env.NEXT_PUBLIC_BUILD_ID ?? String(Date.now()) },
   // The deploy builds into a scratch directory and swaps it in, so the running
   // server never sees a half-written .next and cannot outlive its own chunks.
   distDir: process.env.NEXT_DIST_DIR ?? ".next",

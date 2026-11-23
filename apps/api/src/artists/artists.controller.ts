@@ -158,6 +158,17 @@ export class ArtistsController {
   }
 
   /** Artist: days blocked out, from today onwards. */
+  /** One month of DJ money for a DJ, promoter or admin, as a CSV statement. */
+  @Get("statements.csv")
+  @Auth("artist", "promoter", "admin")
+  statement(
+    @CurrentUser() user: JwtUser,
+    @Query("month") month: string | undefined,
+    @Res() res: Response,
+  ) {
+    return this.artists.statementCsv(user, month, res);
+  }
+
   @Get("blackouts")
   @Auth("artist", "admin")
   blackouts(@CurrentUser() user: JwtUser) {

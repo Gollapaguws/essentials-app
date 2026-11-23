@@ -5,7 +5,7 @@ import { ChangelogService } from "./changelog.service";
 
 const NOTES = `# Changelog
 
-Notable changes to ESSENTIALS. Dates are UTC.
+Notable changes to SONUS. Dates are UTC.
 
 ## 2026-11-12
 

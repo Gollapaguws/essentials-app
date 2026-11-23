@@ -18,9 +18,11 @@ export default function HeroCinema() {
         <HeroSlider slides={slides} />
 
         <h1 className="noir-wm">
-          <GoldWordmark text="ESSENTIALS" />
+          <GoldWordmark text="SONUS" />
         </h1>
-        <p className="noir-tag">{c.tagline}</p>
+        <p className={c.heroPitch ? "noir-tag noir-pitch" : "noir-tag"}>
+          {c.heroPitch ?? c.tagline}
+        </p>
         <a href="#contact" className="noir-btn">
           {c.ctaLabel}
         </a>

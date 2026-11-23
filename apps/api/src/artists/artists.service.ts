@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
+import type { Response } from "express";
 import { ConfigService } from "@nestjs/config";
 import { prisma, ArtistBookingStatus } from "@essentials/db";
 import { rmSync } from "fs";
@@ -11,6 +12,18 @@ export { MAX_PROFILE_IMAGE_BYTES, PROFILE_IMAGE_EXTENSIONS } from "../common/med
 
 /** Average city speed used for drive-time estimates (km/h) when no Maps key is configured. */
 const AVG_SPEED_KMH = 45;
+
+/** Key of the platform travel rate in `PlatformSetting`. */
+export const TRAVEL_RATE_KEY = "travelRatePerKm";
+
+/** The rate every DJ travels at until an admin sets another one. */
+export const DEFAULT_TRAVEL_RATE_PER_KM = 4.95;
+
+/** A positive rate stored as text, or the default when the setting is missing or damaged. */
+export function parseTravelRate(value: string | undefined): number {
+  const rate = Number(value);
+  return Number.isFinite(rate) && rate > 0 ? rate : DEFAULT_TRAVEL_RATE_PER_KM;
+}
 
 export interface RouteLeg {
   fromBookingId: string;
@@ -58,7 +71,7 @@ export function icsCalendar(
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//ESSENTIALS//Gig Calendar//EN",
+    "PRODID:-//SONUS//Gig Calendar//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     ...items.flatMap((i) => [
@@ -74,6 +87,24 @@ export function icsCalendar(
     ]),
     "END:VCALENDAR",
   ].join("\r\n");
+}
+
+/**
+ * The month a statement covers, as `YYYY-MM`. Returns null when the value is
+ * not a real month, so the caller can refuse it instead of billing the wrong
+ * period.
+ */
+export function statementMonth(value: string | undefined) {
+  const match = /^(\d{4})-(\d{2})$/.exec((value ?? "").trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return null;
+  return {
+    key: `${match[1]}-${match[2]}`,
+    start: new Date(Date.UTC(year, month - 1, 1)),
+    end: new Date(Date.UTC(year, month, 1)),
+  };
 }
 
 /** Midnight at the start of the booking's local day. */
@@ -230,26 +261,45 @@ export class ArtistsService {
   }
 
   /**
-   * Admin only: the rate every DJ's routing and invoices use. Read from the
-   * profiles themselves, so the screen shows what is actually being charged
-   * rather than a setting that could drift away from it.
+   * The platform travel rate. Read from `PlatformSetting` — the single value new
+   * profiles inherit and every invoice is priced from.
    */
-  async standardTravelRate() {
-    const rows = await prisma.artistProfile.findMany({ select: { travelRatePerKm: true } });
-    const counts = new Map<number, number>();
-    for (const r of rows) counts.set(r.travelRatePerKm, (counts.get(r.travelRatePerKm) ?? 0) + 1);
-    // The rate most DJs are on is the standard; `mixed` flags profiles left
-    // behind by a rate change that never reached all of them.
-    const [rate] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [4.95];
-    return { travelRatePerKm: rate, artists: rows.length, mixed: counts.size > 1 };
+  async currentTravelRate(): Promise<number> {
+    const setting = await prisma.platformSetting.findUnique({ where: { key: TRAVEL_RATE_KEY } });
+    return parseTravelRate(setting?.value);
   }
 
   /**
-   * Admin only: the standard rate every DJ travels at. Applied to every profile,
-   * because it is a platform rate — not a per-DJ negotiation.
+   * Admin only: the rate every DJ's routing and invoices use. The setting is the
+   * number; `mixed` reports a profile that drifted from it (a manual edit, say),
+   * which is the only way a second rate can still exist.
+   */
+  async standardTravelRate() {
+    const [travelRatePerKm, profiles] = await Promise.all([
+      this.currentTravelRate(),
+      prisma.artistProfile.findMany({ select: { travelRatePerKm: true } }),
+    ]);
+    return {
+      travelRatePerKm,
+      artists: profiles.length,
+      mixed: profiles.some((p) => p.travelRatePerKm !== travelRatePerKm),
+    };
+  }
+
+  /**
+   * Admin only: the standard rate every DJ travels at. The setting and every
+   * profile move together in one transaction, so no profile is left behind and
+   * a profile created afterwards inherits the same number.
    */
   async setStandardTravelRate(rate: number) {
-    const updated = await prisma.artistProfile.updateMany({ data: { travelRatePerKm: rate } });
+    const [updated] = await prisma.$transaction([
+      prisma.artistProfile.updateMany({ data: { travelRatePerKm: rate } }),
+      prisma.platformSetting.upsert({
+        where: { key: TRAVEL_RATE_KEY },
+        create: { key: TRAVEL_RATE_KEY, value: String(rate) },
+        update: { value: String(rate) },
+      }),
+    ]);
     return { travelRatePerKm: rate, artists: updated.count, mixed: false };
   }
 
@@ -319,7 +369,11 @@ export class ArtistsService {
       }
       return updated;
     }
-    return prisma.artistProfile.create({ data: { userId: user.sub, ...patch } });
+    // A new profile starts on the platform rate, not on the schema default, so a
+    // rate change can never be undone by the next DJ who signs up.
+    return prisma.artistProfile.create({
+      data: { userId: user.sub, travelRatePerKm: await this.currentTravelRate(), ...patch },
+    });
   }
 
   /** Store an uploaded profile photo and return the absolute URL to save on the profile. */
@@ -591,6 +645,120 @@ export class ArtistsService {
         nights: rows.length,
       },
     };
+  }
+
+  /**
+   * One month of DJ money as a CSV: a DJ's own gigs, or — for a promoter or an
+   * admin — every gig at their nights. Statements used to be assembled by hand
+   * from the settlements screen every time a venue asked for the month.
+   */
+  async statementCsv(user: JwtUser, month: string | undefined, res: Response) {
+    const range = month ? statementMonth(month) : statementMonth(new Date().toISOString().slice(0, 7));
+    if (!range) throw new BadRequestException("month must be YYYY-MM");
+
+    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    type Row = {
+      date: Date; night: string; venue: string; dj: string; slot: string;
+      fee: number; travel: number; invoiceNumber: string; invoiceStatus: string; invoiced: number; paid: number;
+    };
+    let rows: Row[];
+
+    if (user.role === "artist") {
+      const profile = await prisma.artistProfile.findUnique({ where: { userId: user.sub } });
+      if (!profile) throw new BadRequestException("Create your artist profile first");
+      const bookings = await prisma.artistBooking.findMany({
+        where: {
+          artistId: profile.id,
+          status: { in: ["confirmed", "completed"] },
+          startAt: { gte: range.start, lt: range.end },
+        },
+        include: {
+          event: { select: { title: true, venue: { select: { name: true } } } },
+          invoice: { select: { number: true, status: true, total: true } },
+        },
+        orderBy: { startAt: "asc" },
+      });
+      rows = bookings.map((b) => ({
+        date: b.startAt,
+        night: b.event.title,
+        venue: b.event.venue.name,
+        dj: profile.stageName,
+        slot: b.slot ?? "",
+        fee: b.performanceFee,
+        travel: b.travelFee,
+        invoiceNumber: b.invoice?.number ?? "",
+        invoiceStatus: b.invoice?.status ?? "not invoiced",
+        invoiced: b.invoice?.total ?? 0,
+        paid: b.invoice?.status === "paid" ? b.invoice.total : 0,
+      }));
+    } else if (user.role === "promoter" || user.role === "admin") {
+      const events = await prisma.event.findMany({
+        where: {
+          date: { gte: range.start, lt: range.end },
+          ...(user.role === "admin" ? {} : { promoterId: user.sub }),
+        },
+        select: {
+          title: true,
+          date: true,
+          venue: { select: { name: true } },
+          artistBookings: {
+            where: { status: { in: ["confirmed", "completed"] } },
+            select: {
+              slot: true,
+              startAt: true,
+              performanceFee: true,
+              travelFee: true,
+              artist: { select: { stageName: true } },
+              invoice: { select: { number: true, status: true, total: true } },
+            },
+            orderBy: { startAt: "asc" },
+          },
+        },
+        orderBy: { date: "asc" },
+      });
+      rows = events.flatMap((e) =>
+        e.artistBookings.map((b) => ({
+          date: b.startAt,
+          night: e.title,
+          venue: e.venue.name,
+          dj: b.artist.stageName,
+          slot: b.slot ?? "",
+          fee: b.performanceFee,
+          travel: b.travelFee,
+          invoiceNumber: b.invoice?.number ?? "",
+          invoiceStatus: b.invoice?.status ?? "not invoiced",
+          invoiced: b.invoice?.total ?? 0,
+          paid: b.invoice?.status === "paid" ? b.invoice.total : 0,
+        })),
+      );
+    } else {
+      throw new ForbiddenException("Statements are for DJs, promoters and admins");
+    }
+
+    const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+    const lines = [
+      "date,night,venue,dj,slot,fee,travel,invoice_number,invoice_status,invoiced,paid",
+      ...rows.map((r) =>
+        [
+          r.date.toISOString().slice(0, 10),
+          esc(r.night),
+          esc(r.venue),
+          esc(r.dj),
+          esc(r.slot),
+          r.fee,
+          r.travel,
+          esc(r.invoiceNumber),
+          esc(r.invoiceStatus),
+          r.invoiced,
+          r.paid,
+        ].join(","),
+      ),
+      ["TOTAL", "", "", "", "", sum(rows.map((r) => r.fee)), sum(rows.map((r) => r.travel)), "", "", sum(rows.map((r) => r.invoiced)), sum(rows.map((r) => r.paid))].join(","),
+    ];
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="statement-${range.key}.csv"`);
+    res.send(lines.join("\n"));
   }
 
   /** The DJ's confirmed and played gigs as an .ics file any calendar app can read. */

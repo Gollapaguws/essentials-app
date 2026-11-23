@@ -7,7 +7,7 @@
  * saved home base is never looked up again.
  */
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
-const USER_AGENT = "ESSENTIALS/1.0 (https://essentialsedm.com; hello@essentialsedm.com)";
+const USER_AGENT = "SONUS/1.0 (https://essentialsedm.com; hello@essentialsedm.com)";
 const MIN_INTERVAL_MS = 1100;
 
 let lastGeocodeAt = 0;

@@ -7,10 +7,8 @@ import { REDIS, RedisModule } from "./common/redis.provider";
 import { RedisThrottlerStorage } from "./common/redis-throttler.storage";
 import { AuthModule } from "./auth/auth.module";
 import { UsersModule } from "./users/users.module";
-import { MailModule } from "./mail/mail.module";
 import { EventsModule } from "./events/events.module";
 import { LoyaltyModule } from "./loyalty/loyalty.module";
-import { EmailEngineModule } from "./email-engine/email-engine.module";
 import { AnalyticsModule } from "./analytics/analytics.module";
 import { VenuesModule } from "./venues/venues.module";
 import { PromotionsModule } from "./promotions/promotions.module";
@@ -19,15 +17,18 @@ import { PaymentsModule } from "./payments/payments.module";
 import { InsightsModule } from "./insights/insights.module";
 import { SiteModule } from "./site/site.module";
 import { LiveModule } from "./live/live.module";
-import { MailboxesModule } from "./mailboxes/mailboxes.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { TelegramModule } from "./telegram/telegram.module";
 import { SocialPostingModule } from "./social/social-posting.module";
 import { SearchModule } from "./search/search.module";
+import { AccountMailModule } from "./account-mail/account-mail.module";
+import { UserMailModule } from "./user-mail/user-mail.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ["../../.env", ".env"] }),
+    AccountMailModule,
+    UserMailModule,
     ScheduleModule.forRoot(),
     RedisModule,
     ThrottlerModule.forRootAsync({
@@ -40,10 +41,8 @@ import { SearchModule } from "./search/search.module";
     }),
     AuthModule,
     UsersModule,
-    MailModule,
     EventsModule,
     LoyaltyModule,
-    EmailEngineModule.register(),
     VenuesModule,
     PromotionsModule,
     ArtistsModule,
@@ -52,7 +51,6 @@ import { SearchModule } from "./search/search.module";
     InsightsModule,
     SiteModule,
     LiveModule,
-    MailboxesModule,
     TelegramModule,
     NotificationsModule,
     SocialPostingModule,

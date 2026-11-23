@@ -28,7 +28,7 @@ interface DjTarget {
 interface TestResult {
   recipient: DjTarget;
   delivered: number;
-  channels: { inapp: number; email: number; telegram: number };
+  channels: { inapp: number; telegram: number };
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -102,7 +102,7 @@ export default function Notifications() {
     }
   };
 
-  /** Admin check: prove the bell + email + Telegram paths reach a real DJ. */
+  /** Admin check: prove the bell + Telegram paths reach a real DJ. */
   const sendTest = async () => {
     if (!targetId) return;
     setSending(true);
@@ -113,11 +113,10 @@ export default function Notifications() {
       const who =
         result.recipient.stageName ?? result.recipient.name ?? result.recipient.email;
       const parts = [`in-app ${result.channels.inapp}`];
-      if (result.channels.email) parts.push(`email ${result.channels.email}`);
       if (result.channels.telegram) parts.push(`telegram ${result.channels.telegram}`);
-      const silent = !result.channels.email && !result.channels.telegram;
+      const silent = !result.channels.telegram;
       setTestNotice(
-        `Test sent to ${who} — ${parts.join(" · ")}.${silent ? " No email or Telegram went out: the account has neither." : ""}`,
+        `Test sent to ${who} — ${parts.join(" · ")}.${silent ? " No Telegram went out: the account has not linked it." : ""}`,
       );
     } catch (err) {
       setError(errorMessage(err) ?? "Could not send the test notification.");
@@ -141,8 +140,8 @@ export default function Notifications() {
               )}
             </h1>
             <p className="text-neutral-500 text-xs mt-1">
-              {rows.length} total · DJ calls, gig confirmations and invoices. Emails and Telegram
-              carry the same messages.
+              {rows.length} total · DJ calls, gig confirmations and invoices. Telegram carries the
+              same messages where linked.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -171,8 +170,8 @@ export default function Notifications() {
                 Send a test notification
               </h2>
               <p className="text-neutral-500 text-xs mt-1">
-                Sends the same notice a DJ call sends: the bell feed, plus email and Telegram where
-                the DJ has them.
+                Sends the same notice a DJ call sends: the bell feed, plus Telegram where the DJ
+                has linked it.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">

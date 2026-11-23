@@ -67,3 +67,11 @@ API_URL=https://essentialsedm.com/api npm run smoke
 echo
 echo "Deploy gate: npm run smoke:mfa"
 API_URL=https://essentialsedm.com/api npm run smoke:mfa
+
+# The smoke run proves the HTML and chunks are served; it never executes them.
+# This drives a real browser through the login page and a protected route, so a
+# dashboard that hydrates into a loading shell fails the deploy instead of
+# reaching a user.
+echo
+echo "Deploy gate: npm run e2e:dashboard"
+SITE_URL=https://essentialsedm.com npm run e2e:dashboard

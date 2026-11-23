@@ -1,4 +1,4 @@
-# ESSENTIALS mobile
+# SONUS mobile
 
 Expo Router app for guests, DJs, promoters, venue managers, door staff and admins.
 

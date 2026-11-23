@@ -9,7 +9,7 @@ const links = [
   { label: "EVENTS", note: "Next nights, doors and tickets", to: { pathname: "/", hash: "#lineup" } },
   { label: "THE DJS", note: "The roster and their profiles", to: { pathname: "/", hash: "#djs" } },
   { label: "THE COLLECTIVE", note: "What the room is for", to: { pathname: "/", hash: "#collective" } },
-  { label: "CONTACT", note: "Join the mailing list", to: { pathname: "/", hash: "#contact" } },
+  { label: "CONTACT", note: "Where to find us", to: { pathname: "/", hash: "#contact" } },
   { label: "WHAT'S NEW", note: "What has landed lately", to: { pathname: "/whats-new" }, member: true },
   { label: "PRIVACY", note: "What we hold and your rights", to: { pathname: "/privacy" } },
 ];
@@ -142,9 +142,9 @@ export default function SiteNav() {
   return (
     <header className="noir-nav">
       {showInstall && (
-        <div className="noir-install" role="region" aria-label="Install the ESSENTIALS app">
+        <div className="noir-install" role="region" aria-label="Install the SONUS app">
           <div className="noir-install-copy">
-            <span className="noir-install-kicker">INSTALL ESSENTIALS</span>
+            <span className="noir-install-kicker">INSTALL SONUS</span>
             <p className="noir-install-text">
               {installPrompt
                 ? "Install for full-screen access and quicker launches."
@@ -170,7 +170,7 @@ export default function SiteNav() {
       )}
       <div className="noir-navbar">
         <Link to="/" className="noir-brand">
-          ESSENTIALS
+          SONUS
         </Link>
         <div className="noir-nav-actions">
           {hasDashboard && (
@@ -205,7 +205,7 @@ export default function SiteNav() {
       {open && (
         <div className="noir-overlay" id="site-menu" role="dialog" aria-modal="true" aria-label="Menu">
           <div className="noir-navbar">
-            <span className="noir-brand">ESSENTIALS</span>
+            <span className="noir-brand">SONUS</span>
             <button ref={closeRef} type="button" onClick={() => setOpen(false)} aria-label="Close menu" className="noir-menu">
               CLOSE
             </button>

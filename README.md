@@ -1,9 +1,16 @@
-# ESSENTIALS — Nightlife Promoter Platform
+# SONUS — Nightlife Promoter Platform
 
 Mobile (Expo) + promoter dashboard (Next.js) + API (NestJS/Prisma/Postgres/Redis-BullMQ).
 **Phase 1 shipped.** Phase 2 (venue portal, matching, group chats), Phase 3 (artist portal,
 routing/invoices/payments) and Phase 4 (payments, white-label, advanced analytics) have
 schema hooks already in place — see `packages/db/prisma/schema.prisma`.
+
+New here, or explaining the product to someone non-technical? Start with
+[`docs/what-is-essentials.md`](docs/what-is-essentials.md) — a plain-language
+overview, the public pitch and the DJ booking/invoicing flow.
+
+Planning the platform/commercial build (organisations, subscriptions,
+allowances, Viewing Room)? See [`docs/sonus-platform-plan.md`](docs/sonus-platform-plan.md).
 
 ## Stack
 - `apps/mobile` — Expo guest app: onboarding (email link or Google → invite code → profile), events
@@ -16,7 +23,7 @@ schema hooks already in place — see `packages/db/prisma/schema.prisma`.
   (guest|artist|promoter|venue_manager|admin), TOTP enforced for privileged roles,
   role-scoped queries everywhere, BullMQ email jobs, reminder scheduler, QR door check-in
   (signed HMAC tokens + DoorLog).
-- `packages/db` — Prisma schema + seed (demo event "ESSENTIALS: Amapiano Sunrise" @ The
+- `packages/db` — Prisma schema + seed (demo event "SONUS: Amapiano Sunrise" @ The
   Warehouse, 250 cap, 3 VIP tables, 12 guests).
 - `packages/api-client` — shared typed fetch client.
 - Excluded by design: 1-on-1 DMs, ads platform.

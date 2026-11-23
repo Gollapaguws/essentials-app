@@ -117,7 +117,7 @@ export default function ArtistPortal() {
               className="w-full bg-bg border border-line rounded-lg px-3 py-2 mt-1 opacity-60"
               value={form.travelRatePerKm}
             />
-            <span className="text-[11px] text-neutral-600">Standard rate set by ESSENTIALS</span>
+            <span className="text-[11px] text-neutral-600">Standard rate set by SONUS</span>
           </div>
           <button className="bg-neon text-bg font-black rounded-lg py-2 tracking-widest">SAVE PROFILE</button>
         </form>
@@ -167,7 +167,7 @@ export default function ArtistPortal() {
           </div>
           {telegram && !telegram.configured && (
             <p className="text-neutral-500 text-xs mt-2">
-              The bot is not configured on this server yet — alerts still arrive by email.
+              The bot is not configured on this server yet — alerts still arrive in the app.
             </p>
           )}
         </section>

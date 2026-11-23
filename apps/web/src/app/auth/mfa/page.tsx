@@ -139,7 +139,7 @@ export default function MfaPage() {
           <form className="space-y-3" onSubmit={verify}>
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
               <label htmlFor="totp">Authenticator code</label>
-              <InfoTip label="The 6 digits your authenticator app (Google Authenticator, 1Password, Authy) shows for ESSENTIALS. It changes every 30 seconds." />
+              <InfoTip label="The 6 digits your authenticator app (Google Authenticator, 1Password, Authy) shows for SONUS. It changes every 30 seconds." />
             </div>
             <input
               id="totp"

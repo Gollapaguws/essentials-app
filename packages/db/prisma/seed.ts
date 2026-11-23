@@ -14,7 +14,7 @@ async function main() {
     update: {},
     create: {
       email: "admin@essentials.example",
-      name: "ESSENTIALS Admin",
+      name: "SONUS Admin",
       role: Role.admin,
       verifiedBadge: true,
       referralCode: "ADM-001",
@@ -60,7 +60,7 @@ async function main() {
       id: "demo-event",
       venueId: venue.id,
       promoterId: promoter.id,
-      title: "ESSENTIALS: Amapiano Sunrise",
+      title: "SONUS: Amapiano Sunrise",
       description: "Rooftop opener. Afro & Amapiano till late.",
       date: new Date(Date.now() + 6 * 24 * 3600 * 1000),
       lineup: [
@@ -79,16 +79,6 @@ async function main() {
     create: { eventId: demoEvent.id },
   });
 
-  await prisma.emailSegment.upsert({
-    where: { id: "seg-techno-loyal" },
-    update: {},
-    create: {
-      id: "seg-techno-loyal",
-      name: "Techno fans who attended the last 3 events",
-      filter: { musicTastes: ["Techno"], minAttendedEvents: 3 },
-    },
-  });
-
   // 12 demo guests, RSVP'd
   for (let i = 1; i <= 12; i++) {
     const u = await prisma.user.upsert({
@@ -102,12 +92,6 @@ async function main() {
         vibeTag: i % 3 === 0 ? "Chill" : "Party",
         referralCode: `GST-${String(i).padStart(3, "0")}`,
       },
-    });
-    // guests grant email consent at signup
-    await prisma.consent.upsert({
-      where: { email_channel: { email: u.email, channel: "email" } },
-      update: { status: "granted" },
-      create: { email: u.email, userId: u.id, status: "granted", source: "signup" },
     });
     await prisma.guestList.upsert({
       where: { eventId_userId: { eventId: demoEvent.id, userId: u.id } },

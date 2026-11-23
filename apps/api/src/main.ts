@@ -39,6 +39,6 @@ async function bootstrap() {
   const port = config.get("PORT") ?? 4000;
   await app.listen(port);
   app.get(LiveGateway).attach(app.getHttpServer());
-  console.log(`ESSENTIALS API on :${port}`);
+  console.log(`SONUS API on :${port}`);
 }
 bootstrap();

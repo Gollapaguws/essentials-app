@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { colors, type } from "../../theme";
 import { api, type EventSummary } from "@essentials/api-client";
 
-/** Events feed: upcoming ESSENTIALS events across venues, live headcount. */
+/** Events feed: upcoming SONUS events across venues, live headcount. */
 export default function EventsFeed() {
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [refreshing, setRefreshing] = useState(false);

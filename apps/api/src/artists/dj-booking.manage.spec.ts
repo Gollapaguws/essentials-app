@@ -138,7 +138,7 @@ describe("DjBookingService.cancelAsAdmin", () => {
       expect.objectContaining({
         title: expect.stringContaining("SLOT CANCELLED"),
         body: expect.stringContaining("confirmed"),
-        channels: ["inapp", "email", "telegram"],
+        channels: ["inapp", "telegram"],
       }),
     );
     expect(deliver).toHaveBeenNthCalledWith(

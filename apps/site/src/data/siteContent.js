@@ -35,15 +35,17 @@ export const visuals = [
 ];
 // Editable defaults (server overrides via admin editor, GET /api/site/content)
 export const defaultContent = {
+  heroPitch:
+    "SONUS is Cape Town's home for warehouse parties, club nights and open-format sessions — house, techno, amapiano and hip-hop in the same room on the same night. Find a night, RSVP in seconds and walk in with your door pass on your phone: no paper tickets, no queues at the list. Bring friends, earn free entries, book a table, and catch the room live when you can't be there. Behind the scenes, the same app lets the promoters, DJs, venues and door staff who make the night happen organise the line-up, book the sets and settle the money — so the music gets the attention, not the admin.",
   tagline: "All sound. No filler. Underground rooms, real sound systems and lineups built for the floor.",
   ctaLabel: "GET ON THE LIST",
   city: "CAPE TOWN",
   quote: "WE BUILD ROOMS,\nNOT PLAYLISTS.",
   manifestoP1:
-    "ESSENTIALS is a music events company running warehouse parties, club nights and open-format sessions across South Africa. We book the records that move a floor, not the ones that chase a trend — house, techno, amapiano, hip-hop and everything in between, in the same room, on the same night.",
+    "SONUS is a music events company running warehouse parties, club nights and open-format sessions across South Africa. We book the records that move a floor, not the ones that chase a trend — house, techno, amapiano, hip-hop and everything in between, in the same room, on the same night.",
   manifestoP2:
     "Every event is built the same way: a sound system that can carry a low end, a lineup with range, and a door that stays open until the last record.",
   events: [],
-  footerLeft: "© 2026 ESSENTIALS — CAPE TOWN",
+  footerLeft: "© 2026 SONUS — CAPE TOWN",
   footerRight: "ALL SOUND. NO FILLER.",
 };

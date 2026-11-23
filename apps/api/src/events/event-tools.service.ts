@@ -95,7 +95,7 @@ export class EventToolsService {
     return prisma.event.update({ where: { id: eventId }, data: { status: "pending_venue_approval" } });
   }
 
-  /** Delete an event and its dependent rows (guest lists, bookings, chat, promos). Campaigns keep their history, detached. */
+  /** Delete an event and its dependent rows (guest lists, bookings, chat, promos). */
   async remove(user: JwtUser, eventId: string) {
     const event = await prisma.event.findUnique({
       where: { id: eventId },
@@ -118,8 +118,6 @@ export class EventToolsService {
       await tx.guestList.deleteMany({ where: { eventId } });
       await tx.match.deleteMany({ where: { eventId } });
       await tx.doorLog.deleteMany({ where: { eventId } });
-      // Campaigns may already have been sent, so keep them and just drop the link.
-      await tx.campaign.updateMany({ where: { eventId }, data: { eventId: null } });
       await tx.event.delete({ where: { id: eventId } });
     });
     return { ok: true, id: eventId };
@@ -138,9 +136,9 @@ export class EventToolsService {
     });
     const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = [
-      "name,email,headcount,status,checked_in_at,source_campaign",
+      "name,email,headcount,status,checked_in_at",
       ...rows.map((r) =>
-        [esc(r.user.name), esc(r.user.email), r.headcount, r.status, r.checkedInAt?.toISOString() ?? "", r.sourceCampaignId ?? ""].join(","),
+        [esc(r.user.name), esc(r.user.email), r.headcount, r.status, r.checkedInAt?.toISOString() ?? ""].join(","),
       ),
     ];
     res.setHeader("Content-Type", "text/csv; charset=utf-8");

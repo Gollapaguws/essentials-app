@@ -1,4 +1,5 @@
-import { BadRequestException, Controller, Get, HttpCode, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, HttpCode, Patch, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { ArrayMaxSize, IsArray, IsIn, IsOptional, IsString, MaxLength } from "class-validator";
 import { ConfigService } from "@nestjs/config";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { Throttle } from "@nestjs/throttler";
@@ -10,6 +11,20 @@ import { MAX_PROFILE_IMAGE_BYTES, storeImage } from "../common/media-storage";
 import type { VerifiedSession } from "./supabase-token.service";
 import { SkipMfa } from "../common/skip-mfa.decorator";
 import { SkipPasswordReset } from "../common/skip-password-reset.decorator";
+
+/** The genres and vibes the guest app offers at profile setup. */
+export const MUSIC_TASTES = ["House", "Techno", "Hip-Hop", "Afro", "Amapiano"] as const;
+export const VIBE_TAGS = ["Chill", "Party", "Networking"] as const;
+
+export class UpdateMeDto {
+  @IsOptional() @IsString() @MaxLength(60) name?: string;
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MUSIC_TASTES.length)
+  @IsIn(MUSIC_TASTES, { each: true })
+  musicTastes?: string[];
+  @IsOptional() @IsIn(VIBE_TAGS) vibeTag?: (typeof VIBE_TAGS)[number];
+}
 
 interface RequestIdentity extends VerifiedSession {
   id?: string | null;
@@ -58,6 +73,18 @@ export class AuthController {
   @Auth("admin")
   audit(@Query("limit") limit?: string) {
     return this.authUsers.audit(Number(limit) || 100);
+  }
+
+  /**
+   * The signed-in account's own profile: the guest app used to keep these in
+   * memory only, so a finished setup was lost on the next launch.
+   */
+  @Patch("me")
+  @UseGuards(SupabaseAuthGuard)
+  @SkipMfa()
+  @SkipPasswordReset()
+  updateMe(@CurrentUser() session: RequestIdentity, @Body() dto: UpdateMeDto) {
+    return this.authUsers.updateMe(session.id ?? session.sub, dto);
   }
 
   /** Profile photo for any signed-in account (jpg/png/webp/avif, max 5 MB). */

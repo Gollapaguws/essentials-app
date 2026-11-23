@@ -48,7 +48,7 @@ export class DjBookingService {
             : "slots open (day / evening / late-night)"
         }. Apply now.`,
         link: `${this.appUrl()}/artist`,
-        channels: ["inapp", "email", "telegram"],
+        channels: ["inapp", "telegram"],
       },
     );
     return { notified: artists.length };
@@ -151,7 +151,7 @@ export class DjBookingService {
       title: `DJ application: ${booking.artist.stageName}`,
       body: `${booking.artist.stageName} applied for ${slotLabel} at ${event.title}. Confirm in your dashboard.`,
       link: `${this.appUrl()}/applications`,
-      channels: ["inapp", "email", "telegram"],
+      channels: ["inapp", "telegram"],
     });
     return booking;
   }
@@ -218,7 +218,7 @@ export class DjBookingService {
       title: `Application cancelled — ${booking.event.title}`,
       body: `${profile.stageName} cancelled their application for ${booking.slot ?? "the slot"}.`,
       link: `${this.appUrl()}/applications`,
-      channels: ["inapp", "email"],
+      channels: ["inapp"],
     });
     return cancelled;
   }
@@ -255,17 +255,17 @@ export class DjBookingService {
     await this.notifications.deliver([booking.artist.userId], {
       kind: wasConfirmed ? "declined" : "application",
       title: `SLOT CANCELLED — ${booking.event.title}`,
-      body: `An Essentials admin cancelled your ${wasConfirmed ? "confirmed " : ""}${booking.slot ?? "slot"} at ${booking.event.title}.${wasConfirmed ? " The slot is open again." : ""} Contact the promoter if you need details.`,
+      body: `A SONUS admin cancelled your ${wasConfirmed ? "confirmed " : ""}${booking.slot ?? "slot"} at ${booking.event.title}.${wasConfirmed ? " The slot is open again." : ""} Contact the promoter if you need details.`,
       link: `${this.appUrl()}/gig-calendar`,
-      channels: ["inapp", "email", "telegram"],
+      channels: ["inapp", "telegram"],
     });
 
     await this.notifications.deliver([booking.event.promoterId], {
       kind: "application",
       title: `Admin cancelled a slot — ${booking.event.title}`,
-      body: `${booking.artist.stageName}'s ${booking.slot ?? "slot"} was cancelled by an Essentials admin.${wasConfirmed ? " The slot is open again." : ""}`,
+      body: `${booking.artist.stageName}'s ${booking.slot ?? "slot"} was cancelled by a SONUS admin.${wasConfirmed ? " The slot is open again." : ""}`,
       link: `${this.appUrl()}/applications`,
-      channels: ["inapp", "email"],
+      channels: ["inapp"],
     });
 
     if (booking.slotId) {
@@ -280,7 +280,7 @@ export class DjBookingService {
           title: `Slot open again — ${booking.event.title}`,
           body: `${booking.slot ?? "That slot"} at ${booking.event.title} is open again after an admin cancellation. The promoter is reviewing the other applications.`,
           link: `${this.appUrl()}/gig-calendar`,
-          channels: ["inapp", "email"],
+          channels: ["inapp"],
         });
       }
     }
@@ -336,7 +336,7 @@ export class DjBookingService {
           title: `Slot open again — ${booking.event.title}`,
           body: `${booking.slot ?? "Your slot"} at ${booking.event.title} is open again. The promoter is reviewing the other applications.`,
           link: `${this.appUrl()}/gig-calendar`,
-          channels: ["inapp", "email"],
+          channels: ["inapp"],
         });
       }
     }
@@ -351,7 +351,7 @@ export class DjBookingService {
       body,
       link: `${this.appUrl()}/artist`,
       // A decline is worth a bell, not a message on every channel.
-      channels: confirm ? ["inapp", "email", "telegram"] : ["inapp"],
+      channels: confirm ? ["inapp", "telegram"] : ["inapp"],
     });
     return prisma.artistBooking.findUnique({ where: { id: bookingId } });
   }
@@ -437,7 +437,7 @@ export class DjBookingService {
       title: `EXTENDED — ${booking.event.title}`,
       body: `The promoter added you to ${slot.label} at ${booking.event.title}. Fee: R${slot.fee.toLocaleString()}.`,
       link: `${this.appUrl()}/artist`,
-      channels: ["inapp", "email", "telegram"],
+      channels: ["inapp", "telegram"],
     });
     return created;
   }
@@ -535,7 +535,7 @@ export class DjBookingService {
           title: `Slot open again — ${booking.event.title}`,
           body: `${previousSlot ?? "That slot"} at ${booking.event.title} is open again. The promoter is reviewing the other applications.`,
           link: `${this.appUrl()}/gig-calendar`,
-          channels: ["inapp", "email"],
+          channels: ["inapp"],
         });
       }
     }
@@ -545,7 +545,7 @@ export class DjBookingService {
       title: `SLOT CHANGED — ${booking.event.title}`,
       body: `The promoter moved your ${previousSlot ?? "set"} to ${slot.label} at ${booking.event.title}. Fee: R${slot.fee.toLocaleString()}.`,
       link: `${this.appUrl()}/gig-calendar`,
-      channels: booking.status === "confirmed" ? ["inapp", "email", "telegram"] : ["inapp"],
+      channels: booking.status === "confirmed" ? ["inapp", "telegram"] : ["inapp"],
     });
     return moved;
   }
@@ -590,7 +590,7 @@ export class DjBookingService {
           ? `${booking.event.venue.name} confirmed your ${booking.slot ?? "set"}. You can invoice the venue for ${booking.performanceFee} now.`
           : `${booking.event.venue.name} confirmed your ${booking.slot ?? "set"}. This was an unpaid gig, so there is nothing to invoice.`,
       link: `${this.appUrl()}/gig-calendar`,
-      channels: ["inapp", "email"],
+      channels: ["inapp"],
     });
     return completed;
   }

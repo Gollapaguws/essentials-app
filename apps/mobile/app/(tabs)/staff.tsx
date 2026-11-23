@@ -13,19 +13,49 @@ interface StaffEvent {
   _count: { guestLists: number };
 }
 
+interface BudgetNight {
+  id: string;
+  budget: number;
+  committed: number;
+  remaining: number | null;
+  overBudget: boolean;
+  slots: number;
+  confirmedSlots: number;
+}
+
+interface BudgetOverview {
+  nights: BudgetNight[];
+  totals: { budget: number; committed: number; remaining: number; overBudgetNights: number };
+}
+
+const rand = (v: number) => `R${v.toLocaleString()}`;
+
 /**
- * Staff tab: the nights this promoter owns, with list fill at a glance.
- * `(tabs)/_layout` only mounts the tab for promoter/admin, but the endpoint
- * answers 403 to everyone else, so a direct link still gets the gate message.
+ * Staff tab: the nights this promoter owns, with list fill and DJ spend at a
+ * glance. `(tabs)/_layout` only mounts the tab for promoter/admin, but the
+ * endpoint answers 403 to everyone else, so a direct link still gets the gate
+ * message.
  */
 export default function Staff() {
   const [events, setEvents] = useState<StaffEvent[]>([]);
+  // Money per night, so a promoter can size another confirmation from a phone.
+  const [budgets, setBudgets] = useState<Record<string, BudgetNight>>({});
+  const [overview, setOverview] = useState<BudgetOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      setEvents(await api.get<StaffEvent[]>("/events/manage/list"));
+      const [list, money] = await Promise.allSettled([
+        api.get<StaffEvent[]>("/events/manage/list"),
+        api.get<BudgetOverview>("/events/budgets"),
+      ]);
+      if (list.status === "rejected") throw list.reason;
+      setEvents(list.value);
+      if (money.status === "fulfilled") {
+        setOverview(money.value);
+        setBudgets(Object.fromEntries(money.value.nights.map((n) => [n.id, n])));
+      }
       setError(null);
     } catch (err) {
       setError(
@@ -92,6 +122,29 @@ export default function Staff() {
               </Text>
             </View>
           )}
+          {!error && overview && overview.nights.length > 0 && (
+            <View style={s.card}>
+              <Text style={{ color: colors.neon, fontWeight: "800", letterSpacing: 1 }}>DJ BUDGET</Text>
+              <View style={s.stats}>
+                <View style={s.stat}>
+                  <Text style={s.statValue}>{rand(overview.totals.committed)}</Text>
+                  <Text style={s.statLabel}>COMMITTED</Text>
+                </View>
+                <View style={s.stat}>
+                  <Text style={[s.statValue, overview.totals.remaining < 0 && { color: "#FACC15" }]}>
+                    {rand(overview.totals.remaining)}
+                  </Text>
+                  <Text style={s.statLabel}>{overview.totals.remaining < 0 ? "OVER BUDGET" : "ROOM LEFT"}</Text>
+                </View>
+              </View>
+              <Text style={{ color: colors.muted, marginTop: 12 }}>
+                Across {overview.nights.length} upcoming night{overview.nights.length === 1 ? "" : "s"}.
+                {overview.totals.overBudgetNights > 0
+                  ? ` ${overview.totals.overBudgetNights} over the ceiling — raise it in the dashboard or decline a DJ.`
+                  : " Confirmations stop at each night's ceiling."}
+              </Text>
+            </View>
+          )}
         </View>
       }
       ListEmptyComponent={
@@ -119,6 +172,17 @@ export default function Staff() {
               ]}
             />
           </View>
+          {budgets[item.id] && (
+            <Text style={{ color: budgets[item.id].overBudget ? "#FACC15" : colors.muted, marginTop: 8, fontSize: 12 }}>
+              {budgets[item.id].confirmedSlots}/{budgets[item.id].slots} slots filled ·{" "}
+              {rand(budgets[item.id].committed)} committed ·{" "}
+              {budgets[item.id].remaining == null
+                ? "no ceiling"
+                : budgets[item.id].overBudget
+                  ? `${rand(Math.abs(budgets[item.id].remaining ?? 0))} over`
+                  : `${rand(budgets[item.id].remaining ?? 0)} left`}
+            </Text>
+          )}
         </View>
       )}
     />

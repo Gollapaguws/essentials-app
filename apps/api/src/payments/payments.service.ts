@@ -35,7 +35,7 @@ export class PaymentsService {
 
     const pending = invoice.payments.find((p) => p.status === PaymentStatus.pending);
     const appUrl = this.config.get("APP_URL") ?? "http://localhost:3001";
-    const description = `ESSENTIALS invoice ${invoice.number} — ${invoice.artist.stageName}`;
+    const description = `SONUS invoice ${invoice.number} — ${invoice.artist.stageName}`;
     const checkout = await this.provider.createCheckout({
       reference: pending?.reference ?? invoice.number,
       amountMinor: invoice.total * 100,

@@ -30,7 +30,7 @@ const copy = {
       "Each slot on the gig calendar shows its exact start, end and fee.",
       "Invoice the venue only after the promoter's completion confirmation for a gig you played.",
       "New Earnings view: what completed gigs have earned, without travel, matching what venues are billed.",
-      "Travel is the flat R4.95/km rate set by ESSENTIALS — DJs and promoters can't change it.",
+      "Travel is the flat R4.95/km rate set by SONUS — DJs and promoters can't change it.",
     ],
     href: "/earnings",
     label: "SEE EARNINGS",

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@essentials/api-client";
 import { DASHBOARD_ROLES, landingPath, type MeResponse } from "@essentials/auth";
 import { session } from "@/lib/session";
 import { siteAuth, siteAuthCallback, siteLoginUrl } from "@/lib/siteAuth";
@@ -15,7 +14,6 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
-  const [mailDown, setMailDown] = useState(false);
   const [checking, setChecking] = useState(true);
   const [googleBusy, setGoogleBusy] = useState(false);
   const router = useRouter();
@@ -93,24 +91,6 @@ export default function LoginPage() {
     }
   };
 
-  // Say the relay is down before the click, not after: otherwise staff ask for a
-  // reset link, get "sent", and wait for something that cannot arrive. A failed
-  // check on its own is not proof, so only a definite "down" raises the banner.
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .get<{ ok: boolean }>("/mail/status")
-      .then((status) => {
-        if (!cancelled) setMailDown(!status.ok);
-      })
-      .catch(() => {
-        /* the endpoint being unreachable is not evidence about the mail server */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const sendReset = async () => {
     setError(null);
     if (!email.includes("@")) {
@@ -152,15 +132,8 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen grid place-items-center px-6">
       <div className="w-full max-w-md border border-line bg-surface rounded-2xl p-8">
-        <h1 className="text-neon text-3xl font-black tracking-widest">ESSENTIALS</h1>
+        <h1 className="text-neon text-3xl font-black tracking-widest">SONUS</h1>
         <p className="text-neutral-500 mt-2 text-sm">Dashboard — sign in to continue.</p>
-        {mailDown && (
-          <p className="mt-4 text-xs text-amber-400" role="status">
-            Password reset email is down right now, so a reset link will not arrive. An admin can set
-            a password for you from Users.
-          </p>
-        )}
-
         {checking && (
           <p className="mt-6 text-xs uppercase tracking-widest text-neutral-500">Checking your session…</p>
         )}
@@ -190,7 +163,7 @@ export default function LoginPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
               <label htmlFor="email">Email</label>
-              <InfoTip label="The address on your ESSENTIALS account. Staff accounts are created by an admin; guests can sign up on the public site." />
+              <InfoTip label="The address on your SONUS account. Staff accounts are created by an admin; guests can sign up on the public site." />
             </div>
             <input
               id="email"

@@ -5,6 +5,54 @@ Phase 1 sends via **Resend** behind the swappable `MailProvider` interface
 **listmonk** (campaigns/segments) + **Postal** (MTA) — implement a new
 `MailProvider` (e.g. `ListmonkProvider`) and flip `MAIL_PROVIDER`.
 
+## Personal mail via Bluehost
+
+Bluehost cPanel mail is a **mailbox host, not a bulk sender**. Use it for
+person-to-person and low-volume transactional mail, and keep newsletter/weekly
+campaigns on Resend (or listmonk) — Bluehost applies per-mailbox sending limits and
+an acceptable-use policy that bulk flows will trip.
+
+Mailbox creation, passwords and forwarding stay in Bluehost's control panel; there
+is no API for that. The dashboard's `/mailboxes` page manages the VPS's own
+Dovecot mailboxes and is unrelated to Bluehost.
+
+### SMTP settings
+
+| | Bluehost cPanel mail | Bluehost Professional Email (Titan) |
+|---|---|---|
+| Host | `mail.<your-domain>` (or `<your-domain>`) | `smtp.titan.email` |
+| Port | 465 SSL/TLS (or 587 STARTTLS) | 465 SSL/TLS |
+| Username | full address, e.g. `hello@essentialsedm.com` | same |
+| Password | that mailbox's password | same |
+| Note | — | enable third-party app access first |
+
+Point the app at it in `.env`:
+
+```dotenv
+MAIL_PROVIDER="smtp"
+SMTP_HOST="mail.essentialsedm.com"
+SMTP_PORT="465"
+SMTP_SECURE="true"
+SMTP_USER="hello@essentialsedm.com"
+SMTP_PASS="…"
+MAIL_FROM="ESSENTIALS <hello@essentialsedm.com>"
+```
+
+`MAIL_FROM` must be a mailbox Bluehost owns for the domain, otherwise the send is
+rejected. `MAIL_PROVIDER` is global, so this routes **all** API mail through
+Bluehost; if campaigns must stay on Resend, send them through a second deployment
+or add per-flow provider routing before switching. The health check at
+`GET /api/mail/status` follows `SMTP_HOST`/`SMTP_PORT` and probes 465 over TLS.
+
+### DNS
+
+If Bluehost also handles inbound personal mail, move the domain's **MX** records to
+Bluehost and copy the **SPF** and **DKIM** values cPanel shows under *Email
+Deliverability*. Keep a single SPF TXT record (no second `v=spf1`); if the domain's
+MX stays elsewhere, add Bluehost's sending IPs to the existing SPF instead and
+publish the DKIM keys cPanel provides. Stay within SPF's 10-DNS-lookup limit when
+Resend is still in the record.
+
 ## DNS records (set at your DNS provider for `essentials.example`)
 
 | Record | Host | Value |
