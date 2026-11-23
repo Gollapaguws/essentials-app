@@ -22,7 +22,18 @@ number, and must not collide with a reserved name or an existing Unix account
 
 Prisma tracks the mailbox in `UserMailbox`; every action writes an `AuthEvent`
 (`mailbox_created`, `mailbox_password_reset`, `mailbox_disabled`,
-`mailbox_enabled`, `mailbox_deleted`).
+`mailbox_enabled`, `mailbox_deleted`, `mailbox_settings_emailed`).
+
+## Settings email
+
+Creating a mailbox emails its connection details (IMAP 993 SSL, SMTP 587
+STARTTLS, the address) to the account's **sign-in** address — never to the
+mailbox itself, and never with the password, which the administrator passes on
+separately. The dashboard's **Email settings** button re-sends it on demand via
+`POST /users/:id/mailbox/settings-email`; a relay that refuses the message
+returns `503` rather than reporting success. The login address must itself be
+deliverable: an `@essentialsedm.com` login only works if that local part exists
+as an account, alias or catch-all target.
 
 ## Aliases and catch-all
 

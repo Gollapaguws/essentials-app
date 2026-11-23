@@ -37,6 +37,9 @@ Notable changes to ESSENTIALS. Dates are UTC.
   parts, and one catch-all can route unknown `@essentialsedm.com` mail to a
   chosen mailbox. Both are generated into `/etc/postfix/virtual-mailboxes` and
   reloaded; the catch-all is off by default so unknown recipients still bounce.
+- **Settings email on demand.** Provisioning already emails the IMAP/SMTP details
+  (never the password) to the account's sign-in address; admins can now re-send it
+  from the mailbox panel with `POST /users/:id/mailbox/settings-email`.
 
 ### Transactional account mail
 

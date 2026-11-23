@@ -106,6 +106,30 @@ export class UserMailService {
     return { mailbox: await this.view(mailbox), password };
   }
 
+  /** Re-send the connection settings to the account's sign-in address. */
+  async emailSettings(userId: string, actor?: Actor) {
+    this.assertEnabled();
+    const user = await this.account(userId);
+    if (!user.mailbox) throw new NotFoundException("This account has no mailbox.");
+
+    const sent = await this.accountMail.send(user.email, {
+      kind: "mailbox-created",
+      address: user.mailbox.address,
+    });
+    if (!sent) {
+      throw new ServiceUnavailableException(
+        "The mail relay did not accept the message, so the settings were not sent. Check the sign-in address and the mail log.",
+      );
+    }
+
+    await this.audit(user.id, user.email, "mailbox_settings_emailed", {
+      to: user.email,
+      address: user.mailbox.address,
+      actor,
+    });
+    return { to: user.email, address: user.mailbox.address };
+  }
+
   /** Replace the extra local parts that deliver to this mailbox. */
   async updateAliases(userId: string, input: string[], actor?: Actor) {
     this.assertEnabled();

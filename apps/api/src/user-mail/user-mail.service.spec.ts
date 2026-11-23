@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
 import { prisma } from "@essentials/db";
@@ -232,6 +233,61 @@ describe("UserMailService", () => {
     });
     expect(aliasMap.sync).toHaveBeenCalled();
     expect(result.mailbox.aliases).toEqual(["bookings"]);
+  });
+
+  it("emails the settings to the sign-in address on request", async () => {
+    db.user.findUnique.mockResolvedValue({
+      ...USER,
+      mailbox: {
+        id: "m1",
+        userId: "u1",
+        address: "dj@essentialsedm.com",
+        localpart: "dj",
+        aliases: [],
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    const { service, accountMail } = setup();
+
+    const result = await service.emailSettings("u1", { email: "admin@example.com" });
+
+    expect(accountMail.send).toHaveBeenCalledWith("dj@example.com", {
+      kind: "mailbox-created",
+      address: "dj@essentialsedm.com",
+    });
+    expect(result).toEqual({ to: "dj@example.com", address: "dj@essentialsedm.com" });
+    expect(db.authEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ kind: "mailbox_settings_emailed" }),
+      }),
+    );
+  });
+
+  it("refuses to email settings when the account has no mailbox", async () => {
+    const { service } = setup();
+    await expect(service.emailSettings("u1")).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("reports a relay failure instead of claiming the settings were sent", async () => {
+    db.user.findUnique.mockResolvedValue({
+      ...USER,
+      mailbox: {
+        id: "m1",
+        userId: "u1",
+        address: "dj@essentialsedm.com",
+        localpart: "dj",
+        aliases: [],
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    const { service, accountMail } = setup();
+    accountMail.send.mockResolvedValue(false);
+
+    await expect(service.emailSettings("u1")).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
   it("refuses a catch-all that is not a provisioned mailbox", async () => {

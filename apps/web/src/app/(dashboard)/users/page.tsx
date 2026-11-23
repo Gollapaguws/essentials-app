@@ -354,6 +354,23 @@ export default function Users() {
     }
   };
 
+  const emailMailboxSettings = async () => {
+    if (!mailboxFor || !mailboxState?.mailbox) return;
+    setBusyId(mailboxFor.id);
+    setMailboxError(null);
+    try {
+      const result = await api.post<{ to: string }>(
+        `/users/${mailboxFor.id}/mailbox/settings-email`,
+        {},
+      );
+      setNotice(`Mailbox settings emailed to ${result.to}.`);
+    } catch (err) {
+      setMailboxError(errorMessage(err) ?? "Could not send the settings email.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const toggleMailbox = async () => {
     if (!mailboxFor || !mailboxState?.mailbox) return;
     const disabling = mailboxState.mailbox.status === "active";
@@ -687,6 +704,13 @@ export default function Users() {
                     className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 disabled:opacity-40"
                   >
                     RESET PASSWORD
+                  </button>
+                  <button
+                    disabled={busyId === mailboxFor.id}
+                    onClick={emailMailboxSettings}
+                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-line text-neutral-300 hover:border-neon hover:text-neon disabled:opacity-40"
+                  >
+                    EMAIL SETTINGS
                   </button>
                   <button
                     disabled={busyId === mailboxFor.id}

@@ -46,6 +46,14 @@ export class UserMailController {
     return this.mail.updateAliases(userId, dto.aliases, actor);
   }
 
+  /** Email the connection settings to the account's sign-in address. */
+  @Post("settings-email")
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  emailSettings(@Param("userId") userId: string, @CurrentUser() actor: JwtUser) {
+    return this.mail.emailSettings(userId, actor);
+  }
+
   /** Set a new password and return it once; the old one stops working. */
   @Post("password")
   @HttpCode(200)
