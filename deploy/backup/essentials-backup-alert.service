@@ -1,0 +1,8 @@
+[Unit]
+Description=Email the administrator when the ESSENTIALS backup fails
+After=essentials-backup.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/essentials-backup-alert

@@ -101,9 +101,84 @@ export class UserMailService {
     }
 
     await this.audit(user.id, user.email, "mailbox_created", { localpart, actor });
+    // The map carries the sign-in alias, so `name@domain` logins reach the mailbox.
+    await this.aliasMap.sync();
     // Settings go to the sign-in address, never the password.
     void this.accountMail.send(user.email, { kind: "mailbox-created", address: mailbox.address });
     return { mailbox: await this.view(mailbox), password };
+  }
+
+  /**
+   * Attach a mailbox that already exists on the mail server — one created before
+   * this feature, or by hand. The Unix account, its password and its stored mail
+   * are left exactly as they are; only the ownership row is created.
+   */
+  async adopt(userId: string, localpartInput: string | undefined, actor?: Actor) {
+    this.assertEnabled();
+    const user = await this.account(userId);
+    if (user.mailbox) throw new ConflictException("This account already has a mailbox.");
+
+    const localpart = normaliseLocalpart(localpartInput || user.email.split("@")[0]);
+    if (!localpart) throw new BadRequestException("Choose an address before the @.");
+    if (!isValidLocalpart(localpart)) {
+      throw new BadRequestException(
+        "Use 1–30 characters — letters, numbers, dots, dashes or underscores — starting and ending with a letter or number.",
+      );
+    }
+    if (isReservedLocalpart(localpart)) {
+      throw new BadRequestException(`${localpart} is reserved by the mail server.`);
+    }
+    if (await prisma.userMailbox.findUnique({ where: { localpart }, select: { id: true } })) {
+      throw new ConflictException(`${localpart}@${this.provisioner.domain} is already assigned.`);
+    }
+    if (!(await this.provisioner.userExists(localpart))) {
+      throw new BadRequestException(
+        `No ${localpart}@${this.provisioner.domain} account exists on the mail server — create a new mailbox instead.`,
+      );
+    }
+
+    const mailbox = await prisma.userMailbox.create({
+      data: { userId, localpart, address: this.provisioner.addressFor(localpart) },
+    });
+    await this.aliasMap.sync();
+    await this.audit(user.id, user.email, "mailbox_adopted", { localpart, actor });
+    return { mailbox: await this.view(mailbox) };
+  }
+
+  /** The mailbox belonging to the signed-in account, for its own console. */
+  async own(userId: string) {
+    const user = await this.account(userId);
+    return {
+      enabled: this.provisioner.enabled,
+      domain: this.provisioner.domain,
+      mailbox: user.mailbox ? await this.view(user.mailbox) : null,
+    };
+  }
+
+  /**
+   * Owner-initiated password change. The old password is not required — a user
+   * who has lost it must still be able to recover without an administrator.
+   */
+  async setOwnPassword(userId: string, password: string, actor?: Actor) {
+    this.assertEnabled();
+    const user = await this.account(userId);
+    if (!user.mailbox) throw new NotFoundException("This account has no mailbox.");
+    if (user.mailbox.status !== "active") {
+      throw new ConflictException("This mailbox is disabled. Ask an administrator to re-enable it.");
+    }
+    if (password.length < 10 || password.length > 72) {
+      throw new BadRequestException("Use a password between 10 and 72 characters.");
+    }
+    if (/[\r\n]/.test(password)) {
+      throw new BadRequestException("The password cannot contain line breaks.");
+    }
+
+    await this.provisioner.setPassword(user.mailbox.localpart, password);
+    await this.audit(user.id, user.email, "mailbox_password_reset_by_owner", {
+      address: user.mailbox.address,
+      actor,
+    });
+    return { ok: true };
   }
 
   /** Re-send the connection settings to the account's sign-in address. */

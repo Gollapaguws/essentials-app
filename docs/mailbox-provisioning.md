@@ -20,6 +20,12 @@ parts must be 1–30 characters of `[a-z0-9._-]`, start and end with a letter or
 number, and must not collide with a reserved name or an existing Unix account
 (`getent passwd`). The password is generated, returned once, and never stored.
 
+A mailbox that already exists on the mail server — created before this feature
+or by hand — is attached with **Link existing** (`POST /users/:id/mailbox/adopt`).
+Adoption only writes the ownership row: the Unix account, its password and its
+stored mail are untouched, and no settings email is sent because the password is
+unknown.
+
 Prisma tracks the mailbox in `UserMailbox`; every action writes an `AuthEvent`
 (`mailbox_created`, `mailbox_password_reset`, `mailbox_disabled`,
 `mailbox_enabled`, `mailbox_deleted`, `mailbox_settings_emailed`).
@@ -31,9 +37,22 @@ STARTTLS, the address) to the account's **sign-in** address — never to the
 mailbox itself, and never with the password, which the administrator passes on
 separately. The dashboard's **Email settings** button re-sends it on demand via
 `POST /users/:id/mailbox/settings-email`; a relay that refuses the message
-returns `503` rather than reporting success. The login address must itself be
-deliverable: an `@essentialsedm.com` login only works if that local part exists
-as an account, alias or catch-all target.
+returns `503` rather than reporting success.
+
+Sign-in addresses on `MAILBOX_DOMAIN` are routed to their owner's mailbox
+automatically: the map gains `smoke@domain → smoke-test@domain` for an account
+whose login and mailbox differ, so notices reach a real inbox. An alias set
+explicitly by an admin wins over that automatic line.
+
+## Owner password changes
+
+The account console (Account → Mailbox) shows the address and IMAP/SMTP details
+and sets a new mailbox password through `PATCH /mailbox/me/password`. The old
+password is not required, because the usual reason to be there is having lost
+it; the signed-in session and its two-step verification are the gate. Passwords
+must be 10–72 characters, cannot contain line breaks, are never emailed, and
+are refused while the mailbox is disabled. Each change is audited as
+`mailbox_password_reset_by_owner`.
 
 ## Aliases and catch-all
 

@@ -5,6 +5,19 @@ import { TopNav } from "@/components/TopNav";
 import { session, type DashboardDevice } from "@/lib/session";
 import { signOutEverywhere } from "@/lib/signOut";
 import { errorMessage } from "@/lib/errors";
+import { api } from "@essentials/api-client";
+
+interface OwnMailbox {
+  address: string;
+  status: string;
+  aliases: string[];
+}
+
+interface MailboxMe {
+  enabled: boolean;
+  domain: string;
+  mailbox: OwnMailbox | null;
+}
 
 const when = (iso: string) => {
   const date = new Date(iso);
@@ -32,6 +45,12 @@ export default function Account() {
   const [codes, setCodes] = useState<string[] | null>(null);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [mailbox, setMailbox] = useState<OwnMailbox | null>(null);
+  const [mailPassword, setMailPassword] = useState("");
+  const [mailConfirm, setMailConfirm] = useState("");
+  const [mailSaving, setMailSaving] = useState(false);
+  const [mailNotice, setMailNotice] = useState<string | null>(null);
+  const [mailError, setMailError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -46,7 +65,39 @@ export default function Account() {
     } catch {
       // Recovery codes are optional until MFA is enabled.
     }
+    try {
+      const own = await api.get<MailboxMe>("/mailbox/me");
+      setMailbox(own.mailbox);
+    } catch {
+      // Mailbox hosting may be off; the card simply stays hidden.
+    }
   }, []);
+
+  const changeMailboxPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mailbox) return;
+    setMailError(null);
+    setMailNotice(null);
+    if (mailPassword.length < 10) {
+      setMailError("Use at least 10 characters.");
+      return;
+    }
+    if (mailPassword !== mailConfirm) {
+      setMailError("The two passwords do not match.");
+      return;
+    }
+    setMailSaving(true);
+    try {
+      await api.patch("/mailbox/me/password", { password: mailPassword });
+      setMailPassword("");
+      setMailConfirm("");
+      setMailNotice("Mailbox password changed — use the new one in your mail app.");
+    } catch (err) {
+      setMailError(errorMessage(err) ?? "Could not change the mailbox password.");
+    } finally {
+      setMailSaving(false);
+    }
+  };
 
   useEffect(() => {
     void load();
@@ -183,6 +234,75 @@ export default function Account() {
             </div>
           )}
         </section>
+
+        {mailbox && (
+          <section className="border border-line bg-surface rounded-xl p-5 space-y-3">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wider">Mailbox</h2>
+              <p className="text-neutral-500 text-xs mt-1">
+                {mailbox.address} — sign in to your mail app with this address. Incoming: mail.
+                {mailbox.address.split("@")[1]} port 993 (SSL). Outgoing: port 587 (STARTTLS).
+              </p>
+              {mailbox.aliases.length > 0 && (
+                <p className="text-neutral-600 text-xs mt-1">
+                  Also receives:{" "}
+                  {mailbox.aliases
+                    .map((alias) => `${alias}@${mailbox.address.split("@")[1]}`)
+                    .join(", ")}
+                </p>
+              )}
+            </div>
+
+            {mailbox.status === "active" ? (
+              <form onSubmit={changeMailboxPassword} className="flex flex-wrap items-end gap-2">
+                <label className="space-y-1">
+                  <span className="block text-[10px] uppercase tracking-widest text-neutral-500">
+                    New password
+                  </span>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={mailPassword}
+                    onChange={(e) => setMailPassword(e.target.value)}
+                    minLength={10}
+                    className="bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-neon w-56"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="block text-[10px] uppercase tracking-widest text-neutral-500">
+                    Confirm
+                  </span>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={mailConfirm}
+                    onChange={(e) => setMailConfirm(e.target.value)}
+                    minLength={10}
+                    className="bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-neon w-56"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={mailSaving || !mailPassword || !mailConfirm}
+                  className="border border-neon/50 text-neon rounded-lg px-3 py-2 text-xs font-bold tracking-widest disabled:opacity-40"
+                >
+                  {mailSaving ? "SAVING…" : "SET PASSWORD"}
+                </button>
+              </form>
+            ) : (
+              <p className="text-amber-300 text-xs">
+                This mailbox is disabled — ask an administrator to re-enable it.
+              </p>
+            )}
+
+            <p className="text-neutral-600 text-[11px]">
+              Changing this replaces the old password immediately; mail apps still using the old one
+              will ask for the new one. The password is never emailed.
+            </p>
+            {mailNotice && <p className="text-neon text-sm">{mailNotice}</p>}
+            {mailError && <p className="text-red-400 text-sm">{mailError}</p>}
+          </section>
+        )}
       </main>
     </>
   );

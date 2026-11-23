@@ -280,6 +280,33 @@ export default function Users() {
     }
   };
 
+  const adoptMailbox = async () => {
+    if (!mailboxFor) return;
+    setBusyId(mailboxFor.id);
+    setMailboxError(null);
+    setMailboxCredentials(null);
+    try {
+      const result = await api.post<{ mailbox: Mailbox }>(
+        `/users/${mailboxFor.id}/mailbox/adopt`,
+        { localpart: mailboxLocalpart.trim() },
+      );
+      setMailboxState((prev) => ({
+        enabled: prev?.enabled ?? true,
+        domain: prev?.domain ?? "",
+        mailbox: result.mailbox,
+      }));
+      setAliasDraft(result.mailbox.aliases.join(", "));
+      setNotice(
+        `${result.mailbox.address} is now managed here; its existing mail and password were left untouched.`,
+      );
+      void load(q);
+    } catch (err) {
+      setMailboxError(errorMessage(err) ?? "Could not link the existing mailbox.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const saveAliases = async () => {
     if (!mailboxFor || !mailboxState?.mailbox) return;
     setBusyId(mailboxFor.id);
@@ -618,6 +645,14 @@ export default function Users() {
                 >
                   {busyId === mailboxFor.id ? "CREATING…" : "CREATE MAILBOX"}
                 </button>
+                <button
+                  type="button"
+                  disabled={busyId === mailboxFor.id || !mailboxLocalpart.trim()}
+                  onClick={adoptMailbox}
+                  className="rounded-lg px-3 py-2 text-xs font-bold tracking-widest border border-line text-neutral-300 hover:border-neon hover:text-neon disabled:opacity-40"
+                >
+                  LINK EXISTING
+                </button>
               </form>
             )}
 
@@ -659,6 +694,8 @@ export default function Users() {
                   </div>
                   <p className="text-neutral-600 text-[11px]">
                     Extra @{mailboxState.domain} addresses that deliver to this mailbox.
+                    {" "}
+                    A sign-in address on this domain reaches the mailbox automatically.
                   </p>
                 </div>
 

@@ -10,3 +10,5 @@ ExecStart=/usr/local/sbin/essentials-idrive-backup
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7
+# Mail the admin when the job fails (see essentials-backup-alert.service).
+OnFailure=essentials-backup-alert.service

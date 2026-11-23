@@ -91,6 +91,21 @@ describe("alias map", () => {
     const map = renderAliasMap([], null, "essentialsedm.com");
     expect(map).not.toContain("@essentialsedm.com\t");
   });
+
+  it("routes a sign-in address to its mailbox, letting an explicit alias win", () => {
+    const map = renderAliasMap(
+      [{ address: "smoke-test@essentialsedm.com", aliases: ["bookings"] }],
+      null,
+      "essentialsedm.com",
+      [
+        { localpart: "smoke", address: "smoke-test@essentialsedm.com" },
+        { localpart: "bookings", address: "smoke-test@essentialsedm.com" },
+      ],
+    );
+
+    expect(map).toContain("smoke@essentialsedm.com\tsmoke-test@essentialsedm.com");
+    expect(map.match(/bookings@essentialsedm\.com/g)).toHaveLength(1);
+  });
 });
 
 describe("local-part rules", () => {
@@ -288,6 +303,116 @@ describe("UserMailService", () => {
     accountMail.send.mockResolvedValue(false);
 
     await expect(service.emailSettings("u1")).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it("links a mailbox that already exists without touching it", async () => {
+    const mailbox = {
+      id: "m1",
+      userId: "u1",
+      address: "admin@essentialsedm.com",
+      localpart: "admin",
+      aliases: [],
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    db.userMailbox.create.mockResolvedValue(mailbox);
+    const { service, provisioner, accountMail, aliasMap } = setup({
+      userExists: jest.fn().mockResolvedValue(true),
+    });
+
+    const result = await service.adopt("u1", "admin", { email: "admin@example.com" });
+
+    expect(provisioner.create).not.toHaveBeenCalled();
+    expect(provisioner.setPassword).not.toHaveBeenCalled();
+    expect(accountMail.send).not.toHaveBeenCalled();
+    expect(aliasMap.sync).toHaveBeenCalled();
+    expect(result.mailbox.address).toBe("admin@essentialsedm.com");
+    expect(db.authEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ kind: "mailbox_adopted" }),
+      }),
+    );
+  });
+
+  it("refuses to link an address with no mail account on the server", async () => {
+    const { service } = setup();
+    await expect(service.adopt("u1", "nobody")).rejects.toBeInstanceOf(BadRequestException);
+    expect(db.userMailbox.create).not.toHaveBeenCalled();
+  });
+
+  it("lets the owner set a new mailbox password without the old one", async () => {
+    db.user.findUnique.mockResolvedValue({
+      ...USER,
+      mailbox: {
+        id: "m1",
+        userId: "u1",
+        address: "dj@essentialsedm.com",
+        localpart: "dj",
+        aliases: [],
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    const { service, provisioner } = setup();
+
+    await expect(service.setOwnPassword("u1", "correct horse battery")).resolves.toEqual({
+      ok: true,
+    });
+    expect(provisioner.setPassword).toHaveBeenCalledWith("dj", "correct horse battery");
+    expect(db.authEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ kind: "mailbox_password_reset_by_owner" }),
+      }),
+    );
+  });
+
+  it("rejects short passwords and line breaks from the owner", async () => {
+    db.user.findUnique.mockResolvedValue({
+      ...USER,
+      mailbox: {
+        id: "m1",
+        userId: "u1",
+        address: "dj@essentialsedm.com",
+        localpart: "dj",
+        aliases: [],
+        status: "active",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    const { service, provisioner } = setup();
+
+    await expect(service.setOwnPassword("u1", "short")).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(
+      service.setOwnPassword("u1", "longenough\ndj:evil"),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(provisioner.setPassword).not.toHaveBeenCalled();
+  });
+
+  it("refuses an owner password change while the mailbox is disabled", async () => {
+    db.user.findUnique.mockResolvedValue({
+      ...USER,
+      mailbox: {
+        id: "m1",
+        userId: "u1",
+        address: "dj@essentialsedm.com",
+        localpart: "dj",
+        aliases: [],
+        status: "disabled",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+    const { service, provisioner } = setup();
+
+    await expect(service.setOwnPassword("u1", "correct horse battery")).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(provisioner.setPassword).not.toHaveBeenCalled();
   });
 
   it("refuses a catch-all that is not a provisioned mailbox", async () => {

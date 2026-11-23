@@ -36,6 +36,17 @@ export class UserMailController {
     return this.mail.create(userId, dto.localpart, actor);
   }
 
+  /** Attach a mailbox that already exists on the mail server. */
+  @Post("adopt")
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  adopt(
+    @Param("userId") userId: string,
+    @Body() dto: CreateMailboxDto,
+    @CurrentUser() actor: JwtUser,
+  ) {
+    return this.mail.adopt(userId, dto.localpart, actor);
+  }
+
   /** Replace the extra local parts that deliver to this mailbox. */
   @Patch("aliases")
   setAliases(

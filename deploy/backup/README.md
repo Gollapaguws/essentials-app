@@ -46,14 +46,25 @@ password manager, not only on the VPS.
 
 ```bash
 install -m 755 deploy/backup/idrive-backup.sh /usr/local/sbin/essentials-idrive-backup
+install -m 755 deploy/backup/backup-alert.sh /usr/local/sbin/essentials-backup-alert
 install -m 644 deploy/backup/essentials-backup.service /etc/systemd/system/
+install -m 644 deploy/backup/essentials-backup-alert.service /etc/systemd/system/
 install -m 644 deploy/backup/essentials-backup.timer /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now essentials-backup.timer
 ```
 
-Configuration overrides (`IDRIVE_REMOTE`, `RETENTION_DAYS`, …) go in
-`/etc/essentials-backup.conf`; it is optional and read on every run.
+Configuration overrides (`IDRIVE_REMOTE`, `RETENTION_DAYS`, `ALERT_EMAIL`, …) go
+in `/etc/essentials-backup.conf`; it is optional and read on every run.
+
+## Failure alerts
+
+`essentials-backup.service` carries `OnFailure=essentials-backup-alert.service`,
+so a failed, timed-out or killed run emails the administrator with the last 40
+log lines. The recipient defaults to `admin@essentialsedm.com` and can be
+changed with `ALERT_EMAIL` in the config file. Emails leave through the local
+Postfix, so they deliver even when IDrive is unreachable — which is usually the
+reason the job failed.
 
 ## Verify and restore
 

@@ -17,6 +17,14 @@ export class CreateMailboxDto {
   localpart?: string;
 }
 
+export class SetOwnMailboxPasswordDto {
+  /** Chosen by the mailbox owner; no confirmation field is sent to the server. */
+  @IsString()
+  @MinLength(10)
+  @MaxLength(72)
+  password!: string;
+}
+
 export class SetMailboxStatusDto {
   @IsIn(["active", "disabled"])
   status!: "active" | "disabled";

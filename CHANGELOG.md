@@ -40,6 +40,13 @@ Notable changes to ESSENTIALS. Dates are UTC.
 - **Settings email on demand.** Provisioning already emails the IMAP/SMTP details
   (never the password) to the account's sign-in address; admins can now re-send it
   from the mailbox panel with `POST /users/:id/mailbox/settings-email`.
+- **Legacy mailboxes are adopted, not recreated.** *Link existing* attaches an
+  account that already exists on the mail server, keeping its mail and password.
+- **Sign-in addresses on the mail domain route to the owner's mailbox** in the
+  generated alias map, so account notices no longer bounce for those accounts.
+- **Owners reset their mailbox password from Account → Mailbox**
+  (`PATCH /mailbox/me/password`); the session is the gate, the password is never
+  emailed, and disabled mailboxes refuse the change.
 
 ### Transactional account mail
 
@@ -50,6 +57,14 @@ Notable changes to ESSENTIALS. Dates are UTC.
 - Delivery is best-effort — a relay failure is logged and never fails the admin
   action. The CI guard permits `nodemailer` only in
   `apps/api/src/account-mail`.
+
+### Off-site backups
+
+- **Nightly encrypted backup to IDrive e2** covers the Postgres dump, the phpList
+  database, uploaded media and campaign images; files are GPG-encrypted before
+  upload and pruned after 30 days.
+- **Failure alert.** `OnFailure=` on the backup unit emails the administrator the
+  last 40 log lines, so a silent 02:38 failure does not go unnoticed.
 
 ### Privacy notice
 
