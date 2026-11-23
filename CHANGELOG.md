@@ -62,11 +62,18 @@ Notable changes to ESSENTIALS. Dates are UTC.
 
 - **DJ statement dashboard** at `/statements`: every confirmed or played gig grouped
   by month, with agreed fee, travel, what was invoiced, what the venue has paid and
-  what is still owed — each month downloadable as CSV.
+  what is still owed — each month downloadable as CSV. Travel on an uninvoiced gig
+  is estimated from the DJ's home base at the platform rate (marked "estimated"),
+  so the month reflects what the invoice will add; invoiced gigs show the billed
+  amount instead.
 - **Promoter DJ statements** on the same route: one card per DJ across the
   promoter's nights, with monthly totals and a per-DJ CSV download
   (`/artists/statements.csv?artistId=…`). Access is checked against the promoter's
   own events, and admins see every promoter's DJs.
+- **Email a statement.** A promoter can send any DJ their month from the same
+  card (`POST /artists/statements/email`); it goes to the DJ's sign-in address,
+  never the promoter, and a refused relay returns `503` instead of reporting a
+  send that did not happen.
 
 ### Off-site backups
 

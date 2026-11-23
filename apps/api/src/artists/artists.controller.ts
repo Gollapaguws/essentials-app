@@ -172,6 +172,18 @@ export class ArtistsController {
     return this.artists.promoterStatements(user);
   }
 
+  /** Promoter: email a DJ their statement for one month. */
+  @Post("statements/email")
+  @HttpCode(200)
+  @Auth("promoter", "admin")
+  emailStatement(
+    @CurrentUser() user: JwtUser,
+    @Body("artistId") artistId: string,
+    @Body("month") month: string | undefined,
+  ) {
+    return this.artists.emailStatement(user, artistId, month);
+  }
+
   /** One month of DJ money for a DJ, promoter or admin, as a CSV statement. */
   @Get("statements.csv")
   @Auth("artist", "promoter", "admin")

@@ -13,7 +13,25 @@ export type AccountNotice =
   | { kind: "role-changed"; from: string; to: string }
   | { kind: "sign-in-reset" }
   | { kind: "mfa-changed"; enabled: boolean }
-  | { kind: "mailbox-created"; address: string };
+  | { kind: "mailbox-created"; address: string }
+  | {
+      kind: "statement";
+      month: string;
+      dj: string;
+      gigs: Array<{
+        date: string;
+        night: string;
+        venue: string;
+        slot: string | null;
+        fee: number;
+        travel: number;
+        invoiced: number;
+        paid: number;
+        invoice: string | null;
+        status: string;
+      }>;
+      totals: { agreed: number; invoiced: number; paid: number; outstanding: number };
+    };
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "administrator",
@@ -77,6 +95,20 @@ export function renderAccountNotice(
         "If you did not expect this change, contact the ESSENTIALS team.",
       ];
       break;
+    case "statement": {
+      const money = (value: number) => `R${value.toLocaleString()}`;
+      subject = `Your ${notice.month} ESSENTIALS statement`;
+      paragraphs = [
+        `Here is your statement for ${notice.month} as ${notice.dj}.`,
+        ...notice.gigs.map(
+          (gig) =>
+            `${gig.date} · ${gig.night} at ${gig.venue}${gig.slot ? ` (${gig.slot})` : ""} — fee ${money(gig.fee)}, travel ${money(gig.travel)}, ${gig.invoice ? `invoice ${gig.invoice} (${gig.status})` : "not invoiced"}, paid ${money(gig.paid)}`,
+        ),
+        `Agreed ${money(notice.totals.agreed)} · invoiced ${money(notice.totals.invoiced)} · paid ${money(notice.totals.paid)} · outstanding ${money(notice.totals.outstanding)}.`,
+        `You can download the CSV any time from ${appUrl} → Statements.`,
+      ];
+      break;
+    }
     case "mailbox-created": {
       const mailHost = `mail.${notice.address.split("@")[1]}`;
       subject = "Your ESSENTIALS mailbox is ready";

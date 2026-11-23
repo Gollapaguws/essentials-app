@@ -19,6 +19,7 @@ interface StatementGig {
   slot: string | null;
   fee: number;
   travel: number;
+  travelEstimated: boolean;
   agreed: number;
   invoiced: number;
   paid: number;
@@ -119,6 +120,8 @@ export default function Statements() {
   const [month, setMonth] = useState(thisMonth);
   const [noProfile, setNoProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!role) return;
@@ -139,6 +142,23 @@ export default function Statements() {
         .catch((e) => setError(errorMessage(e) ?? "Could not load DJ statements."));
     }
   }, [role, isDj]);
+
+  const emailStatement = async (dj: DjStatement) => {
+    setSendingId(dj.id);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await api.post<{ to: string }>("/artists/statements/email", {
+        artistId: dj.id,
+        month,
+      });
+      setNotice(`${monthLabel(month)} statement sent to ${dj.stageName} at ${result.to}.`);
+    } catch (e) {
+      setError(errorMessage(e) ?? "Could not email that statement.");
+    } finally {
+      setSendingId(null);
+    }
+  };
 
   if (isDj) {
     const totals = artist?.totals;
@@ -191,6 +211,11 @@ export default function Statements() {
             ? `${totals.gigs} gig${totals.gigs === 1 ? "" : "s"} across ${totals.months} month${totals.months === 1 ? "" : "s"}`
             : "Loading…"}
         </p>
+        <p className="text-neutral-600 text-[11px]">
+          Travel on uninvoiced gigs is estimated from your home base at the platform rate; invoiced
+          gigs show the amount that was billed. Add or fix your home base in My Profile to make the
+          estimate accurate.
+        </p>
 
         {(artist?.months ?? []).map((row) => (
           <Panel key={row.key}>
@@ -231,7 +256,12 @@ export default function Statements() {
                         </p>
                       </td>
                       <td className="px-1 py-2 text-right">{rand(gig.fee)}</td>
-                      <td className="px-1 py-2 text-right text-neutral-400">{rand(gig.travel)}</td>
+                      <td className="px-1 py-2 text-right text-neutral-400">
+                        {rand(gig.travel)}
+                        {gig.travelEstimated && (
+                          <span className="block text-[10px] text-neutral-600">estimated</span>
+                        )}
+                      </td>
                       <td className="px-1 py-2 text-right">{rand(gig.invoiced)}</td>
                       <td className="px-1 py-2 text-right text-neon">{rand(gig.paid)}</td>
                       <td className="px-1 py-2 text-xs">
@@ -255,6 +285,7 @@ export default function Statements() {
           <Panel>
             <p className="text-neutral-500 text-sm">
               No statements yet. A gig lands here once a promoter confirms you for it.
+              Travel on uninvoiced gigs is estimated from your home base.
             </p>
           </Panel>
         )}
@@ -286,6 +317,7 @@ export default function Statements() {
       />
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
+      {notice && <p className="text-neon text-sm">{notice}</p>}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Agreed" value={rand(totals?.agreed ?? 0)} />
@@ -305,11 +337,22 @@ export default function Statements() {
                   <span className="text-neon">{rand(dj.paid)} paid</span> · {rand(dj.outstanding)} outstanding
                 </p>
               </div>
-              <DownloadButton
-                path={`/artists/statements.csv?month=${month}&artistId=${dj.id}`}
-                filename={`statement-${slug(dj.stageName)}-${month}.csv`}
-                label="DOWNLOAD MONTH"
-              />
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => void emailStatement(dj)}
+                  disabled={sendingId === dj.id}
+                  title={`Email ${dj.stageName} their ${monthLabel(month)} statement`}
+                  className="border border-neon/40 text-neon rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest disabled:opacity-40"
+                >
+                  {sendingId === dj.id ? "SENDING…" : "EMAIL MONTH"}
+                </button>
+                <DownloadButton
+                  path={`/artists/statements.csv?month=${month}&artistId=${dj.id}`}
+                  filename={`statement-${slug(dj.stageName)}-${month}.csv`}
+                  label="DOWNLOAD MONTH"
+                />
+              </div>
             </div>
 
             <div className="overflow-x-auto mt-3">

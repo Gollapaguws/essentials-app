@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { prisma } from "@essentials/db";
 import { ArtistsService, statementMonth } from "./artists.service";
@@ -19,13 +23,19 @@ const db = prisma as unknown as {
   event: { findMany: jest.Mock };
 };
 
-const service = () => new ArtistsService({ get: () => undefined } as unknown as ConfigService);
+const accountMail = { send: jest.fn().mockResolvedValue(true) };
+const service = () =>
+  new ArtistsService(
+    { get: () => undefined } as unknown as ConfigService,
+    accountMail as unknown as import("../account-mail/account-mail.service").AccountMailService,
+  );
 const response = () => ({ setHeader: jest.fn(), send: jest.fn() });
 
 const artist: JwtUser = { sub: "artist-user", email: "dj@example.com", role: "artist" };
 const promoter: JwtUser = { sub: "promoter-1", email: "p@example.com", role: "promoter" };
 
 beforeEach(() => {
+  accountMail.send.mockReset().mockResolvedValue(true);
   db.artistProfile.findUnique.mockReset();
   db.artistBooking.findMany.mockReset();
   db.artistBooking.findFirst.mockReset();
@@ -103,6 +113,63 @@ describe("ArtistsService.statements", () => {
     expect(data.totals.gigs).toBe(3);
   });
 
+  it("estimates travel on uninvoiced gigs from the DJ's home base", async () => {
+    db.artistProfile.findUnique.mockResolvedValue({
+      id: "artist-1",
+      stageName: "DJ Nova",
+      homeLat: -26.2041,
+      homeLng: 28.0473,
+      travelRatePerKm: 4.95,
+    });
+    db.artistBooking.findMany.mockResolvedValue([
+      {
+        id: "b1",
+        startAt: new Date("2027-03-13T18:00:00.000Z"),
+        slot: null,
+        performanceFee: 500,
+        travelFee: 0,
+        event: {
+          title: "A",
+          venue: { name: "V", lat: -26.2041, lng: 28.2 },
+        },
+        invoice: null,
+      },
+    ]);
+
+    const data = await service().statements(artist);
+
+    const gig = data.months[0].gigs[0];
+    expect(gig.travel).toBeGreaterThan(0);
+    expect(gig.travelEstimated).toBe(true);
+    expect(gig.agreed).toBe(500 + gig.travel);
+  });
+
+  it("keeps the billed travel once the gig is invoiced", async () => {
+    db.artistProfile.findUnique.mockResolvedValue({
+      id: "artist-1",
+      stageName: "DJ Nova",
+      homeLat: -26.2041,
+      homeLng: 28.0473,
+      travelRatePerKm: 4.95,
+    });
+    db.artistBooking.findMany.mockResolvedValue([
+      {
+        id: "b1",
+        startAt: new Date("2027-03-13T18:00:00.000Z"),
+        slot: null,
+        performanceFee: 500,
+        travelFee: 120,
+        event: { title: "A", venue: { name: "V", lat: -26.2041, lng: 28.2 } },
+        invoice: { number: "INV-1", status: "sent", total: 620, payments: [] },
+      },
+    ]);
+
+    const gig = (await service().statements(artist)).months[0].gigs[0];
+
+    expect(gig.travel).toBe(120);
+    expect(gig.travelEstimated).toBe(false);
+  });
+
   it("keeps one statement per DJ for a promoter", async () => {
     db.artistBooking.findMany.mockResolvedValue([
       {
@@ -144,6 +211,73 @@ describe("ArtistsService.statements", () => {
     await service().promoterStatements({ sub: "a1", email: "a@example.com", role: "admin" });
 
     expect(db.artistBooking.findMany.mock.calls[0][0].where).not.toHaveProperty("event");
+  });
+});
+
+describe("ArtistsService.emailStatement", () => {
+  const booking = {
+    startAt: new Date("2027-03-13T18:00:00.000Z"),
+    slot: "20:00–21:00",
+    performanceFee: 500,
+    travelFee: 100,
+    event: { title: "Amapiano Sunrise", venue: { name: "The Warehouse" } },
+    invoice: { number: "INV-1", status: "sent", total: 600 },
+  };
+
+  function arrange() {
+    db.artistProfile.findUnique.mockResolvedValue({
+      id: "a1",
+      stageName: "DJ Nova",
+      user: { email: "dj@example.com" },
+    });
+    db.artistBooking.findFirst.mockResolvedValue({ id: "b1" });
+    db.artistBooking.findMany.mockResolvedValue([booking]);
+  }
+
+  it("emails the DJ the month's gigs and totals", async () => {
+    arrange();
+
+    await expect(service().emailStatement(promoter, "a1", "2027-03")).resolves.toEqual({
+      to: "dj@example.com",
+      month: "2027-03",
+      gigs: 1,
+    });
+
+    const notice = accountMail.send.mock.calls[0][1] as {
+      kind: string;
+      totals: Record<string, number>;
+    };
+    expect(notice.kind).toBe("statement");
+    expect(notice.totals).toEqual({ agreed: 600, invoiced: 600, paid: 0, outstanding: 600 });
+  });
+
+  it("refuses a month it cannot parse", async () => {
+    await expect(service().emailStatement(promoter, "a1", "2027-13")).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(accountMail.send).not.toHaveBeenCalled();
+  });
+
+  it("refuses a DJ who has never played for that promoter", async () => {
+    db.artistProfile.findUnique.mockResolvedValue({
+      id: "a1",
+      stageName: "DJ Nova",
+      user: { email: "dj@example.com" },
+    });
+    db.artistBooking.findFirst.mockResolvedValue(null);
+    await expect(service().emailStatement(promoter, "a1", "2027-03")).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(accountMail.send).not.toHaveBeenCalled();
+  });
+
+  it("reports a relay failure instead of claiming it was sent", async () => {
+    arrange();
+    accountMail.send.mockResolvedValue(false);
+
+    await expect(service().emailStatement(promoter, "a1", "2027-03")).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
   });
 });
 

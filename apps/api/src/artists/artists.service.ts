@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import type { Response } from "express";
 import { ConfigService } from "@nestjs/config";
 import { prisma, ArtistBookingStatus } from "@essentials/db";
@@ -6,6 +12,7 @@ import { rmSync } from "fs";
 import { join } from "path";
 import { storeImage } from "../common/media-storage";
 import { geocodeAddress, haversineKm, homeTravel } from "../common/geo";
+import { AccountMailService } from "../account-mail/account-mail.service";
 import type { JwtUser } from "../common/roles.guard";
 
 export { MAX_PROFILE_IMAGE_BYTES, PROFILE_IMAGE_EXTENSIONS } from "../common/media-storage";
@@ -123,7 +130,11 @@ function startOfDay(value: string | Date): Date {
  */
 @Injectable()
 export class ArtistsService {
-  constructor(private config: ConfigService) {}
+  constructor(
+    private config: ConfigService,
+    /** Optional so unit tests can build the service without a mail relay. */
+    private readonly accountMail?: AccountMailService,
+  ) {}
 
   private fuelPrice() {
     return parseFloat(this.config.get("FUEL_PRICE") ?? "23.5"); // currency per litre
@@ -662,7 +673,9 @@ export class ArtistsService {
         slot: true,
         performanceFee: true,
         travelFee: true,
-        event: { select: { title: true, venue: { select: { name: true } } } },
+        event: {
+          select: { title: true, venue: { select: { name: true, lat: true, lng: true } } },
+        },
         invoice: {
           select: {
             number: true,
@@ -682,6 +695,9 @@ export class ArtistsService {
           ? b.invoice.total
           : sum(b.invoice.payments.filter((p) => p.status === "paid").map((p) => p.amount))
         : 0;
+      // Uninvoiced gigs show the travel the invoice will add, from the DJ's home
+      // base; invoiced ones keep the amount that was actually billed.
+      const travel = b.invoice ? b.travelFee : (homeTravel(profile, b.event.venue)?.fee ?? 0);
       return {
         id: b.id,
         startAt: b.startAt,
@@ -689,8 +705,9 @@ export class ArtistsService {
         venue: b.event.venue.name,
         slot: b.slot,
         fee: b.performanceFee,
-        travel: b.travelFee,
-        agreed: b.performanceFee + b.travelFee,
+        travel,
+        travelEstimated: !b.invoice,
+        agreed: b.performanceFee + travel,
         invoiced: b.invoice?.total ?? 0,
         paid,
         invoice: b.invoice ? { number: b.invoice.number, status: b.invoice.status } : null,
@@ -842,6 +859,89 @@ export class ArtistsService {
         outstanding: sum(djs.map((d) => d.outstanding)),
       },
     };
+  }
+
+  /**
+   * Email one DJ their statement for a month, at the promoter's request. It goes
+   * to the DJ's sign-in address, never to the promoter, and carries a summary
+   * rather than the password-protected download.
+   */
+  async emailStatement(user: JwtUser, artistId: string, month: string | undefined) {
+    if (user.role !== "promoter" && user.role !== "admin") {
+      throw new ForbiddenException("Promoters only");
+    }
+    const range = statementMonth(month);
+    if (!range) throw new BadRequestException("month must be YYYY-MM");
+
+    const profile = await prisma.artistProfile.findUnique({
+      where: { id: artistId },
+      select: { id: true, stageName: true, user: { select: { email: true } } },
+    });
+    if (!profile) throw new NotFoundException("DJ not found");
+
+    if (user.role === "promoter") {
+      const onNights = await prisma.artistBooking.findFirst({
+        where: { artistId, event: { promoterId: user.sub } },
+        select: { id: true },
+      });
+      if (!onNights) throw new ForbiddenException("That DJ has no gigs at your nights");
+    }
+
+    const bookings = await prisma.artistBooking.findMany({
+      where: {
+        artistId,
+        status: { in: ["confirmed", "completed"] },
+        startAt: { gte: range.start, lt: range.end },
+        ...(user.role === "promoter" ? { event: { promoterId: user.sub } } : {}),
+      },
+      select: {
+        startAt: true,
+        slot: true,
+        performanceFee: true,
+        travelFee: true,
+        event: { select: { title: true, venue: { select: { name: true } } } },
+        invoice: { select: { number: true, status: true, total: true } },
+      },
+      orderBy: { startAt: "asc" },
+    });
+    if (!bookings.length) {
+      throw new BadRequestException(`No ${profile.stageName} gigs in ${range.key}`);
+    }
+
+    const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+    const gigs = bookings.map((b) => ({
+      date: b.startAt.toISOString().slice(0, 10),
+      night: b.event.title,
+      venue: b.event.venue.name,
+      slot: b.slot,
+      fee: b.performanceFee,
+      travel: b.travelFee,
+      invoiced: b.invoice?.total ?? 0,
+      paid: b.invoice?.status === "paid" ? b.invoice.total : 0,
+      invoice: b.invoice?.number ?? null,
+      status: b.invoice?.status ?? "not invoiced",
+    }));
+    const agreed = sum(gigs.map((g) => g.fee + g.travel));
+    const paid = sum(gigs.map((g) => g.paid));
+
+    const sent = await this.accountMail?.send(profile.user.email, {
+      kind: "statement",
+      month: range.key,
+      dj: profile.stageName,
+      gigs,
+      totals: {
+        agreed,
+        invoiced: sum(gigs.map((g) => g.invoiced)),
+        paid,
+        outstanding: agreed - paid,
+      },
+    });
+    if (!sent) {
+      throw new ServiceUnavailableException(
+        "The mail relay did not accept the message, so the statement was not sent.",
+      );
+    }
+    return { to: profile.user.email, month: range.key, gigs: gigs.length };
   }
 
   /**

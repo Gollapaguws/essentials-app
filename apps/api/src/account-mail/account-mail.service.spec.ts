@@ -34,6 +34,39 @@ describe("renderAccountNotice", () => {
     expect(rendered.html).toContain("&lt;script&gt;");
   });
 
+  it("lays a statement out with each gig and the month's totals", () => {
+    const rendered = renderAccountNotice(
+      {
+        kind: "statement",
+        month: "2027-03",
+        dj: "DJ Nova",
+        gigs: [
+          {
+            date: "2027-03-13",
+            night: "Amapiano Sunrise",
+            venue: "The Warehouse",
+            slot: "20:00–21:00",
+            fee: 500,
+            travel: 100,
+            invoiced: 600,
+            paid: 0,
+            invoice: "INV-1",
+            status: "sent",
+          },
+        ],
+        totals: { agreed: 600, invoiced: 600, paid: 0, outstanding: 600 },
+      },
+      { appUrl: "https://essentialsedm.com/dashboard" },
+    );
+
+    expect(rendered.subject).toBe("Your 2027-03 ESSENTIALS statement");
+    expect(rendered.text).toContain("as DJ Nova");
+    expect(rendered.text).toContain("Amapiano Sunrise at The Warehouse");
+    expect(rendered.text).toContain("outstanding R600");
+    expect(rendered.text).toContain("https://essentialsedm.com/dashboard");
+    expect(rendered.text).not.toMatch(/unsubscribe/i);
+  });
+
   it("states whether two-step verification was on or off", () => {
     const off = renderAccountNotice({ kind: "mfa-changed", enabled: false }, { appUrl: "https://x.test" });
     const on = renderAccountNotice({ kind: "mfa-changed", enabled: true }, { appUrl: "https://x.test" });
