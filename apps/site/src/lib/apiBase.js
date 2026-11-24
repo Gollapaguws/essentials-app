@@ -2,8 +2,7 @@
  * Where the public site talks to its API, and the host it calls itself.
  *
  * nginx serves the API on the same vhost as the site (`/api/`), so requests are
- * made to whatever origin the page was loaded from. That keeps them same-origin
- * on every host we serve — essentialsedm.com and sonus.essentialsedm.com alike —
+ * made to whatever origin the page was loaded from. That keeps them same-origin,
  * so no CORS or cookie is involved in reading a lineup.
  *
  * `VITE_API_URL` is only for pointing a local dev server at a deployed API.

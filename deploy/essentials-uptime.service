@@ -1,5 +1,5 @@
 [Unit]
-Description=ESSENTIALS uptime watch (site + API health)
+Description=SONUS uptime watch (site, API health, site config)
 After=network-online.target
 Wants=network-online.target
 

@@ -18,6 +18,12 @@
  * With neither set the pass still logs to the journal, so `journalctl -u
  * essentials-uptime` has the history.
  *
+ * The third check is about configuration rather than reachability: the site's
+ * HTML publishes the API and Supabase bases its bundle was built against, and
+ * each must answer as the service it should be. A host that has moved to
+ * another application still answers 200, so "does it respond" is not enough —
+ * this is what catches a build pointing at a domain we no longer serve.
+ *
  * This runs on the same VPS it watches: it catches a dead API, a dead nginx or
  * a bad deploy, but not the whole machine going away. Pair it with an external
  * check for that.
@@ -92,6 +98,59 @@ const checks = [
         return "200 but the response is not JSON";
       }
       if (body?.ok !== true) return "200 but the response is not { ok: true }";
+      return null;
+    },
+  },
+  {
+    id: "config",
+    name: "site config",
+    url: `${ORIGIN}/`,
+    async run() {
+      const res = await fetch(this.url, {
+        redirect: "follow",
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (!res.ok) return `HTTP ${res.status}`;
+      const html = await res.text();
+      const meta = (name) =>
+        new RegExp(`<meta name="${name}" content="([^"]*)"`).exec(html)?.[1] ?? "";
+
+      const apiBase = meta("sonus-api-base");
+      const supabase = meta("sonus-supabase-url");
+      // A build made before these tags existed is not a fault worth waking
+      // someone for, but it does mean the check is blind, so say so once.
+      if (!apiBase || !supabase) return "the served HTML does not publish its API/Supabase base";
+
+      // The API base is relative in production; resolve it the way the browser
+      // does, against the page's own origin.
+      const apiHealth = new URL(`${apiBase.replace(/\/+$/, "")}/health`, `${ORIGIN}/`);
+      const apiRes = await fetch(apiHealth, {
+        redirect: "follow",
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      const apiText = await apiRes.text();
+      if (!apiRes.ok) return `API base ${apiBase} answered HTTP ${apiRes.status}`;
+      try {
+        if (JSON.parse(apiText)?.ok !== true) throw new Error("shape");
+      } catch {
+        return `API base ${apiBase} did not answer as our API (expected { ok: true } at ${apiHealth})`;
+      }
+
+      // GoTrue's health payload names itself, which is how a different app on the
+      // same path is told apart from ours.
+      const authHealth = `${supabase.replace(/\/+$/, "")}/auth/v1/health`;
+      const authRes = await fetch(authHealth, {
+        redirect: "follow",
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      const authText = await authRes.text();
+      if (!authRes.ok) return `Supabase base ${supabase} answered HTTP ${authRes.status} at ${authHealth}`;
+      try {
+        const body = JSON.parse(authText);
+        if (!body?.version && !body?.name) throw new Error("shape");
+      } catch {
+        return `Supabase base ${supabase} did not answer as GoTrue at ${authHealth}`;
+      }
       return null;
     },
   },
