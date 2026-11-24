@@ -519,21 +519,33 @@ export class MailService {
   }
 
   /** Postfix on this host is the relay; no third-party SMTP credentials are involved. */
+  /**
+   * The relay user mail leaves by. Resend's verified domain signs what the local
+   * Postfix cannot: this host's DKIM record is stale and its IP is outside the
+   * domain's SPF, so mail accepted locally would be rejected by Gmail. Without a
+   * Resend key the local relay is still used, for a development machine.
+   */
   private async relay(raw: Buffer, envelope: { from: string; to: string[] }) {
-    const host = this.config.get<string>("SMTP_HOST")?.trim();
+    const resend = this.config.get<string>("RESEND_API_KEY")?.trim();
+    const host = resend ? "smtp.resend.com" : this.config.get<string>("SMTP_HOST")?.trim();
     if (!host) throw new ServiceUnavailableException("Mail sending is not configured on this server.");
-    const port = Number(this.config.get<string>("SMTP_PORT") || (this.config.get<string>("SMTP_USER") ? 465 : 25));
-    const secure = this.config.get<string>("SMTP_SECURE")
-      ? ["1", "true", "yes"].includes(String(this.config.get("SMTP_SECURE")).toLowerCase())
-      : port === 465;
-    const user = this.config.get<string>("SMTP_USER")?.trim();
+    const local = ["127.0.0.1", "localhost", "::1"].includes(host);
+    const port = resend
+      ? 465
+      : Number(this.config.get<string>("SMTP_PORT") || (this.config.get<string>("SMTP_USER") ? 465 : 25));
+    const secure = resend
+      ? true
+      : this.config.get<string>("SMTP_SECURE")
+        ? ["1", "true", "yes"].includes(String(this.config.get("SMTP_SECURE")).toLowerCase())
+        : port === 465;
+    const user = resend ? "resend" : this.config.get<string>("SMTP_USER")?.trim();
     const transport = createTransport({
       host,
       port,
       secure,
-      requireTLS: !secure && !["127.0.0.1", "localhost", "::1"].includes(host),
-      auth: user ? { user, pass: this.config.get<string>("SMTP_PASS") ?? "" } : undefined,
-      tls: { rejectUnauthorized: !["127.0.0.1", "localhost", "::1"].includes(host) },
+      requireTLS: !secure && !local,
+      auth: user ? { user, pass: (resend ?? this.config.get<string>("SMTP_PASS")) ?? "" } : undefined,
+      tls: { rejectUnauthorized: !local },
     });
     try {
       await transport.sendMail({ envelope, raw });
