@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 import { useAuth } from "@/components/AuthProvider";
 import { ConsolePage } from "@/components/console/ConsolePage";
 import { PageHeader } from "@/components/console/PageHeader";
@@ -76,6 +77,8 @@ interface DjStatement {
 
 interface PromoterStatements {
   djs: DjStatement[];
+  /** Present on the promoter view: which slice of the DJ list this is. */
+  page?: { limit: number; offset: number; shown: number; total: number; hasMore: boolean };
   totals: {
     djs: number;
     gigs: number;
@@ -87,6 +90,9 @@ interface PromoterStatements {
 }
 
 const rand = (value: number) => `R${value.toLocaleString()}`;
+
+/** Matches MAX_PAGE_SIZE on the API: one page of DJs, never the whole client book. */
+const PAGE_SIZE = 200;
 
 const monthLabel = (key: string) => {
   const date = new Date(`${key}-01T00:00:00Z`);
@@ -115,33 +121,23 @@ export default function Statements() {
   const role = me?.user.role;
   const isDj = role === "artist";
 
-  const [artist, setArtist] = useState<ArtistStatements | null>(null);
-  const [promoter, setPromoter] = useState<PromoterStatements | null>(null);
+  // One resource per side of the desk; `null` keeps the unused one idle.
+  const artistSource = useResource<ArtistStatements>(isDj ? "/artists/statements" : null);
+  const promoterSource = useResource<PromoterStatements>(
+    role === "promoter" || role === "admin"
+      ? `/artists/statements/djs?limit=${PAGE_SIZE}`
+      : null,
+  );
+  const artist = artistSource.data;
+  const promoter = promoterSource.data;
+  // A DJ without a profile gets the "create one" panel, not a red error.
+  const noProfile = isDj && /artist profile/i.test(artistSource.error ?? "");
+  const loadError = isDj ? (noProfile ? null : artistSource.error) : promoterSource.error;
+
   const [month, setMonth] = useState(thisMonth);
-  const [noProfile, setNoProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!role) return;
-    setError(null);
-    if (isDj) {
-      api
-        .get<ArtistStatements>("/artists/statements")
-        .then(setArtist)
-        .catch((e) => {
-          const message = errorMessage(e) ?? "Could not load your statements.";
-          if (/artist profile/i.test(message)) setNoProfile(true);
-          else setError(message);
-        });
-    } else if (role === "promoter" || role === "admin") {
-      api
-        .get<PromoterStatements>("/artists/statements/djs")
-        .then(setPromoter)
-        .catch((e) => setError(errorMessage(e) ?? "Could not load DJ statements."));
-    }
-  }, [role, isDj]);
 
   const emailStatement = async (dj: DjStatement) => {
     setSendingId(dj.id);
@@ -188,7 +184,11 @@ export default function Statements() {
           }
         />
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {(error ?? loadError) && (
+          <p role="alert" className="text-red-400 text-sm">
+            {error ?? loadError}
+          </p>
+        )}
         {noProfile && (
           <p className="border border-line bg-surface rounded-xl p-4 text-neutral-400 text-sm">
             Statements belong to a DJ profile. Create one on{" "}
@@ -316,8 +316,17 @@ export default function Statements() {
         }
       />
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {(error ?? loadError) && (
+        <p role="alert" className="text-red-400 text-sm">
+          {error ?? loadError}
+        </p>
+      )}
       {notice && <p className="text-neon text-sm">{notice}</p>}
+      {promoter?.page?.hasMore && (
+        <p className="text-amber-300/90 text-xs">
+          Showing {promoter.page.shown} of {promoter.page.total} DJs. The totals above cover all of them.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Agreed" value={rand(totals?.agreed ?? 0)} />

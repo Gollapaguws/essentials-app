@@ -8,6 +8,9 @@ import { LiveChatService } from "./live-chat.service";
 import { PublicEventsService } from "./public-events.service";
 import { PublicDjsService } from "./public-djs.service";
 import { ChangelogService } from "./changelog.service";
+import { ShareController } from "./share.controller";
+import { ShareService } from "./share.service";
+import { SitemapController } from "./sitemap.controller";
 
-@Module({ controllers: [SiteContentController, LiveChatController], providers: [SiteContentService, SiteStatsService, MediaCleanupService, LiveChatService, PublicEventsService, PublicDjsService, ChangelogService] })
+@Module({ controllers: [SiteContentController, LiveChatController, ShareController, SitemapController], providers: [SiteContentService, SiteStatsService, MediaCleanupService, LiveChatService, PublicEventsService, PublicDjsService, ChangelogService, ShareService] })
 export class SiteModule {}

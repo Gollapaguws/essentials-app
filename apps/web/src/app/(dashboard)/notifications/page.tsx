@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
 import { useAuth } from "@/components/AuthProvider";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 
 interface NotificationRow {
   id: string;
@@ -47,35 +48,19 @@ export default function Notifications() {
   const { me } = useAuth();
   const isAdmin = me?.user.role === "admin";
 
-  const [rows, setRows] = useState<NotificationRow[]>([]);
+  const rowsSource = useResource<NotificationRow[]>("/notifications");
+  const djsSource = useResource<DjTarget[]>(isAdmin ? "/notifications/djs" : null);
+  const rows = rowsSource.data ?? [];
+  const djs = djsSource.data ?? [];
+  // Load failures come from the resources; `error` is only for actions.
+  const loadError = rowsSource.error ?? djsSource.error;
+
   const [busy, setBusy] = useState(false);
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [djs, setDjs] = useState<DjTarget[]>([]);
   const [targetId, setTargetId] = useState("");
   const [sending, setSending] = useState(false);
   const [testNotice, setTestNotice] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      setRows(await api.get<NotificationRow[]>("/notifications"));
-      setError(null);
-    } catch (err) {
-      setError(errorMessage(err) ?? "Could not load notifications.");
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useEffect(() => {
-    if (!isAdmin) return;
-    api
-      .get<DjTarget[]>("/notifications/djs")
-      .then(setDjs)
-      .catch((err) => setError(errorMessage(err) ?? "Could not load DJ accounts."));
-  }, [isAdmin]);
 
   const unread = rows.filter((r) => !r.read).length;
   const visible = onlyUnread ? rows.filter((r) => !r.read) : rows;
@@ -84,7 +69,7 @@ export default function Notifications() {
     setBusy(true);
     try {
       await api.post("/notifications/read", {});
-      await load();
+      rowsSource.reload();
     } catch (err) {
       setError(errorMessage(err) ?? "Could not mark notifications read.");
     } finally {
@@ -95,8 +80,10 @@ export default function Notifications() {
   const markOne = async (id: string) => {
     try {
       await api.post("/notifications/read", { id });
-      // Optimistic: the row dims immediately, then the list is re-read.
-      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, read: true } : r)));
+      // Optimistic: the row dims immediately; a reload would be a needless round trip.
+      rowsSource.setData((prev) =>
+        (prev ?? []).map((r) => (r.id === id ? { ...r, read: true } : r)),
+      );
     } catch (err) {
       setError(errorMessage(err) ?? "Could not mark that notification read.");
     }
@@ -201,7 +188,12 @@ export default function Notifications() {
           </section>
         )}
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {(error ?? loadError) && (
+          <p role="alert" className="text-red-400 text-sm">
+            {error ?? loadError}
+          </p>
+        )}
+        {rowsSource.loading && <p className="text-neutral-500 text-xs">Loading…</p>}
 
         <div className="border border-line rounded-xl divide-y divide-line">
           {visible.map((row) => (

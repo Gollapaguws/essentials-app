@@ -8,6 +8,7 @@ import { DjBookingService } from "./dj-booking.service";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { MAX_PROFILE_IMAGE_BYTES } from "../common/media-storage";
+import { parsePaging } from "../common/paging";
 import { IsBoolean, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 
 class ProfileDto {
@@ -165,11 +166,15 @@ export class ArtistsController {
     return this.artists.statements(user);
   }
 
-  /** Promoter: one statement per DJ across their nights. */
+  /** Promoter: one statement per DJ across their nights, paged by DJ. */
   @Get("statements/djs")
   @Auth("promoter", "admin")
-  promoterStatements(@CurrentUser() user: JwtUser) {
-    return this.artists.promoterStatements(user);
+  promoterStatements(
+    @CurrentUser() user: JwtUser,
+    @Query("limit") limit?: string,
+    @Query("offset") offset?: string,
+  ) {
+    return this.artists.promoterStatements(user, parsePaging(limit, offset));
   }
 
   /** Promoter: email a DJ their statement for one month. */

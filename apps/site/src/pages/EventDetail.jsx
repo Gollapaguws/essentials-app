@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import SiteNav from "@/components/SiteNav";
 import SiteFooter from "@/components/SiteFooter";
+import { setPageMeta, shareImage } from "@/lib/share";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
 
@@ -42,6 +43,25 @@ export default function EventDetail() {
       live = false;
     };
   }, [id]);
+
+  // A night's link is usually shared, not searched: the unfurl has to carry the
+  // night's own title, date and lineup.
+  useEffect(() => {
+    if (state === "missing") {
+      setPageMeta({ title: "Night not found", path: "/events" });
+      return;
+    }
+    if (!event) return;
+    setPageMeta({
+      title: event.title,
+      description: [when(event.date), event.venue?.name, (event.artists ?? []).map((a) => a.name).join(", ")]
+        .filter(Boolean)
+        .join(" · "),
+      image: shareImage(API_URL, "event", event.id),
+      path: `/events/${event.id}`,
+      type: "article",
+    });
+  }, [event, state]);
 
   return (
     <div className="noir">

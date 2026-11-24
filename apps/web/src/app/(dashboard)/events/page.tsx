@@ -11,6 +11,9 @@ import { PageHeader } from "@/components/console/PageHeader";
 import { Panel } from "@/components/console/Panel";
 import { Badge } from "@/components/console/Badge";
 
+/** Matches MAX_PAGE_SIZE on the API: one page fills this screen, and never more. */
+const PAGE_SIZE = 200;
+
 interface EventSlotRow {
   id: string;
   label: string;
@@ -154,7 +157,12 @@ export default function EventManager() {
   // approves it on creation and calls the DJ roster straight away.
   const venueIsMine = !!selectedVenue?.managerId && selectedVenue.managerId === me?.user.sub;
 
-  const load = () => api.get<EventRow[]>("/events/manage/list").then(setEvents).catch((e) => setError(errorMessage(e)));
+  // Newest first, capped at one page; the API clamps the same ceiling.
+  const load = () =>
+    api
+      .get<EventRow[]>(`/events/manage/list?limit=${PAGE_SIZE}`)
+      .then(setEvents)
+      .catch((e) => setError(errorMessage(e)));
   useEffect(() => {
     setFocusId(new URLSearchParams(window.location.search).get("focus"));
     load();
@@ -380,6 +388,11 @@ export default function EventManager() {
         description="Plan the night, price the slots and keep the booking pipeline moving."
         actions={<Badge tone="info">{events.length} nights</Badge>}
       />
+      {events.length === PAGE_SIZE && (
+        <p className="text-amber-300/90 text-xs">
+          Showing the {PAGE_SIZE} most recent nights — older nights stay in the database and export.
+        </p>
+      )}
       {error && <p className="text-red-400 text-sm">{error}</p>}
       {notice && <p className="text-neon text-sm">{notice}</p>}
 

@@ -9,6 +9,7 @@ import { DjBookingService } from "../artists/dj-booking.service";
 import { VenuesService } from "../venues/venues.service";
 import { buildSlots, normalizePlan, SLOT_PHASES } from "./slots";
 import { loadNightArc, normalizeNightArc, parseNightArc } from "./night-arc";
+import { pageArgs, parsePaging, type Paging } from "../common/paging";
 
 export interface EventUpdateInput {
   title?: string;
@@ -519,7 +520,7 @@ export class EventsService {
     return prisma.event.update({ where: { id: eventId }, data });
   }
 
-  async listForPromoter(user: JwtUser) {
+  async listForPromoter(user: JwtUser, paging: Paging = parsePaging()) {
     if (
       user.role !== "promoter" &&
       user.role !== "venue_manager" &&
@@ -558,6 +559,7 @@ export class EventsService {
         },
       },
       orderBy: { date: "desc" },
+      ...pageArgs(paging),
     });
 
     // The budget view: what each slot pays, which are taken, and how much of the

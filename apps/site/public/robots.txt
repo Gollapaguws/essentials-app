@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# The console, sign-in and the API are for people with accounts, and their
+# pages are duplicates of the public site to a crawler.
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /register
+Disallow: /auth/
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /api/
+
+Sitemap: https://essentialsedm.com/sitemap.xml

@@ -62,6 +62,9 @@ const ROLE_LABEL: Record<string, string> = {
 
 const field = "bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-neon";
 
+/** Matches MAX_PAGE_SIZE on the API: one page fills this screen, and never more. */
+const PAGE_SIZE = 200;
+
 function formatBytes(bytes: number | null): string {
   if (bytes === null) return "—";
   if (bytes === 0) return "0 KB";
@@ -105,8 +108,10 @@ export default function Users() {
   const load = useCallback(async (search: string) => {
     setError(null);
     try {
-      const query = search.trim() ? `?q=${encodeURIComponent(search.trim())}` : "";
-      setUsers(await api.get<RegisteredUser[]>(`/users${query}`));
+      // One page, sized to what this screen renders; the API clamps it too.
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+      if (search.trim()) params.set("q", search.trim());
+      setUsers(await api.get<RegisteredUser[]>(`/users?${params}`));
     } catch (e) {
       setError(errorMessage(e) ?? "Could not load users.");
     }
@@ -524,6 +529,11 @@ export default function Users() {
               {users.length} account{users.length === 1 ? "" : "s"} · make someone a DJ, venue or
               promoter
             </p>
+            {users.length === PAGE_SIZE && (
+              <p className="text-amber-300/90 text-xs mt-1">
+                Showing the {PAGE_SIZE} newest accounts. Search by name or email to find anyone older.
+              </p>
+            )}
           </div>
           <form
             className="flex gap-2"

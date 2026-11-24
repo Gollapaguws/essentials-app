@@ -2,6 +2,11 @@ name: CI
 
 on:
   pull_request:
+  # The dashboard flows drive the deployed site with a real account, so they run on
+  # a schedule or by hand — never from a pull request.
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -182,3 +187,49 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: npm run build
+
+  e2e-flows:
+    name: Dashboard flows (read-only)
+    # Signs in with a real account, so this is never a PR check: it would send
+    # traffic from an untrusted branch and needs credentials anyway.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright-core install --with-deps chromium
+
+      - name: Check flow credentials
+        id: creds
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: |
+          if [ -n "$E2E_EMAIL" ] && [ -n "$E2E_PASSWORD" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::E2E_EMAIL / E2E_PASSWORD are not set, so the flows were skipped."
+          fi
+
+      # Read-only: fills the create form without submitting, finds the statement
+      # email action without sending, and proves the door rejects an unknown guest.
+      # Set E2E_WRITE=1 locally (against staging) to commit for real.
+      - name: Run flows
+        if: steps.creds.outputs.available == 'true'
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          E2E_BASE_URL: ${{ vars.E2E_BASE_URL || 'https://essentialsedm.com' }}
+        run: node scripts/e2e-flows.mjs

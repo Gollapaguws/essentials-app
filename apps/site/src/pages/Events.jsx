@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import SiteNav from "@/components/SiteNav";
 import SiteFooter from "@/components/SiteFooter";
+import { setPageMeta } from "@/lib/share";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
 
@@ -16,6 +17,15 @@ const when = (date) =>
 export default function Events() {
   const [events, setEvents] = useState([]);
   const [state, setState] = useState("loading");
+
+  useEffect(() => {
+    setPageMeta({
+      title: "Events",
+      description:
+        "Every announced ESSENTIALS night: warehouse parties, club nights and open-format sessions across South Africa.",
+      path: "/events",
+    });
+  }, []);
 
   useEffect(() => {
     fetch(`${API_URL}/site/events`)

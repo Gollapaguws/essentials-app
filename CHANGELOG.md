@@ -2,6 +2,50 @@
 
 Notable changes to ESSENTIALS. Dates are UTC.
 
+## 2026-11-24
+
+### Operational visibility
+
+- **`GET /api/health` is now a readiness probe.** It pings Postgres and Redis with
+  a 2s timeout and answers 503 when either is unreachable, instead of returning a
+  constant `{ ok: true }` while the database was down. The old `/api/site/health`
+  redirects here so existing monitors keep working.
+- **Every request carries an id.** Responses echo `x-request-id` and errors include
+  it in the body, so "something went wrong" can be matched to the stack trace in
+  the journal. A global exception filter logs 5xx with the stack and never leaks
+  an internal message to the client.
+
+### Bounded lists
+
+- Users, the event manager list and promoter DJ statements accept `limit`/`offset`
+  (default 50, maximum 200, clamped rather than rejected). The three dashboard
+  screens request one page and say so when they hit the ceiling; statement totals
+  still cover every DJ, not just the page.
+
+### Dashboard resilience
+
+- **A shared `useResource` hook** replaces the hand-rolled fetch/loading/error
+  effect: one GET, aborts on unmount, ignores a stale response overtaking a newer
+  one, and keeps the last data visible while reloading.
+- **Error, loading and not-found boundaries** for the console. A thrown render
+  error used to blank the entire dashboard; it now shows a recoverable screen with
+  a reference code and a retry button.
+
+### Sharing and discovery
+
+- **Event and DJ links unfurl properly.** Each page sets its own title, description,
+  canonical URL and Open Graph/Twitter tags, and the API renders a 1200×630 PNG
+  card per event and per DJ (venue, date, lineup) at
+  `/api/site/share/event/<id>` and `/api/site/share/dj/<id>`.
+- `/sitemap.xml` is generated from live events and published DJ profiles, and
+  `/robots.txt` keeps the console and API out of search results.
+
+### Tests
+
+- Three browser flows — create and publish a night, email a DJ statement, door
+  check-in — run against the deployed dashboard in read-only mode on a schedule
+  and by hand (`scripts/e2e-flows.mjs`). `E2E_WRITE=1` commits them for real.
+
 ## 2026-11-23
 
 ### Set-time arc on slots

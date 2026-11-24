@@ -13,6 +13,7 @@ import { DashboardSessionService } from "../auth/dashboard-session.service";
 import { ArtistsService } from "../artists/artists.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { AccountMailService } from "../account-mail/account-mail.service";
+import { pageArgs, parsePaging, type Paging } from "../common/paging";
 import { TelegramService } from "../telegram/telegram.service";
 import type { CreateUserDto, SetRoleDto, UpdateProfileDto } from "./users.dto";
 
@@ -310,7 +311,7 @@ export class UsersService {
   }
 
   /** Every registered account, newest first, optionally filtered by email/name. */
-  async list(q?: string) {
+  async list(q?: string, paging: Paging = parsePaging()) {
     const search = q?.trim();
     const users = await prisma.user.findMany({
       where: search
@@ -322,7 +323,7 @@ export class UsersService {
           }
         : undefined,
       orderBy: [{ createdAt: "desc" }],
-      take: 500,
+      ...pageArgs(paging),
       select: USER_SELECT,
     });
     return users.map(shape);

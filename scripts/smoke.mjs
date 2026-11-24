@@ -301,8 +301,12 @@ async function main() {
   console.log(`API: ${API}\nSupabase: ${SUPABASE}${READ_ONLY ? "\nMode: read-only" : ""}`);
 
   // 1. Health ------------------------------------------------------------
-  const health = await req(`${API}/site/health`);
-  check("GET /site/health → 200 ok", health.status === 200 && health.body?.ok === true, health.body);
+  const health = await req(`${API}/health`);
+  check(
+    "GET /health → 200 with db + redis ready",
+    health.status === 200 && health.body?.ok === true && health.body?.checks?.db?.ok === true,
+    health.body,
+  );
 
   const gt = await req(`${GT}/health`);
   check("Supabase auth health → 200", gt.status === 200, gt.body?.name ?? gt.body);

@@ -4,11 +4,15 @@ import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { AppModule } from "./app.module";
 import { LiveGateway } from "./live/live.gateway";
+import { requestId } from "./common/request-id.middleware";
+import { AllExceptionsFilter } from "./common/all-exceptions.filter";
 import helmet from "helmet";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   app.setGlobalPrefix("api");
+  // First, so every log line and error response from here on carries the id.
+  app.use(requestId);
   // nginx terminates TLS and forwards X-Forwarded-Proto; without this req.protocol
   // stays "http" and stored upload URLs become mixed content on the https dashboard.
   app.set("trust proxy", 1);
@@ -36,6 +40,9 @@ async function bootstrap() {
     credentials: true,
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // Last line of defence: an unexpected throw becomes a logged 500 with a
+  // request id instead of Nest's default body with no trace on the server.
+  app.useGlobalFilters(new AllExceptionsFilter());
   const port = config.get("PORT") ?? 4000;
   await app.listen(port);
   app.get(LiveGateway).attach(app.getHttpServer());

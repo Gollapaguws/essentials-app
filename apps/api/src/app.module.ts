@@ -21,6 +21,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
 import { TelegramModule } from "./telegram/telegram.module";
 import { SocialPostingModule } from "./social/social-posting.module";
 import { SearchModule } from "./search/search.module";
+import { HealthModule } from "./health/health.module";
 import { AccountMailModule } from "./account-mail/account-mail.module";
 import { UserMailModule } from "./user-mail/user-mail.module";
 
@@ -31,6 +32,7 @@ import { UserMailModule } from "./user-mail/user-mail.module";
     UserMailModule,
     ScheduleModule.forRoot(),
     RedisModule,
+    HealthModule,
     ThrottlerModule.forRootAsync({
       imports: [RedisModule],
       inject: [REDIS],

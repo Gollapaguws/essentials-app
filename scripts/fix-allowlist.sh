@@ -13,6 +13,6 @@ sleep 6
 docker inspect supabase_auth_app --format "{{range .Config.Env}}{{println .}}{{end}}" | grep -E "SITE_URL|ALLOW"
 systemctl restart essentials-api essentials-web
 sleep 6
-curl -s http://127.0.0.1:4000/api/site/health
+curl -s http://127.0.0.1:4000/api/health
 echo
 curl -sk https://essentialsedm.com/ -o /dev/null -w "site:%{http_code}\n"

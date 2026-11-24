@@ -4,6 +4,7 @@ import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { UsersService } from "./users.service";
 import { CreateUserDto, SetMfaDto, SetRoleDto, UpdateProfileDto } from "./users.dto";
+import { pageArgs, parsePaging, type Paging } from "../common/paging";
 
 /** Admin-only account administration: who is registered, and what they are. */
 @Controller("users")
@@ -11,9 +12,14 @@ import { CreateUserDto, SetMfaDto, SetRoleDto, UpdateProfileDto } from "./users.
 export class UsersController {
   constructor(private readonly users: UsersService) {}
 
+  /** Paged: an admin screen renders a page, never the whole account table. */
   @Get()
-  list(@Query("q") q?: string) {
-    return this.users.list(q);
+  list(
+    @Query("q") q?: string,
+    @Query("limit") limit?: string,
+    @Query("offset") offset?: string,
+  ) {
+    return this.users.list(q, parsePaging(limit, offset));
   }
 
   /** Provision an account with a temporary password; it must be reset on first sign-in. */

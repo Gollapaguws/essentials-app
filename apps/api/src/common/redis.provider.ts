@@ -11,6 +11,7 @@ export interface RedisCommands {
   ttl(key: string): Promise<number>;
   pexpire(key: string, ms: number): Promise<number>;
   pttl(key: string): Promise<number>;
+  ping(): Promise<string>;
   set(key: string, value: string, mode: "PX", ms: number, nx: "NX"): Promise<unknown>;
 }
 

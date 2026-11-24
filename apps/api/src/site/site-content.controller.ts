@@ -27,7 +27,10 @@ class SiteEventDto {
 /**
  * Public + admin front-page endpoints for essentialsedm.com.
  * GET /site/content public · POST /site/content admin · media upload admin ·
- * visit beacon public · my-data export authenticated · health public.
+ * visit beacon public · my-data export authenticated.
+ *
+ * The readiness probe lives at GET /api/health (HealthModule), not here: it checks
+ * Postgres and Redis rather than returning a constant.
  */
 @Controller("site")
 export class SiteContentController {
@@ -148,9 +151,4 @@ export class SiteContentController {
     return this.siteStats.stats();
   }
 
-  @Get("health")
-  @HttpCode(200)
-  health() {
-    return { ok: true, service: "essentials-api", time: new Date().toISOString() };
-  }
 }

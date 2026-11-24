@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import SiteNav from "@/components/SiteNav";
 import SiteFooter from "@/components/SiteFooter";
+import { setPageMeta, shareImage } from "@/lib/share";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
 
@@ -42,6 +43,17 @@ export default function DjProfile() {
       live = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    if (!dj) return;
+    setPageMeta({
+      title: dj.stageName,
+      description: (dj.bio ?? "").slice(0, 180),
+      image: shareImage(API_URL, "dj", dj.id),
+      path: `/djs/${dj.id}`,
+      type: "profile",
+    });
+  }, [dj]);
 
   return (
     <div className="noir">

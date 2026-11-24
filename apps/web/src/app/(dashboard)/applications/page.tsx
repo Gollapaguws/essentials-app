@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/console/PageHeader";
 import { Panel } from "@/components/console/Panel";
 import { Badge, bookingTone } from "@/components/console/Badge";
 import { EmptyState } from "@/components/console/EmptyState";
+import { useResource } from "@/hooks/useResource";
 
 interface ArtistNote {
   id: string;
@@ -53,7 +54,10 @@ const initials = (name: string) =>
 export default function Applications() {
   const { me } = useAuth();
   const isAdmin = me?.user.role === "admin";
-  const [apps, setApps] = useState<Application[]>([]);
+  // Decisions change this list, so it is always re-read rather than cached.
+  const appsSource = useResource<Application[]>("/artists/applications");
+  const apps = appsSource.data ?? [];
+  const setApps = appsSource.setData;
   const [error, setError] = useState<string | null>(null);
   // One note per DJ, not per application: editing either row edits the same note.
   const [editing, setEditing] = useState<{ artistId: string; body: string } | null>(null);
@@ -69,10 +73,6 @@ export default function Applications() {
   const [moving, setMoving] = useState<string | null>(null);
   const [adminCancelling, setAdminCancelling] = useState<string | null>(null);
 
-  // Decisions change this list; never let the browser answer from its HTTP cache.
-  const load = () => api.get<Application[]>("/artists/applications", { cache: "no-store" }).then(setApps).catch((e) => setError(errorMessage(e)));
-  useEffect(() => { load(); }, []);
-
   const decide = async (id: string, confirm: boolean) => {
     setError(null);
     try {
@@ -81,11 +81,11 @@ export default function Applications() {
         { confirm, reason: reasons[id]?.trim() || undefined },
       );
       // Keep the row on screen with its new status while the list reloads.
-      setApps((prev) => prev.map((a) => (a.id === id
+      setApps((prev) => (prev ?? []).map((a) => (a.id === id
         ? { ...a, status: decided.status, declineReason: decided.declineReason ?? a.declineReason }
         : a)));
       setReasons((prev) => ({ ...prev, [id]: "" }));
-      load();
+      appsSource.reload();
     } catch (err) { setError(errorMessage(err)); }
   };
 
@@ -97,7 +97,7 @@ export default function Applications() {
     try {
       await api.post(`/artists/bookings/${a.id}/extend`, { slotId });
       setExtendChoices((prev) => ({ ...prev, [a.id]: "" }));
-      load();
+      appsSource.reload();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -113,7 +113,7 @@ export default function Applications() {
     try {
       await api.post(`/artists/bookings/${a.id}/move`, { slotId });
       setMoveChoices((prev) => ({ ...prev, [a.id]: "" }));
-      load();
+      appsSource.reload();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -131,8 +131,8 @@ export default function Applications() {
     setAdminCancelling(a.id);
     try {
       await api.post(`/artists/bookings/${a.id}/cancel`);
-      setApps((prev) => prev.map((row) => row.id === a.id ? { ...row, status: "cancelled" } : row));
-      await load();
+      setApps((prev) => (prev ?? []).map((row) => row.id === a.id ? { ...row, status: "cancelled" } : row));
+      appsSource.reload();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -145,7 +145,7 @@ export default function Applications() {
     setError(null);
     try {
       await api.post(`/artists/bookings/${id}/complete`);
-      load();
+      appsSource.reload();
     } catch (err) { setError(errorMessage(err)); }
   };
 
@@ -161,7 +161,7 @@ export default function Applications() {
     try {
       const saved = await api.patch<{ note: ArtistNote | null }>(`/artists/${editing.artistId}/note`, { body: editing.body });
       // The note belongs to the DJ, so every row for them reflects the save.
-      setApps((prev) => prev.map((r) => (r.artist.id === editing.artistId ? { ...r, note: saved.note } : r)));
+      setApps((prev) => (prev ?? []).map((r) => (r.artist.id === editing.artistId ? { ...r, note: saved.note } : r)));
       setEditing(null);
     } catch (err) {
       setNoteError(errorMessage(err));
@@ -187,11 +187,12 @@ export default function Applications() {
         }
       />
 
-      {error && (
+      {(error ?? appsSource.error) && (
         <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-2.5 text-sm text-red-300">
-          {error}
+          {error ?? appsSource.error}
         </div>
       )}
+      {appsSource.loading && <p className="text-neutral-500 text-xs">Loading applications…</p>}
 
       <Panel
         title="Application queue"

@@ -8,6 +8,7 @@ import {
 import type { Response } from "express";
 import { ConfigService } from "@nestjs/config";
 import { prisma, ArtistBookingStatus } from "@essentials/db";
+import { parsePaging, type Paging } from "../common/paging";
 import { rmSync } from "fs";
 import { join } from "path";
 import { storeImage } from "../common/media-storage";
@@ -759,7 +760,7 @@ export class ArtistsService {
    * Promoter view: one statement per DJ across every night they have played at
    * this promoter's events, grouped by month so a month can be handed over.
    */
-  async promoterStatements(user: JwtUser) {
+  async promoterStatements(user: JwtUser, paging: Paging = parsePaging()) {
     if (user.role !== "promoter" && user.role !== "admin") {
       throw new ForbiddenException("Promoters only");
     }
@@ -822,7 +823,7 @@ export class ArtistsService {
       byArtist.set(b.artist.id, entry);
     }
 
-    const djs = [...byArtist.values()]
+    const allDjs = [...byArtist.values()]
       .map((entry) => {
         const gigs = entry.gigs as Array<{ startAt: Date; fee: number; travel: number; agreed: number; invoiced: number; paid: number }>;
         const months = new Map<string, typeof gigs>();
@@ -854,15 +855,26 @@ export class ArtistsService {
       })
       .sort((a, b) => a.stageName.localeCompare(b.stageName));
 
+    // Grouping needs every booking, but only one screen's worth of DJs is shipped.
+    // The totals stay grand totals so the header never under-reports money.
+    const djs = allDjs.slice(paging.offset, paging.offset + paging.limit);
+
     return {
       djs,
       totals: {
-        djs: djs.length,
-        gigs: sum(djs.map((d) => d.gigs.length)),
-        agreed: sum(djs.map((d) => d.agreed)),
-        invoiced: sum(djs.map((d) => d.invoiced)),
-        paid: sum(djs.map((d) => d.paid)),
-        outstanding: sum(djs.map((d) => d.outstanding)),
+        djs: allDjs.length,
+        gigs: sum(allDjs.map((d) => d.gigs.length)),
+        agreed: sum(allDjs.map((d) => d.agreed)),
+        invoiced: sum(allDjs.map((d) => d.invoiced)),
+        paid: sum(allDjs.map((d) => d.paid)),
+        outstanding: sum(allDjs.map((d) => d.outstanding)),
+      },
+      page: {
+        limit: paging.limit,
+        offset: paging.offset,
+        shown: djs.length,
+        total: allDjs.length,
+        hasMore: paging.offset + djs.length < allDjs.length,
       },
     };
   }

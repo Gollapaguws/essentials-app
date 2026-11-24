@@ -77,7 +77,7 @@ const checks = [
   {
     id: "api",
     name: "API health",
-    url: process.env.UPTIME_API_URL ?? `${API}/site/health`,
+    url: process.env.UPTIME_API_URL ?? `${API}/health`,
     async run() {
       const res = await fetch(this.url, {
         redirect: "follow",
