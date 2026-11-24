@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
 import { API_URL, api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 
 interface InvoiceRef {
   id: string;
@@ -52,29 +53,16 @@ function invoiceState(gig: PlayedGig) {
 
 /** Artist: money earned from played gigs, what is invoiced, and what is still owed. */
 export default function Earnings() {
-  const [data, setData] = useState<Earnings | null>(null);
+  const source = useResource<Earnings>("/artists/earnings");
+  const data = source.data;
+  // An admin opening the page has no DJ profile yet — that is not an error.
+  const noProfile = /artist profile/i.test(source.error ?? "");
+  const loadError = noProfile ? null : source.error;
+
   const [busyId, setBusyId] = useState<string | null>(null);
   const [remindingId, setRemindingId] = useState<string | null>(null);
-  const [noProfile, setNoProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      setData(await api.get<Earnings>("/artists/earnings"));
-      setNoProfile(false);
-    } catch (e) {
-      const message = errorMessage(e) ?? "Could not load your earnings.";
-      // An admin opening the page has no DJ profile yet — that is not an error.
-      if (/artist profile/i.test(message)) setNoProfile(true);
-      else setError(message);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const invoice = async (gig: PlayedGig) => {
     setBusyId(gig.id);
@@ -83,7 +71,7 @@ export default function Earnings() {
     try {
       const inv = await api.post<{ number: string }>("/invoices/generate", { bookingIds: [gig.id] });
       setNotice(`Invoice ${inv.number} sent to ${gig.venue} for ${rand(gig.amount)}.`);
-      await load();
+      source.reload();
     } catch (e) {
       setError(errorMessage(e) ?? "Could not invoice this gig.");
     } finally {
@@ -123,7 +111,11 @@ export default function Earnings() {
         </div>
 
         {notice && <p className="text-neon text-sm">{notice}</p>}
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {(error ?? loadError) && (
+          <p role="alert" className="text-red-400 text-sm">
+            {error ?? loadError}
+          </p>
+        )}
 
         {noProfile && (
           <p className="border border-line bg-surface rounded-xl p-4 text-neutral-400 text-sm">

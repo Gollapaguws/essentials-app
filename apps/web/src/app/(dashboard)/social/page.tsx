@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 
 interface Post {
   id: string; content: string; platforms: string[]; mediaUrl?: string | null;
@@ -26,8 +27,10 @@ const ALL = [
 
 /** Central social media hub: AI-generated copy → post to every platform. */
 export default function SocialHub() {
-  const [accounts, setAccounts] = useState<Accounts | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const accountsSource = useResource<Accounts>("/social/accounts");
+  const accounts = accountsSource.data;
+  const postsSource = useResource<Post[]>("/social/posts");
+  const posts = postsSource.data ?? [];
   const [content, setContent] = useState("");
   const [topic, setTopic] = useState("");
   const [venue, setVenue] = useState("The Warehouse, Cape Town");
@@ -38,12 +41,6 @@ export default function SocialHub() {
   const [schedule, setSchedule] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-
-  const load = () => {
-    api.get<Accounts>("/social/accounts").then(setAccounts).catch((e) => setError(errorMessage(e)));
-    api.get<Post[]>("/social/posts").then(setPosts).catch(() => {});
-  };
-  useEffect(() => { load(); }, []);
 
   const togglePlatform = (key: string) =>
     setSelected((p) => (p.includes(key) ? p.filter((x) => x !== key) : [...p, key]));
@@ -73,13 +70,13 @@ export default function SocialHub() {
       });
       setMsg(scheduled || schedule ? "Post scheduled." : "Posted to selected platforms.");
       setContent("");
-      load();
+      postsSource.reload();
     } catch (err) { setError(errorMessage(err)); }
     finally { setPosting(false); }
   };
 
   const publishAgain = async (id: string) => {
-    try { await api.post(`/social/posts/${id}/publish`, {}); load(); setMsg("Republished."); }
+    try { await api.post(`/social/posts/${id}/publish`, {}); postsSource.reload(); setMsg("Republished."); }
     catch (err) { setError(errorMessage(err)); }
   };
 
@@ -96,7 +93,11 @@ export default function SocialHub() {
           configured platforms ({accounts?.autoPublish.join(", ") || "none configured yet"}), the rest get a
           copy button + composer link.
         </p>
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {(error ?? accountsSource.error) && (
+          <p role="alert" className="text-red-400 text-sm">
+            {error ?? accountsSource.error}
+          </p>
+        )}
         {msg && <p className="text-neon text-sm">{msg}</p>}
 
         <section className="border border-line bg-surface rounded-xl p-4 space-y-3">

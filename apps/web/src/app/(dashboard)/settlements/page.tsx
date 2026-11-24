@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Stat } from "@/components/Stat";
-import { api } from "@essentials/api-client";
-import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 import { ConsolePage } from "@/components/console/ConsolePage";
 import { PageHeader } from "@/components/console/PageHeader";
 import { Panel } from "@/components/console/Panel";
@@ -51,17 +50,9 @@ const rand = (v: number) => `R${v.toLocaleString()}`;
 
 /** Where the DJ money is per night: agreed, billed, collected, still out. */
 export default function Settlements() {
-  const [data, setData] = useState<Settlements | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data, error, loading } = useResource<Settlements>("/artists/settlements");
   // The month a statement download covers; defaults to this one.
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
-
-  useEffect(() => {
-    api
-      .get<Settlements>("/artists/settlements")
-      .then(setData)
-      .catch((e) => setError(errorMessage(e) ?? "Could not load settlements."));
-  }, []);
 
   const totals = data?.totals;
 
@@ -92,7 +83,12 @@ export default function Settlements() {
         }
       />
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && (
+        <p role="alert" className="text-red-400 text-sm">
+          {error}
+        </p>
+      )}
+      {loading && <p className="text-neutral-500 text-xs">Loading settlements…</p>}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Committed" value={rand(totals?.committed ?? 0)} />

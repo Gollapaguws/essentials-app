@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
-import { api } from "@essentials/api-client";
-import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 
 interface Ltv { averageLtv: number; topGuests: { userId: string; name: string | null; email: string; visits: number; doorSpend: number; ltv: number }[] }
 interface Cohort { cohort: string; size: number; retention: { month: number; pct: number }[] }
@@ -15,14 +13,9 @@ const tooltipStyle = { backgroundColor: "#141414", border: "1px solid #222", bor
 
 /** Phase 4 advanced analytics: lifetime value + cohort retention. */
 export default function Insights() {
-  const [ltv, setLtv] = useState<Ltv | null>(null);
-  const [cohorts, setCohorts] = useState<Cohort[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api.get<Ltv>("/insights/ltv").then(setLtv).catch((e) => setError(errorMessage(e)));
-    api.get<Cohort[]>("/insights/cohorts").then(setCohorts).catch(() => {});
-  }, []);
+  const { data: ltv, error } = useResource<Ltv>("/insights/ltv");
+  // Cohorts are optional decoration; a failure here must not hide the LTV table.
+  const cohorts = useResource<Cohort[]>("/insights/cohorts").data ?? [];
 
   const cohortChart = cohorts.map((c) => ({
     name: c.cohort,

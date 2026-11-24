@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api } from "@essentials/api-client";
-import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 import { ConsolePage } from "@/components/console/ConsolePage";
 import { PageHeader } from "@/components/console/PageHeader";
 import { Panel } from "@/components/console/Panel";
@@ -28,12 +26,8 @@ interface Artist {
 
 /** Promoter: the DJ roster, so an application can be judged against who is free and what they cost. */
 export default function ArtistRoster() {
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api.get<Artist[]>("/artists").then(setArtists).catch((e) => setError(errorMessage(e)));
-  }, []);
+  const { data, error, loading } = useResource<Artist[]>("/artists");
+  const artists = data ?? [];
 
   return (
     <ConsolePage size="xl">
@@ -42,7 +36,8 @@ export default function ArtistRoster() {
         title="ARTISTS"
         description="Every DJ on the roster, with their travel rate and the gigs they are already locked into."
       />
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
+      {loading && <p className="text-neutral-500 text-xs">Loading the roster…</p>}
 
       <Panel flush>
         <div className="overflow-x-auto">

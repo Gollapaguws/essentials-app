@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
 import { useAuth } from "@/components/AuthProvider";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 
 interface Booking {
   id: string;
@@ -63,10 +64,15 @@ export default function BookingCalendar() {
   const { me } = useAuth();
   const role = me?.user.role ?? "guest";
 
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [schedule, setSchedule] = useState<Schedule | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [noProfile, setNoProfile] = useState(false);
+  const bookingsSource = useResource<Booking[]>("/live/bookings");
+  const bookings = bookingsSource.data ?? [];
+  const loading = bookingsSource.loading;
+  // The shared schedule is public; a failure there must not hide the DJ's own
+  // bookings or make the page look broken.
+  const schedule = useResource<Schedule>("/live/schedule").data;
+  // A DJ without a profile has nothing to book from; point at My Profile.
+  const noProfile = /artist profile/i.test(bookingsSource.error ?? "");
+  const loadError = noProfile ? null : bookingsSource.error;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -78,26 +84,7 @@ export default function BookingCalendar() {
   // Initialised from the clock once; changing the month leaves the draft alone.
   const [draft, setDraft] = useState<Draft>(nextSlot);
 
-  const load = useCallback(async () => {
-    // The shared schedule is public, so a failure here must not hide the DJ's
-    // own bookings or make the page look broken.
-    api.get<Schedule>("/live/schedule").then(setSchedule).catch(() => {});
-    try {
-      setBookings(await api.get<Booking[]>("/live/bookings"));
-      setNoProfile(false);
-    } catch (e) {
-      const message = errorMessage(e);
-      // A DJ without a profile has nothing to book from; point at My Profile.
-      if (/artist profile/i.test(message)) setNoProfile(true);
-      else setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const load = () => bookingsSource.reload();
 
   const book = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -123,7 +110,7 @@ export default function BookingCalendar() {
         `Booked for ${dayLabel(startsAt.toISOString())}, ${timeLabel(startsAt.toISOString())}–${timeLabel(endsAt.toISOString())}. Go Live unlocks inside that window.`,
       );
       setDraft((current) => ({ ...current, title: "" }));
-      await load();
+      load();
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -137,7 +124,7 @@ export default function BookingCalendar() {
     setNotice(null);
     try {
       await api.del(`/live/bookings/${booking.id}`);
-      await load();
+      load();
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -196,7 +183,11 @@ export default function BookingCalendar() {
         </div>
 
         {notice && <p className="text-neon text-sm">{notice}</p>}
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {(error ?? loadError) && (
+          <p role="alert" className="text-red-400 text-sm">
+            {error ?? loadError}
+          </p>
+        )}
 
         {noProfile && (
           <p className="border border-line bg-surface rounded-xl p-4 text-neutral-400 text-sm">

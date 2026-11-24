@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { DownloadButton } from "@/components/DownloadButton";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 import { ConsolePage } from "@/components/console/ConsolePage";
 import { PageHeader } from "@/components/console/PageHeader";
 import { Badge, bookingTone } from "@/components/console/Badge";
@@ -57,24 +58,28 @@ const LEGACY_SLOTS = [
 
 /** DJ flow: open events → choose a slot (time + fee) → apply → promoter confirms → invoice. */
 export default function GigCalendar() {
-  const [open, setOpen] = useState<OpenGig[]>([]);
-  const [gigs, setGigs] = useState<Gig[]>([]);
+  const openSource = useResource<OpenGig[]>("/artists/gig-calendar");
+  const gigsSource = useResource<Gig[]>("/artists/gigs");
+  const blackoutsSource = useResource<Blackout[]>("/artists/blackouts");
+  const open = openSource.data ?? [];
+  const gigs = gigsSource.data ?? [];
+  const loadError = openSource.error ?? gigsSource.error ?? blackoutsSource.error;
   // "slot:<id>" for real slots, "legacy:<key>" for pre-slot events.
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
-  const [blackouts, setBlackouts] = useState<Blackout[]>([]);
+  const blackouts = blackoutsSource.data ?? [];
   const [blackoutDate, setBlackoutDate] = useState("");
   const [blackoutReason, setBlackoutReason] = useState("");
   const [blackoutError, setBlackoutError] = useState<string | null>(null);
 
+  // A decision on one list changes the others (an application closes a slot).
   const load = () => {
-    api.get<OpenGig[]>("/artists/gig-calendar").then(setOpen).catch(() => {});
-    api.get<Gig[]>("/artists/gigs").then(setGigs).catch(() => {});
-    api.get<Blackout[]>("/artists/blackouts").then(setBlackouts).catch(() => {});
+    openSource.reload();
+    gigsSource.reload();
+    blackoutsSource.reload();
   };
-  useEffect(() => { load(); }, []);
 
   const apply = async (eventId: string) => {
     const choice = picked[eventId];
@@ -161,7 +166,11 @@ export default function GigCalendar() {
         }
       />
       {msg && <p className="text-neon text-sm">{msg}</p>}
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {(error ?? loadError) && (
+        <p role="alert" className="text-red-400 text-sm">
+          {error ?? loadError}
+        </p>
+      )}
 
       <section className="console-panel console-panel-body">
         <h2 className="console-section-title mb-3">Open events — pick a slot</h2>

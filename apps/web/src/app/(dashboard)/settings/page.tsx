@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { useAuth } from "@/components/AuthProvider";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 
 interface TravelRate {
   travelRatePerKm: number;
@@ -19,26 +20,19 @@ export default function Settings() {
   const { me } = useAuth();
   const isAdmin = me?.user.role === "admin";
 
-  const [rate, setRate] = useState<TravelRate | null>(null);
+  // Non-admins never ask for a rate they cannot change.
+  const source = useResource<TravelRate>(isAdmin ? "/artists/travel-rate" : null);
+  const rate = source.data;
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const current = await api.get<TravelRate>("/artists/travel-rate");
-      setRate(current);
-      setDraft(String(current.travelRatePerKm));
-    } catch (e) {
-      setError(errorMessage(e) ?? "Could not load the travel rate.");
-    }
-  }, []);
-
+  // Seed the editable field once the current rate lands, and after every save.
   useEffect(() => {
-    if (isAdmin) void load();
-  }, [isAdmin, load]);
+    if (rate) setDraft(String(rate.travelRatePerKm));
+  }, [rate]);
+  const loadError = error ?? source.error;
 
   const value = Number(draft);
   const changed = rate !== null && value !== rate.travelRatePerKm;
@@ -52,8 +46,7 @@ export default function Settings() {
     setNotice(null);
     try {
       const saved = await api.patch<TravelRate>("/artists/travel-rate", { travelRatePerKm: value });
-      setRate(saved);
-      setDraft(String(saved.travelRatePerKm));
+      source.setData(saved);
       setNotice(
         saved.artists
           ? `Every DJ now travels at R${saved.travelRatePerKm.toFixed(2)}/km — ${saved.artists} profile${saved.artists === 1 ? "" : "s"} updated.`
@@ -89,7 +82,11 @@ export default function Settings() {
         </div>
 
         {notice && <p className="text-neon text-sm">{notice}</p>}
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {loadError && (
+          <p role="alert" className="text-red-400 text-sm">
+            {loadError}
+          </p>
+        )}
 
         <section className="border border-line rounded-xl p-5 space-y-5">
           <div className="flex flex-wrap items-start justify-between gap-3">

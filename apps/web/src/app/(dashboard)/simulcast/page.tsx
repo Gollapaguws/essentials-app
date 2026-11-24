@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 
 interface Target { id: string; platform: string; label: string | null; url: string; enabled: boolean; live: boolean }
 interface LiveStatus { live: boolean; rtspUrl: string; simulcast: Record<string, boolean> }
@@ -21,30 +22,34 @@ const labelFor = (k: string) => PLATFORMS.find((p) => p.key === k)?.label ?? k;
 
 /** Admin: simulcast targets — GO LIVE pushes to every enabled platform. */
 export default function Simulcast() {
-  const [targets, setTargets] = useState<Target[]>([]);
-  const [status, setStatus] = useState<LiveStatus | null>(null);
+  const targetsSource = useResource<Target[]>("/live/targets");
+  const targets = targetsSource.data ?? [];
+  const statusSource = useResource<LiveStatus>("/live/status");
+  const status = statusSource.data;
   const [form, setForm] = useState({ platform: "youtube", url: "", label: "" });
   const [error, setError] = useState<string | null>(null);
 
-  const load = () => {
-    api.get<Target[]>("/live/targets").then(setTargets).catch((e) => setError(errorMessage(e)));
-    api.get<LiveStatus>("/live/status").then(setStatus).catch(() => {});
-  };
-  useEffect(() => { load(); const id = setInterval(() => api.get<LiveStatus>("/live/status").then(setStatus).catch(() => {}), 5000); return () => clearInterval(id); }, []);
+  // Poll only the cheap status endpoint; the target list changes on our own writes.
+  const poll = statusSource.reload;
+  useEffect(() => {
+    const id = setInterval(poll, 5000);
+    return () => clearInterval(id);
+  }, [poll]);
+  const loadError = error ?? targetsSource.error;
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    try { await api.post("/live/targets", form); setForm({ ...form, url: "", label: "" }); load(); }
+    try { await api.post("/live/targets", form); setForm({ ...form, url: "", label: "" }); targetsSource.reload(); }
     catch (err) { setError(errorMessage(err)); }
   };
 
   const toggle = async (id: string) => {
-    try { await api.post(`/live/targets/${id}/toggle`); load(); } catch (err) { setError(errorMessage(err)); }
+    try { await api.post(`/live/targets/${id}/toggle`); targetsSource.reload(); } catch (err) { setError(errorMessage(err)); }
   };
 
   const remove = async (id: string) => {
-    try { await api.del(`/live/targets/${id}`); load(); } catch (err) { setError(errorMessage(err)); }
+    try { await api.del(`/live/targets/${id}`); targetsSource.reload(); } catch (err) { setError(errorMessage(err)); }
   };
 
   const input = "w-full bg-bg border border-line rounded-lg px-3 py-2";
@@ -59,7 +64,11 @@ export default function Simulcast() {
           platform below. Stream keys stay on the server and are never shown again.
           {status?.live && <span className="text-neon font-bold"> ● BROADCAST IS LIVE — pushing to {Object.values(status.simulcast ?? {}).filter(Boolean).length} platform(s)</span>}
         </p>
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {loadError && (
+          <p role="alert" className="text-red-400 text-sm">
+            {loadError}
+          </p>
+        )}
 
         <form onSubmit={add} className="border border-line bg-surface rounded-xl p-4 space-y-3">
           <div className="grid md:grid-cols-3 gap-3">

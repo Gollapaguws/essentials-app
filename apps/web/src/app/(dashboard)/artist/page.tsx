@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useResource } from "@/hooks/useResource";
 import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
@@ -15,23 +16,31 @@ interface TelegramStatus { configured: boolean; bot: string | null; linked: bool
 
 /** Phase 3 artist portal: profile, gig calendar, collision alerts, fuel/travel costing, invoices. */
 export default function ArtistPortal() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [gigs, setGigs] = useState<Gig[]>([]);
+  const profileSource = useResource<Profile | null>("/artists/me");
+  const profile = profileSource.data;
+  const gigsSource = useResource<Gig[]>("/artists/gigs");
+  const gigs = gigsSource.data ?? [];
   const [plan, setPlan] = useState<Plan | null>(null);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const invoicesSource = useResource<Invoice[]>("/invoices");
+  const invoices = invoicesSource.data ?? [];
   const [planDate, setPlanDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [form, setForm] = useState<Profile>({ stageName: "", bio: "", imageUrl: "", vehicleConsumptionLPer100km: 8, travelRatePerKm: 4.95 });
-  const [telegram, setTelegram] = useState<TelegramStatus | null>(null);
+  const telegramSource = useResource<TelegramStatus>("/telegram/status");
+  const telegram = telegramSource.data;
   const [error, setError] = useState<string | null>(null);
 
   const loadAll = () => {
-    api.get<Profile | null>("/artists/me").then((p) => { setProfile(p); if (p) setForm(p); }).catch(() => {});
-    api.get<Gig[]>("/artists/gigs").then(setGigs).catch(() => {});
-    api.get<Invoice[]>("/invoices").then(setInvoices).catch(() => {});
+    profileSource.reload();
+    gigsSource.reload();
+    invoicesSource.reload();
   };
-  const loadTelegram = () =>
-    api.get<TelegramStatus>("/telegram/status").then(setTelegram).catch(() => {});
-  useEffect(() => { loadAll(); loadTelegram(); }, []);
+  const loadTelegram = () => telegramSource.reload();
+
+  // The form is editable, so it is seeded from the saved profile rather than bound
+  // to it — a refetch must not wipe what the DJ is typing.
+  useEffect(() => {
+    if (profile) setForm(profile);
+  }, [profile]);
 
   /** Copy-free onboarding: one deep link, the DJ presses Start in Telegram. */
   const connectTelegram = async () => {

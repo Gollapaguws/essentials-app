@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { useAuth } from "@/components/AuthProvider";
-import { api } from "@essentials/api-client";
-import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 
 interface AuditRow {
   id: string;
@@ -58,20 +56,12 @@ function describeReset(meta: Record<string, unknown>): string {
 /** Admin: who signed in, whose role changed, who enrolled MFA — newest first. */
 export default function Audit() {
   const { me } = useAuth();
-  const [rows, setRows] = useState<AuditRow[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!me) return;
-    if (me.user.role !== "admin") {
-      setError("Admins only.");
-      return;
-    }
-    api
-      .get<AuditRow[]>("/auth/audit?limit=200")
-      .then(setRows)
-      .catch((e) => setError(errorMessage(e) ?? "Could not load the audit trail."));
-  }, [me]);
+  const isAdmin = me?.user.role === "admin";
+  // Nobody else can read the trail, so the request is not made at all.
+  const { data, error, loading } = useResource<AuditRow[]>(
+    isAdmin ? "/auth/audit?limit=200" : null,
+  );
+  const rows = data ?? [];
 
   return (
     <>
@@ -85,7 +75,13 @@ export default function Audit() {
           </p>
         </div>
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {!isAdmin && me && <p className="text-neutral-400 text-sm">Admins only.</p>}
+        {error && (
+          <p role="alert" className="text-red-400 text-sm">
+            {error}
+          </p>
+        )}
+        {loading && <p className="text-neutral-500 text-xs">Loading the trail…</p>}
 
         <div className="border border-line rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
@@ -125,7 +121,7 @@ export default function Audit() {
                   </td>
                 </tr>
               ))}
-              {!rows.length && !error && (
+              {!rows.length && !error && !loading && (
                 <tr>
                   <td colSpan={5} className="px-4 py-6 text-center text-neutral-500">
                     No audit events yet.

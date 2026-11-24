@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://essentialsedm.com/api";
 const MAX_UPLOAD = 120 * 1024 * 1024;
@@ -40,17 +41,15 @@ function SiteMetric({ label, value }: { label: string; value: number }) {
 
 /** Admin editor for the essentialsedm.com front page. Saves to /api/site/content (admin-only). */
 export default function FrontPageEditor() {
-  const [c, setC] = useState<FrontPage>({});
-  const [stats, setStats] = useState<SiteStats | null>(null);
+  const content = useResource<FrontPage>("/site/content");
+  // Edits are patches on top of whatever the server returned.
+  const c = content.data ?? {};
+  const setC = content.setData;
+  const stats = useResource<SiteStats>("/site/stats").data;
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    api.get<FrontPage>("/site/content").then(setC).catch((e) => setError(errorMessage(e)));
-    api.get<SiteStats>("/site/stats").then(setStats).catch(() => {});
-  }, []);
-
-  const set = (patch: Partial<FrontPage>) => setC((p) => ({ ...p, ...patch }));
+  const set = (patch: Partial<FrontPage>) => setC((p) => ({ ...(p ?? {}), ...patch }));
   const uploadMedia = async (file: File, cb: (url: string) => void) => {
     setError(null);
     if (file.size > MAX_UPLOAD) {
@@ -82,13 +81,13 @@ export default function FrontPageEditor() {
   };
 
   const setEvent = (i: number, patch: Partial<FrontPageEvent>) =>
-    setC((p) => ({ ...p, events: (p.events ?? []).map((e, j) => (j === i ? { ...e, ...patch } : e)) }));
+    setC((p) => ({ ...(p ?? {}), events: (p?.events ?? []).map((e, j) => (j === i ? { ...e, ...patch } : e)) }));
 
   const save = async () => {
     setError(null); setMsg(null);
     try {
       await api.post("/site/content", c);
-      setMsg("Saved â€” the front page updates on next load.");
+      setMsg("Saved — the front page updates on next load.");
     } catch (err) {
       setError(errorMessage(err));
     }
