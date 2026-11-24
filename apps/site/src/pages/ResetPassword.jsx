@@ -2,8 +2,17 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { hasSession, signOut, updatePassword } from "@/lib/auth";
 import AuthLayout from "@/components/AuthLayout";
+import { setPageMeta } from "@/lib/share";
 
 export default function ResetPassword() {
+  useEffect(() => {
+    setPageMeta({
+      title: "Choose a new password",
+      description: "Set a new password for your SONUS account.",
+      path: "/reset-password",
+    });
+  }, []);
+
   const [searchParams] = useSearchParams();
   // Supabase recovery links land on /auth/callback which forwards here once the
   // session is established; the marker keeps the page honest about that state.

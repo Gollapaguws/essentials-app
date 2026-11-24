@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { signUpWithPassword, signInWithGoogle } from "@/lib/auth";
 import { authCallbackUrl } from "@/lib/supabase";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
+import { setPageMeta } from "@/lib/share";
 
 /** Public sign-up. The role starts as guest; an admin assigns DJ/venue/promoter. */
 export default function Register() {
+  useEffect(() => {
+    setPageMeta({
+      title: "Create an account",
+      description:
+        "Create a SONUS account to RSVP to nights and, once approved, to manage events, lineups and ticketing.",
+      path: "/register",
+    });
+  }, []);
+
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

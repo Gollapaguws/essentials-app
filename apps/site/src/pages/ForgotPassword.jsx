@@ -1,10 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { requestPasswordReset } from "@/lib/auth";
 import { authCallbackUrl } from "@/lib/supabase";
 import AuthLayout from "@/components/AuthLayout";
+import { setPageMeta } from "@/lib/share";
 
 export default function ForgotPassword() {
+  useEffect(() => {
+    setPageMeta({
+      title: "Reset your password",
+      description: "Enter the email on your SONUS account and we'll send you a link to set a new password.",
+      path: "/forgot-password",
+    });
+  }, []);
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
