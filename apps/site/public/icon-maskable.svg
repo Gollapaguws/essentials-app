@@ -1,9 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="ESSENTIALS">
-  <rect width="512" height="512" fill="#0A0A0A"/>
-  <g transform="translate(51.2 51.2) scale(0.8)" fill="#00FF66">
-    <rect x="150" y="142" width="52" height="228" rx="4"/>
-    <rect x="150" y="142" width="210" height="46" rx="4"/>
-    <rect x="150" y="233" width="166" height="46" rx="4"/>
-    <rect x="150" y="324" width="210" height="46" rx="4"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="SONUS">
+  <defs><radialGradient id="bg" cx="50%" cy="32%" r="78%">
+    <stop offset="0%" stop-color="#1b2f57"/><stop offset="55%" stop-color="#0a1327"/><stop offset="100%" stop-color="#04060d"/>
+  </radialGradient></defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g transform="translate(256 256)" fill="none">
+    <circle r="79.2" stroke="#eaf6ff" stroke-width="12.959999999999999" stroke-opacity="0.95"/>
+    <ellipse rx="136.79999999999998" ry="51.839999999999996" transform="rotate(-18)" stroke="#9fd8ff" stroke-width="10.799999999999999" stroke-opacity="0.95"/>
+    <ellipse rx="136.79999999999998" ry="51.839999999999996" transform="rotate(52)" stroke="#9fd8ff" stroke-width="8.64" stroke-opacity="0.55"/>
+    <circle r="18.72" fill="#eaf6ff" stroke="none"/>
   </g>
 </svg>
