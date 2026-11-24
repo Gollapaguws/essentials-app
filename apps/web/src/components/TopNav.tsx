@@ -177,6 +177,12 @@ const links: NavLink[] = [
     roles: ["admin"],
   },
   {
+    href: "/mail",
+    label: "Mail",
+    group: "YOU",
+    hint: "Your SONUS mailbox: folders, message list, reading pane, replies and new mail.",
+  },
+  {
     href: "/notifications",
     label: "Notifications",
     group: "YOU",

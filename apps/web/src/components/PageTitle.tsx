@@ -30,6 +30,7 @@ const TITLES: [string, string][] = [
   ["/go-live", "Go live"],
   ["/help", "Help"],
   ["/insights", "Insights"],
+  ["/mail", "Mail"],
   ["/notifications", "Notifications"],
   ["/promotions", "Promotions"],
   ["/settings", "Settings"],

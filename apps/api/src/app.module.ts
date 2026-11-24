@@ -24,12 +24,14 @@ import { SearchModule } from "./search/search.module";
 import { HealthModule } from "./health/health.module";
 import { AccountMailModule } from "./account-mail/account-mail.module";
 import { UserMailModule } from "./user-mail/user-mail.module";
+import { MailModule } from "./mail/mail.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ["../../.env", ".env"] }),
     AccountMailModule,
     UserMailModule,
+    MailModule,
     ScheduleModule.forRoot(),
     RedisModule,
     HealthModule,
