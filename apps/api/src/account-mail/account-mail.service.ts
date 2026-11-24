@@ -165,7 +165,29 @@ export class AccountMailService {
       "",
     );
 
-    if (!host || !this.from) {
+    if (!this.from) {
+      this.transport = null;
+      return;
+    }
+
+    // Notices have the same problem as user mail: the local Postfix is outside
+    // the domain's SPF and its DKIM key does not match the published record, so
+    // Gmail rejects what it accepts. Resend's verified domain signs for us.
+    const resend = this.config.get<string>("RESEND_API_KEY")?.trim();
+    if (resend) {
+      this.transport = createTransport({
+        host: "smtp.resend.com",
+        port: 465,
+        secure: true,
+        auth: { user: "resend", pass: resend },
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 20_000,
+      });
+      return;
+    }
+
+    if (!host) {
       this.transport = null;
       return;
     }

@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { execFile, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import { simpleParser, type ParsedMail } from "mailparser";
 import { createTransport } from "nodemailer";
@@ -37,11 +38,40 @@ export interface MailFolder {
   unseen: number;
 }
 
+export interface DraftInput {
+  mode?: string;
+  to?: string;
+  cc?: string;
+  subject?: string;
+  body?: string;
+  inReplyTo?: string;
+  references?: string;
+  /** The draft being replaced, so typing does not pile up copies. */
+  uid?: number | null;
+}
+
+export interface MailDraft {
+  uid: number;
+  mode: "new" | "reply" | "forward";
+  to: string;
+  cc: string;
+  subject: string;
+  body: string;
+  inReplyTo: string;
+  references: string;
+  updatedAt: string | null;
+}
+
+const MAX_DRAFT_BYTES = 512 * 1024;
+
+const MAX_SIGNATURE_CHARS = 2000;
+
 export interface MailSummary {
   enabled: boolean;
   address: string | null;
   domain: string | null;
   folders: MailFolder[];
+  signature: string;
 }
 
 export interface MailListItem {
@@ -119,10 +149,55 @@ export class MailService {
         address: null,
         domain: this.domain,
         folders: [],
+        signature: "",
       };
     }
     const folders = await this.folders(box.localpart);
-    return { enabled: true, address: box.address, domain: this.domain, folders };
+    return {
+      enabled: true,
+      address: box.address,
+      domain: this.domain,
+      folders,
+      signature: (await this.readSignature(userId)) ?? "",
+    };
+  }
+
+  /** Per-account signature, appended to mail started in the console. */
+  async signature(userId: string) {
+    await this.requireMailbox(userId);
+    return { signature: (await this.readSignature(userId)) ?? "" };
+  }
+
+  async setSignature(userId: string, text: string) {
+    await this.requireMailbox(userId);
+    const value = (text ?? "").replace(/\r\n/g, "\n").trim();
+    if (value.length > MAX_SIGNATURE_CHARS) {
+      throw new BadRequestException(
+        `Keep the signature under ${MAX_SIGNATURE_CHARS} characters.`,
+      );
+    }
+    const key = this.signatureKey(userId);
+    if (!value) {
+      await prisma.platformSetting.deleteMany({ where: { key } });
+      return { signature: "" };
+    }
+    await prisma.platformSetting.upsert({
+      where: { key },
+      create: { key, value },
+      update: { value },
+    });
+    return { signature: value };
+  }
+
+  private signatureKey(userId: string) {
+    return `mail_signature:${userId}`;
+  }
+
+  private async readSignature(userId: string): Promise<string | null> {
+    const row = await prisma.platformSetting
+      .findUnique({ where: { key: this.signatureKey(userId) }, select: { value: true } })
+      .catch(() => null);
+    return row?.value ?? null;
   }
 
   async folders(localpart: string): Promise<MailFolder[]> {
@@ -336,6 +411,136 @@ export class MailService {
     if (!box) return { unseen: 0 };
     const { unseen } = await this.status(box.localpart, "INBOX");
     return { unseen };
+  }
+
+  /**
+   * The composer's saved state, kept in the mailbox's own Drafts folder so it is
+   * the same on every device and readable from any mail client. Only the newest
+   * one is the active draft; older ones stay as ordinary messages.
+   */
+  async draft(userId: string, uidInput?: string): Promise<{ draft: MailDraft | null }> {
+    const box = await this.requireMailbox(userId);
+    const names = await this.mailboxNames(box.localpart);
+    if (!names.includes("Drafts")) return { draft: null };
+
+    let uid = uidInput ? this.uid(uidInput) : null;
+    if (!uid) {
+      const { stdout } = await this.doveadm([
+        "search",
+        "-u",
+        box.localpart,
+        "mailbox",
+        "Drafts",
+        "HEADER",
+        "X-SONUS-Draft",
+        "1",
+      ]);
+      const uids = stdout
+        .split("\n")
+        .map((line) => Number(line.trim().split(/\s+/).pop()))
+        .filter((value) => Number.isInteger(value) && value > 0);
+      if (!uids.length) return { draft: null };
+      uid = Math.max(...uids);
+    }
+
+    const { raw } = await this.fetchMessage(box.localpart, "Drafts", uid);
+    const parsed = await simpleParser(raw);
+    const header = (name: string) => String(parsed.headers.get(name) ?? "").trim();
+    const mode = header("x-sonus-mode");
+    return {
+      draft: {
+        uid,
+        mode: mode === "reply" || mode === "forward" ? mode : "new",
+        to: this.addresses(parsed.to).join(", "),
+        cc: this.addresses(parsed.cc).join(", "),
+        subject: parsed.subject ?? "",
+        // The MIME parser hands back the trailing newline the writer added;
+        // keeping it would grow the body by a line on every autosave.
+        body: (parsed.text ?? "").replace(/\r\n/g, "\n").replace(/[\r\n]+$/, ""),
+        inReplyTo: header("in-reply-to"),
+        references: header("references"),
+        updatedAt: parsed.date?.toISOString() ?? null,
+      },
+    };
+  }
+
+  /** Write the composer state into Drafts, replacing the draft it came from. */
+  async saveDraft(userId: string, input: DraftInput): Promise<{ uid: number }> {
+    const box = await this.requireMailbox(userId);
+    const body = (input.body ?? "").replace(/[\r\n]+$/, "");
+    if (Buffer.byteLength(body, "utf8") > MAX_DRAFT_BYTES) {
+      throw new BadRequestException("This draft is too large to save. Send it, or trim it down.");
+    }
+    await this.ensureFolder(box.localpart, "Drafts");
+
+    if (input.uid) {
+      await this.doveadm([
+        "expunge",
+        "-u",
+        box.localpart,
+        "mailbox",
+        "Drafts",
+        "uid",
+        String(this.uid(String(input.uid))),
+      ]).catch(() => null);
+    }
+
+    const to = (input.to ?? "").replace(/[\r\n]+/g, " ").trim();
+    const cc = (input.cc ?? "").replace(/[\r\n]+/g, " ").trim();
+    const subject = (input.subject ?? "").replace(/[\r\n]+/g, " ").slice(0, 300);
+    const mode = input.mode === "reply" || input.mode === "forward" ? input.mode : "new";
+    const headers = [
+      `From: ${box.address}`,
+      to ? `To: ${to}` : null,
+      cc ? `Cc: ${cc}` : null,
+      `Subject: ${subject}`,
+      `Date: ${new Date().toUTCString()}`,
+      `Message-ID: <${randomUUID()}@${box.address.split("@")[1] ?? "localhost"}>`,
+      input.inReplyTo ? `In-Reply-To: ${input.inReplyTo.replace(/[\r\n]+/g, " ")}` : null,
+      input.references ? `References: ${input.references.replace(/[\r\n]+/g, " ")}` : null,
+      "X-SONUS-Draft: 1",
+      `X-SONUS-Mode: ${mode}`,
+      "MIME-Version: 1.0",
+      "Content-Type: text/plain; charset=utf-8",
+      "Content-Transfer-Encoding: 8bit",
+    ].filter((line): line is string => Boolean(line));
+    const raw = Buffer.from(`${headers.join("\r\n")}\r\n\r\n${body}\r\n`, "utf8");
+
+    await this.saveRaw(box.localpart, "Drafts", raw);
+
+    const { stdout } = await this.doveadm([
+      "search",
+      "-u",
+      box.localpart,
+      "mailbox",
+      "Drafts",
+      "HEADER",
+      "X-SONUS-Draft",
+      "1",
+    ]);
+    const uids = stdout
+      .split("\n")
+      .map((line) => Number(line.trim().split(/\s+/).pop()))
+      .filter((value) => Number.isInteger(value) && value > 0);
+    if (!uids.length) throw new ServiceUnavailableException("The draft was written but could not be found again.");
+    const uid = Math.max(...uids);
+    await this.addFlags(box.localpart, "Drafts", uid, ["\\Draft", "\\Seen"]).catch(() => undefined);
+    return { uid };
+  }
+
+  async deleteDraft(userId: string, uidInput: string) {
+    const box = await this.requireMailbox(userId);
+    const uid = this.uid(uidInput);
+    await this.doveadm([
+      "expunge",
+      "-u",
+      box.localpart,
+      "mailbox",
+      "Drafts",
+      "uid",
+      String(uid),
+    ]).catch(() => null);
+    return { ok: true };
   }
 
   // ---- mail store plumbing -------------------------------------------------
@@ -564,6 +769,25 @@ export class MailService {
   }
 
   /** Keep a copy in Sent, the way every mail client does. */
+  private async saveRaw(localpart: string, folder: string, raw: Buffer): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      const child = spawn("doveadm", ["save", "-u", localpart, "-m", folder], {
+        stdio: ["pipe", "ignore", "pipe"],
+        timeout: 20_000,
+      });
+      let stderr = "";
+      child.stderr.on("data", (chunk) => {
+        stderr += String(chunk);
+      });
+      child.on("error", reject);
+      child.on("close", (code) => {
+        if (code === 0) resolve();
+        else reject(new ServiceUnavailableException(`Could not write the draft: ${stderr.trim() || `doveadm exited ${code}`}`));
+      });
+      child.stdin.end(raw);
+    });
+  }
+
   private async saveToSent(localpart: string, raw: Buffer): Promise<boolean> {
     await this.ensureFolder(localpart, "Sent");
     await new Promise<void>((resolve, reject) => {

@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Res,
@@ -13,7 +14,7 @@ import { Throttle } from "@nestjs/throttler";
 import type { Response } from "express";
 import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
-import { MailService, type SendMailInput } from "./mail.service";
+import { MailService, type DraftInput, type SendMailInput } from "./mail.service";
 
 /**
  * The signed-in account's own mailbox: folders, messages, reads, flags, moves
@@ -30,9 +31,36 @@ export class MailController {
     return this.mail.summary(actor.sub);
   }
 
+  @Get("signature")
+  signature(@CurrentUser() actor: JwtUser) {
+    return this.mail.signature(actor.sub);
+  }
+
+  @Patch("signature")
+  setSignature(@CurrentUser() actor: JwtUser, @Body() body: { signature?: string }) {
+    return this.mail.setSignature(actor.sub, String(body?.signature ?? ""));
+  }
+
   @Get("unread")
   unread(@CurrentUser() actor: JwtUser) {
     return this.mail.unread(actor.sub);
+  }
+
+  /** The draft the composer should reopen, newest unless a uid is given. */
+  @Get("drafts")
+  draft(@CurrentUser() actor: JwtUser, @Query("uid") uid?: string) {
+    return this.mail.draft(actor.sub, uid);
+  }
+
+  @Post("drafts")
+  @Throttle({ default: { limit: 120, ttl: 60_000 } })
+  saveDraft(@CurrentUser() actor: JwtUser, @Body() body: DraftInput) {
+    return this.mail.saveDraft(actor.sub, body);
+  }
+
+  @Delete("drafts/:uid")
+  deleteDraft(@CurrentUser() actor: JwtUser, @Param("uid") uid: string) {
+    return this.mail.deleteDraft(actor.sub, uid);
   }
 
   @Get("messages")

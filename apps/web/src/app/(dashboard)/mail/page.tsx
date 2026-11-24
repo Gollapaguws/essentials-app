@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 import { downloadFromApi } from "@/lib/download";
@@ -21,6 +21,7 @@ interface Summary {
   address: string | null;
   domain: string | null;
   folders: Folder[];
+  signature: string;
 }
 
 interface Row {
@@ -69,6 +70,14 @@ interface Draft {
   references: string;
   files: File[];
 }
+
+/** A draft as the server keeps it in the mailbox's Drafts folder. */
+interface ServerDraft extends Omit<Draft, "files"> {
+  uid: number;
+  updatedAt: string | null;
+}
+
+const AUTOSAVE_MS = 1500;
 
 const PAGE_SIZE = 25;
 
@@ -130,39 +139,6 @@ function quote(message: Message): string {
   return `\n\nOn ${fullWhen(message.date)}, ${message.from.name} <${message.from.address}> wrote:\n${lines.join("\n")}`;
 }
 
-/**
- * Unsent mail lives in this browser, keyed by mailbox, so closing the tab or
- * reloading does not throw away a half-written reply. Files cannot be stored
- * this way; the composer says so when it restores a draft.
- */
-const draftKey = (address: string) => `sonus.mail.draft:${address.toLowerCase()}`;
-
-function readDraft(key: string): Draft | null {
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return null;
-    const saved = JSON.parse(raw) as Omit<Draft, "files">;
-    if (!saved?.mode) return null;
-    return { ...saved, files: [] };
-  } catch {
-    window.localStorage.removeItem(key);
-    return null;
-  }
-}
-
-function writeDraft(key: string, draft: Draft): void {
-  // An empty composer is not a draft; drop the entry rather than restore a blank.
-  if (!draft.to.trim() && !draft.cc.trim() && !draft.subject.trim() && !draft.body.trim()) {
-    window.localStorage.removeItem(key);
-    return;
-  }
-  const { mode, to, cc, subject, body, inReplyTo, references } = draft;
-  window.localStorage.setItem(
-    key,
-    JSON.stringify({ mode, to, cc, subject, body, inReplyTo, references }),
-  );
-}
-
 function toBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -184,10 +160,20 @@ export default function Mail() {
   const [failure, setFailure] = useState<string | null>(null);
   // Which mailbox's saved draft has already been offered, so a dismissal sticks.
   const [restoredFor, setRestoredFor] = useState<string | null>(null);
+  const [signatureOpen, setSignatureOpen] = useState(false);
+  const [signatureDraft, setSignatureDraft] = useState("");
+  // The Drafts-folder uid behind the open composer, and whether a save is running.
+  const draftUid = useRef<number | null>(null);
+  const saveInFlight = useRef<Promise<unknown> | null>(null);
+  const closing = useRef(false);
+  const draftOpen = useRef(false);
 
   const summarySource = useResource<Summary>("/mail");
   const summary = summarySource.data;
   const address = summary?.address ?? null;
+  const signature = summary?.signature ?? "";
+  /** Signature text placed above whatever the composer already holds. */
+  const signatureBlock = signature.trim() ? `\n\n${signature.trim()}\n` : "";
 
   const listPath = address
     ? `/mail/messages?folder=${encodeURIComponent(folder)}&offset=${offset}&limit=${PAGE_SIZE}${
@@ -224,25 +210,83 @@ export default function Mail() {
 
   const refreshFolders = () => summarySource.reload();
 
-  const forgetDraft = () => {
-    if (address) window.localStorage.removeItem(draftKey(address));
-  };
+  useEffect(() => {
+    draftOpen.current = draft !== null;
+  }, [draft]);
 
-  // Bring back what was being written last time this mailbox was open.
+  // Reopen whatever was last being written — from Drafts, so it follows the
+  // account onto any device rather than living in one browser.
   useEffect(() => {
     if (!address || restoredFor === address) return;
     setRestoredFor(address);
-    const saved = readDraft(draftKey(address));
-    if (!saved) return;
-    setDraft(saved);
-    setNotice("Your unsent draft is back. Attachments are not kept, so add them again before sending.");
+    void (async () => {
+      const result = await api
+        .get<{ draft: ServerDraft | null }>("/mail/drafts", { cache: "no-store" })
+        .catch(() => null);
+      const saved = result?.draft;
+      // A Reply or Write clicked while this was in flight wins.
+      if (!saved || draftOpen.current) return;
+      closing.current = false;
+      draftUid.current = saved.uid;
+      setDraft({
+        mode: saved.mode,
+        to: saved.to,
+        cc: saved.cc,
+        subject: saved.subject,
+        body: saved.body,
+        inReplyTo: saved.inReplyTo,
+        references: saved.references,
+        files: [],
+      });
+      setNotice("Draft restored from Drafts. Attachments are not kept in a draft, so add them again before sending.");
+    })();
   }, [address, restoredFor]);
 
-  // Save on every keystroke — the payload is a few kilobytes at most.
+  // Autosave into the Drafts folder, replacing the previous copy of this draft.
   useEffect(() => {
-    if (!address || !draft) return;
-    writeDraft(draftKey(address), draft);
+    if (!address || !draft || closing.current) return;
+    const blank = !draft.to.trim() && !draft.cc.trim() && !draft.subject.trim() && !draft.body.trim();
+    if (blank) return;
+    const timer = window.setTimeout(() => {
+      saveInFlight.current = api
+        .post<{ uid: number }>("/mail/drafts", {
+          mode: draft.mode,
+          to: draft.to,
+          cc: draft.cc,
+          subject: draft.subject,
+          body: draft.body,
+          inReplyTo: draft.inReplyTo || undefined,
+          references: draft.references || undefined,
+          uid: draftUid.current,
+        })
+        .then((saved) => {
+          if (closing.current) return;
+          const first = draftUid.current === null;
+          draftUid.current = saved.uid;
+          // The folder rail only learns about Drafts once it exists.
+          if (first) summarySource.reload();
+        })
+        .catch(() => null);
+    }, AUTOSAVE_MS);
+    return () => window.clearTimeout(timer);
+    // The save reads the draft, so it must follow every edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, draft]);
+
+  const dropSavedDraft = async () => {
+    const uid = draftUid.current;
+    draftUid.current = null;
+    if (uid) await api.del(`/mail/drafts/${uid}`).catch(() => null);
+  };
+
+  /** Settle any running save, then remove the server copy before closing. */
+  const closeComposer = async () => {
+    closing.current = true;
+    await saveInFlight.current?.catch(() => null);
+    await dropSavedDraft();
+    closing.current = false;
+    setDraft(null);
+  };
 
   const openFolder = (name: string) => {
     setFolder(name);
@@ -318,14 +362,33 @@ export default function Mail() {
       "Could not download that attachment.",
     );
 
+  const saveSignature = async () => {
+    setBusy(true);
+    setFailure(null);
+    try {
+      const result = await api.patch<{ signature: string }>("/mail/signature", {
+        signature: signatureDraft,
+      });
+      summarySource.setData((prev) => (prev ? { ...prev, signature: result.signature } : prev));
+      setSignatureOpen(false);
+      setNotice(result.signature ? "Signature saved. It is added to mail you start from here." : "Signature removed.");
+    } catch (err) {
+      setFailure(errorMessage(err) ?? "Could not save the signature.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const startReply = () => {
     if (!message) return;
+    closing.current = false;
+    draftUid.current = null;
     setDraft({
       mode: "reply",
       to: message.from.address,
       cc: "",
       subject: /^re:/i.test(message.subject) ? message.subject : `Re: ${message.subject}`,
-      body: quote(message),
+      body: `${signatureBlock}${quote(message)}`,
       inReplyTo: message.messageId ?? "",
       references: [message.references, message.messageId].filter(Boolean).join(" "),
       files: [],
@@ -334,12 +397,14 @@ export default function Mail() {
 
   const startForward = () => {
     if (!message) return;
+    closing.current = false;
+    draftUid.current = null;
     setDraft({
       mode: "forward",
       to: "",
       cc: "",
       subject: /^fwd:/i.test(message.subject) ? message.subject : `Fwd: ${message.subject}`,
-      body: `\n\n---------- Forwarded message ----------\nFrom: ${message.from.name} <${message.from.address}>\nDate: ${fullWhen(message.date)}\nSubject: ${message.subject}\n\n${message.text}`,
+      body: `${signatureBlock || "\n\n"}---------- Forwarded message ----------\nFrom: ${message.from.name} <${message.from.address}>\nDate: ${fullWhen(message.date)}\nSubject: ${message.subject}\n\n${message.text}`,
       inReplyTo: "",
       references: "",
       files: [],
@@ -366,8 +431,7 @@ export default function Mail() {
         references: current.references || undefined,
         attachments,
       });
-      forgetDraft();
-      setDraft(null);
+      await closeComposer();
       setNotice(
         result.saved
           ? "Sent, and a copy is in Sent."
@@ -381,6 +445,29 @@ export default function Mail() {
       setBusy(false);
     }
   };
+
+  const openDraft = (uid: number) =>
+    run(async () => {
+      const result = await api.get<{ draft: ServerDraft | null }>(`/mail/drafts?uid=${uid}`, {
+        cache: "no-store",
+      });
+      const saved = result.draft;
+      if (!saved) throw new Error("That draft is no longer in Drafts.");
+      closing.current = false;
+      draftUid.current = saved.uid;
+      setSelected(null);
+      setDraft({
+        mode: saved.mode,
+        to: saved.to,
+        cc: saved.cc,
+        subject: saved.subject,
+        body: saved.body,
+        inReplyTo: saved.inReplyTo,
+        references: saved.references,
+        files: [],
+      });
+      setNotice("Draft opened. It saves again as you type.");
+    }, "Could not open that draft.");
 
   const hasMailbox = Boolean(address);
   const pageEnd = Math.min(offset + PAGE_SIZE, total);
@@ -397,18 +484,78 @@ export default function Mail() {
         }
         actions={
           hasMailbox ? (
-            <button
-              type="button"
-              className={button}
-              onClick={() =>
-                setDraft({ mode: "new", to: "", cc: "", subject: "", body: "", inReplyTo: "", references: "", files: [] })
-              }
-            >
-              Write
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className={button}
+                onClick={() => {
+                  setSignatureDraft(signature);
+                  setSignatureOpen((open) => !open);
+                  setNotice(null);
+                }}
+              >
+                Signature
+              </button>
+              <button
+                type="button"
+                className={button}
+                onClick={() => {
+                  closing.current = false;
+                  draftUid.current = null;
+                  setDraft({
+                    mode: "new",
+                    to: "",
+                    cc: "",
+                    subject: "",
+                    body: signatureBlock,
+                    inReplyTo: "",
+                    references: "",
+                    files: [],
+                  });
+                  setSignatureOpen(false);
+                }}
+              >
+                Write
+              </button>
+            </div>
           ) : null
         }
       />
+
+      {signatureOpen && hasMailbox && (
+        <Panel
+          title="Email signature"
+          description="Plain text, added to the top of new mail, replies and forwards you start here."
+        >
+          <div className="space-y-3">
+            <textarea
+              className={`${field} min-h-[140px] font-mono text-[13px] leading-6`}
+              value={signatureDraft}
+              onChange={(event) => setSignatureDraft(event.target.value)}
+              placeholder={"Your name\nSONUS Bookings · bookings@essentialsedm.com"}
+              aria-label="Email signature"
+            />
+            <div className="flex items-center gap-2">
+              <button type="button" className={button} disabled={busy} onClick={() => void saveSignature()}>
+                {busy ? "Saving…" : "Save signature"}
+              </button>
+              <button
+                type="button"
+                className={quiet}
+                onClick={() => {
+                  setSignatureOpen(false);
+                  setSignatureDraft("");
+                }}
+              >
+                Cancel
+              </button>
+              <span className="ml-auto text-[11px] text-neutral-500">
+                {signatureDraft.length}/2000
+              </span>
+            </div>
+          </div>
+        </Panel>
+      )}
 
       {(loadError || failure || notice) && (
         <div className="space-y-2">
@@ -488,7 +635,7 @@ export default function Mail() {
                   <li key={row.uid}>
                     <button
                       type="button"
-                      onClick={() => setSelected(row.uid)}
+                      onClick={() => (folder === "Drafts" ? void openDraft(row.uid) : setSelected(row.uid))}
                       className={`w-full px-3 py-2.5 text-left transition ${
                         row.uid === selected ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"
                       }`}
@@ -623,8 +770,7 @@ export default function Mail() {
                       type="button"
                       className={quiet}
                       onClick={() => {
-                        forgetDraft();
-                        setDraft(null);
+                        void closeComposer();
                         setRestoredFor(address);
                         setNotice(null);
                       }}
