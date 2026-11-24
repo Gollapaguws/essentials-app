@@ -6,6 +6,15 @@
 const basePath =
   process.env.NEXT_BASE_PATH ?? (process.env.NODE_ENV === "production" ? "/dashboard" : "");
 
+// NEXT_PUBLIC_* is inlined at build time, not read at runtime, so a plain
+// `next build` without it bakes in the api-client's localhost fallback and no
+// signed-in screen can reach the API. Default it the same way basePath is
+// defaulted, so the systemd Environment= and the deploy script are belt and
+// braces rather than the only thing keeping the dashboard working.
+if (!process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === "production") {
+  process.env.NEXT_PUBLIC_API_URL = "https://essentialsedm.com/api";
+}
+
 // basePath alone is enough: Next serves the app *and* its /_next assets under it.
 // Setting assetPrefix to the same value made the rendered HTML ask for /_next/*,
 // while the files were only served at /dashboard/_next/* — nginx's SPA fallback

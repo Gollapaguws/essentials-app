@@ -99,6 +99,10 @@ jobs:
         working-directory: apps/web
         run: npm run lint
 
+      - name: Test web
+        working-directory: apps/web
+        run: npm test
+
       - name: Lint mobile
         working-directory: apps/mobile
         run: npm run lint

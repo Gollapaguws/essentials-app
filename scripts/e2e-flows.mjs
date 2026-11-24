@@ -70,6 +70,11 @@ async function createAndPublish() {
   await title.fill(nightTitle);
   const venue = page.locator("select").filter({ hasText: "Pick a venue" }).first();
   if ((await venue.count()) === 0) return skip("create and publish a night", "no venues available to this account");
+  // The options arrive with the venues fetch, not with the control.
+  await venue.locator("option").nth(1).waitFor({ timeout: TIMEOUT_MS }).catch(() => {});
+  if ((await venue.locator("option").count()) < 2) {
+    return skip("create and publish a night", "no venues available to this account");
+  }
   await venue.selectOption({ index: 1 });
   await page.locator('input[type="datetime-local"]').first().fill(`${tomorrow}T22:00`);
   await page.getByPlaceholder("Capacity").fill("120");
@@ -131,7 +136,15 @@ async function doorCheckIn() {
   await page.goto(`${DASHBOARD}/door`, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
 
   const night = page.getByLabel("Night");
-  if ((await night.count()) === 0) return skip("door check-in", "this account cannot open the door screen");
+  const appeared = await night.waitFor({ timeout: TIMEOUT_MS }).then(() => true).catch(() => false);
+  if (!appeared) {
+    // Say what the screen actually is — a redirect and a missing control read the
+    // same from here, and only one of them is a bug.
+    const text = (await page.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 120);
+    return skip("door check-in", `${new URL(page.url()).pathname} — ${text}`);
+  }
+  // The night list lands after the control does.
+  await night.locator("option").first().waitFor({ timeout: TIMEOUT_MS }).catch(() => {});
   const nights = await night.locator("option").count();
   if (nights === 0) return skip("door check-in", "no night is running");
 
@@ -143,7 +156,11 @@ async function doorCheckIn() {
   await search.fill(`e2e-no-such-guest-${stamp}`);
   await page.getByRole("button", { name: /^SEARCH$/ }).click();
   const empty = page.getByText("No guests on this list.").first();
-  check("door search answers an unknown guest", await empty.isVisible().catch(() => false));
+  const emptyShown = await empty
+    .waitFor({ timeout: TIMEOUT_MS })
+    .then(() => true)
+    .catch(() => false);
+  check("door search answers an unknown guest", emptyShown);
 
   const checkIn = page.getByRole("button", { name: /CHECK IN$/ }).first();
   if ((await checkIn.count()) === 0) return skip("a guest is checked in", "no unchecked guest on this night");
