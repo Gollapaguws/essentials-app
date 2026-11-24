@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { useResource } from "@/hooks/useResource";
 import { signOutEverywhere } from "@/lib/signOut";
 
 import type { AuthRole } from "@essentials/auth";
@@ -221,6 +222,27 @@ export function TopNav() {
   const visible = links.filter((l) => role === "admin" || !l.roles || l.roles.includes(role));
   const roleLabel = ROLE_LABEL[role] ?? "MEMBER";
 
+  // Unread mail, so the counter is visible from any console screen. Accounts
+  // without a mailbox get 0 rather than an error.
+  const mail = useResource<{ unseen: number }>(user ? "/mail/unread" : null);
+  const unseen = mail.data?.unseen ?? 0;
+
+  // Fresh count after each navigation, and every minute while the tab is open.
+  const previousPath = useRef(path);
+  useEffect(() => {
+    if (previousPath.current === path) return;
+    previousPath.current = path;
+    if (user) mail.reload();
+  }, [path, user, mail.reload]);
+
+  useEffect(() => {
+    if (!user) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") mail.reload();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [user, mail.reload]);
+
   const signOut = () => {
     void signOutEverywhere();
   };
@@ -262,6 +284,7 @@ export function TopNav() {
             <div className="space-y-0.5">
               {items.map((link) => {
                 const active = isActive(link.href);
+                const badge = link.href === "/mail" ? unseen : 0;
                 return (
                   <Link
                     key={link.href}
@@ -281,7 +304,19 @@ export function TopNav() {
                       }`}
                     />
                     <span className="truncate">{link.label}</span>
-                    {active && <span className="ml-auto h-1 w-1 rounded-full bg-neon" />}
+                    {(active || badge > 0) && (
+                      <span className="ml-auto flex items-center gap-1.5">
+                        {badge > 0 && (
+                          <span
+                            className="rounded-full bg-neon px-1.5 text-[9px] font-black leading-4 text-bg"
+                            aria-label={`${badge} unread message${badge === 1 ? "" : "s"}`}
+                          >
+                            {badge > 99 ? "99+" : badge}
+                          </span>
+                        )}
+                        {active && <span className="h-1 w-1 rounded-full bg-neon" />}
+                      </span>
+                    )}
                   </Link>
                 );
               })}

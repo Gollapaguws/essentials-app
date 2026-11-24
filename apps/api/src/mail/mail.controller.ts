@@ -30,6 +30,11 @@ export class MailController {
     return this.mail.summary(actor.sub);
   }
 
+  @Get("unread")
+  unread(@CurrentUser() actor: JwtUser) {
+    return this.mail.unread(actor.sub);
+  }
+
   @Get("messages")
   list(
     @CurrentUser() actor: JwtUser,

@@ -130,6 +130,39 @@ function quote(message: Message): string {
   return `\n\nOn ${fullWhen(message.date)}, ${message.from.name} <${message.from.address}> wrote:\n${lines.join("\n")}`;
 }
 
+/**
+ * Unsent mail lives in this browser, keyed by mailbox, so closing the tab or
+ * reloading does not throw away a half-written reply. Files cannot be stored
+ * this way; the composer says so when it restores a draft.
+ */
+const draftKey = (address: string) => `sonus.mail.draft:${address.toLowerCase()}`;
+
+function readDraft(key: string): Draft | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as Omit<Draft, "files">;
+    if (!saved?.mode) return null;
+    return { ...saved, files: [] };
+  } catch {
+    window.localStorage.removeItem(key);
+    return null;
+  }
+}
+
+function writeDraft(key: string, draft: Draft): void {
+  // An empty composer is not a draft; drop the entry rather than restore a blank.
+  if (!draft.to.trim() && !draft.cc.trim() && !draft.subject.trim() && !draft.body.trim()) {
+    window.localStorage.removeItem(key);
+    return;
+  }
+  const { mode, to, cc, subject, body, inReplyTo, references } = draft;
+  window.localStorage.setItem(
+    key,
+    JSON.stringify({ mode, to, cc, subject, body, inReplyTo, references }),
+  );
+}
+
 function toBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -149,6 +182,8 @@ export default function Mail() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  // Which mailbox's saved draft has already been offered, so a dismissal sticks.
+  const [restoredFor, setRestoredFor] = useState<string | null>(null);
 
   const summarySource = useResource<Summary>("/mail");
   const summary = summarySource.data;
@@ -189,11 +224,31 @@ export default function Mail() {
 
   const refreshFolders = () => summarySource.reload();
 
+  const forgetDraft = () => {
+    if (address) window.localStorage.removeItem(draftKey(address));
+  };
+
+  // Bring back what was being written last time this mailbox was open.
+  useEffect(() => {
+    if (!address || restoredFor === address) return;
+    setRestoredFor(address);
+    const saved = readDraft(draftKey(address));
+    if (!saved) return;
+    setDraft(saved);
+    setNotice("Your unsent draft is back. Attachments are not kept, so add them again before sending.");
+  }, [address, restoredFor]);
+
+  // Save on every keystroke — the payload is a few kilobytes at most.
+  useEffect(() => {
+    if (!address || !draft) return;
+    writeDraft(draftKey(address), draft);
+  }, [address, draft]);
+
   const openFolder = (name: string) => {
     setFolder(name);
     setOffset(0);
     setSelected(null);
-    setDraft(null);
+    // A saved draft survives folder changes; only Send or Discard clears it.
     setNotice(null);
     setFailure(null);
   };
@@ -311,6 +366,7 @@ export default function Mail() {
         references: current.references || undefined,
         attachments,
       });
+      forgetDraft();
       setDraft(null);
       setNotice(
         result.saved
@@ -563,7 +619,16 @@ export default function Mail() {
                     >
                       {busy ? "Sending…" : "Send"}
                     </button>
-                    <button type="button" className={quiet} onClick={() => setDraft(null)}>
+                    <button
+                      type="button"
+                      className={quiet}
+                      onClick={() => {
+                        forgetDraft();
+                        setDraft(null);
+                        setRestoredFor(address);
+                        setNotice(null);
+                      }}
+                    >
                       Discard
                     </button>
                   </div>

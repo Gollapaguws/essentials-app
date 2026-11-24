@@ -327,6 +327,17 @@ export class MailService {
     return { ok: true, saved };
   }
 
+  /**
+   * The INBOX unread count alone, for the console nav. Unlike the summary this
+   * never fails for a missing mailbox: an account without one simply has none.
+   */
+  async unread(userId: string) {
+    const box = await this.ownMailbox(userId);
+    if (!box) return { unseen: 0 };
+    const { unseen } = await this.status(box.localpart, "INBOX");
+    return { unseen };
+  }
+
   // ---- mail store plumbing -------------------------------------------------
 
   private async ownMailbox(userId: string): Promise<OwnMailbox | null> {
@@ -358,13 +369,14 @@ export class MailService {
   }
 
   private async status(localpart: string, folder: string) {
+    // Dovecot takes the field list as one argument; split into two and it
+    // silently reports only the first, so unread counts come back as zero.
     const { stdout } = await this.doveadm([
       "mailbox",
       "status",
       "-u",
       localpart,
-      "messages",
-      "unseen",
+      "messages unseen",
       folder,
     ]);
     const messages = Number(/messages=(\d+)/.exec(stdout)?.[1] ?? 0);
