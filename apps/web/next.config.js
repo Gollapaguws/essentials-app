@@ -11,8 +11,13 @@ const basePath =
 // signed-in screen can reach the API. Default it the same way basePath is
 // defaulted, so the systemd Environment= and the deploy script are belt and
 // braces rather than the only thing keeping the dashboard working.
+//
+// It is a path, not a host: nginx serves the API on the same vhost as the
+// dashboard, and the app is reachable on every hostname we serve. A relative
+// base keeps session cookies and the print/PDF links on whichever host the
+// person actually typed, instead of pinning them to one domain.
 if (!process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === "production") {
-  process.env.NEXT_PUBLIC_API_URL = "https://essentialsedm.com/api";
+  process.env.NEXT_PUBLIC_API_URL = "/api";
 }
 
 // basePath alone is enough: Next serves the app *and* its /_next assets under it.

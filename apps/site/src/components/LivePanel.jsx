@@ -46,7 +46,7 @@ export default function LivePanel({ idleLoop = "" }) {
   }, []);
 
   const studioLive = !!status.studioLive;
-  const hlsUrl = studioLive ? "https://essentialsedm.com/hls/live.m3u8" : status.hls;
+  const hlsUrl = studioLive ? "/hls/live.m3u8" : status.hls;
   const showIdleLoop = !!idleLoop && !idleMissing;
 
   // A newly uploaded reel must get a fresh chance to load.

@@ -3,8 +3,9 @@ import { Link, useParams } from "react-router-dom";
 import SiteNav from "@/components/SiteNav";
 import SiteFooter from "@/components/SiteFooter";
 import { setPageMeta, shareImage } from "@/lib/share";
+import { API_BASE } from "@/lib/apiBase";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
+const API_URL = API_BASE;
 
 const when = (date) => {
   const d = new Date(date);

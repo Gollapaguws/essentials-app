@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { defaultContent } from "@/data/siteContent";
+import { API_BASE } from "@/lib/apiBase";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
+const API_URL = API_BASE;
 
 /** Front-page content: server overrides (admin editor) merged over shipped defaults. */
 export function useSiteContent() {

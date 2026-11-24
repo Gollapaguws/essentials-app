@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
+import { API_BASE } from "@/lib/apiBase";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
+const API_URL = API_BASE;
 
 /** Read the current access token straight from the Supabase session. */
 async function currentToken() {

@@ -3,8 +3,9 @@ import { Link, Navigate } from "react-router-dom";
 import SiteNav from "@/components/SiteNav";
 import SiteFooter from "@/components/SiteFooter";
 import { useAuth } from "@/lib/AuthContext";
+import { API_BASE } from "@/lib/apiBase";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
+const API_URL = API_BASE;
 
 /** Newest first; the page stays short even when the changelog grows. */
 const RELEASES_SHOWN = 3;

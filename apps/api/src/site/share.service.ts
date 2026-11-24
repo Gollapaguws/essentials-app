@@ -4,7 +4,11 @@ import sharp from "sharp";
 
 const WIDTH = 1200;
 const HEIGHT = 630;
-const SITE = "https://essentialsedm.com";
+/**
+ * The public host printed on a share card. Read at request time because the env
+ * file is not parsed yet when this module is imported.
+ */
+const siteUrl = () => (process.env.SITE_URL ?? "https://sonus.essentialsedm.com").replace(/\/$/, "");
 
 /** SVG is hand-built, so anything from the database has to be escaped. */
 function esc(value: string): string {
@@ -119,7 +123,7 @@ ${metaLines
       eyebrow: when.toUpperCase(),
       title: event.title,
       meta: [event.venue.name, lineup.length ? lineup.join(" · ") : "Lineup to be announced"],
-      footer: `${SITE}/events/${id}`,
+      footer: `${siteUrl()}/events/${id}`,
     });
   }
 
@@ -134,7 +138,7 @@ ${metaLines
       eyebrow: "ESSENTIALS ROSTER",
       title: dj.stageName,
       meta: [(dj.bio ?? "").slice(0, 90)].filter(Boolean),
-      footer: `${SITE}/djs/${id}`,
+      footer: `${siteUrl()}/djs/${id}`,
     });
   }
 }

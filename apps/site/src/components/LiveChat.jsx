@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import "./live-chat.css";
+import { API_BASE } from "@/lib/apiBase";
 
-const API = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
+const API = API_BASE;
 const NAME_KEY = "essentials.liveChatName";
 const POLL_MS = 5000;
 

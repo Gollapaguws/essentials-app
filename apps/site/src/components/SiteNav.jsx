@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchMe, openDashboard, signOut } from "@/lib/auth";
+import { API_BASE } from "@/lib/apiBase";
 
 // Each label carries one line of plain description, so the menu says where it
 // goes. Same-origin links with a hash keep working from the auth pages too: the
@@ -15,7 +16,7 @@ const links = [
 ];
 
 const INSTALL_DISMISSED_KEY = "essentials-install-banner-dismissed";
-const API_URL = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
+const API_URL = API_BASE;
 
 const trackInstallEvent = (name) => {
   void fetch(`${API_URL}/site/event`, {

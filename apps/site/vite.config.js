@@ -8,4 +8,9 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
+  server: {
+    // The site calls the API on its own origin, so in dev that origin is Vite
+    // and the request has to be forwarded to the local API.
+    proxy: { "/api": "http://127.0.0.1:4000" },
+  },
 });

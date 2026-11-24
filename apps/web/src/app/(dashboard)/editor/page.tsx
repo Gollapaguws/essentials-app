@@ -6,7 +6,7 @@ import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 import { useResource } from "@/hooks/useResource";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://essentialsedm.com/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 const MAX_UPLOAD = 120 * 1024 * 1024;
 
 interface FrontPageEvent { title: string; displayDate: string; city: string; venue: string; doors: string; price: string; status?: string }

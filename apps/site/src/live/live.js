@@ -1,4 +1,5 @@
-const API = import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api";
+import { API_BASE } from "@/lib/apiBase";
+const API = API_BASE;
 const WS_BASE = (window.location.origin ?? "https://essentialsedm.com").replace(/^http/, "ws");
 
 const token = () => localStorage.getItem("essentials_token") ?? "";

@@ -1,4 +1,6 @@
-const SITE = "https://essentialsedm.com";
+import { SITE_URL } from "@/lib/apiBase";
+
+const SITE = SITE_URL;
 
 const DEFAULTS = {
   title: "ESSENTIALS — Music Events",

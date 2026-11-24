@@ -3,9 +3,10 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import { AuthProvider } from '@/lib/AuthContext';
 import Home from './pages/Home';
+import { API_BASE } from "@/lib/apiBase";
 
 if (typeof window !== "undefined") {
-  fetch(`${import.meta.env.VITE_API_URL ?? "https://essentialsedm.com/api"}/site/visit`, {
+  fetch(`${API_BASE}/site/visit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ path: window.location.pathname }),

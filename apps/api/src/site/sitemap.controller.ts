@@ -2,7 +2,11 @@ import { Controller, Get, Header } from "@nestjs/common";
 import { PublicDjsService } from "./public-djs.service";
 import { PublicEventsService } from "./public-events.service";
 
-const SITE = "https://essentialsedm.com";
+/**
+ * The canonical host for the sitemap. Read per request: the env file is loaded
+ * during bootstrap, after this module is imported.
+ */
+const siteUrl = () => (process.env.SITE_URL ?? "https://sonus.essentialsedm.com").replace(/\/$/, "");
 
 interface Url {
   path: string;
@@ -12,6 +16,7 @@ interface Url {
 }
 
 function xml(urls: Url[]): string {
+  const SITE = siteUrl();
   const rows = urls
     .map(
       (u) => `  <url>
