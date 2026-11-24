@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { DASHBOARD_ROLES } from "@essentials/auth";
-import { supabase } from "@/lib/supabase";
-import { fetchMe, openDashboard } from "@/lib/auth";
+import { authCallbackUrl, supabase } from "@/lib/supabase";
+import { fetchMe, openDashboard, signInWithGoogle } from "@/lib/auth";
 
 /** @type {import('react').CSSProperties} */
 const style = { minHeight: "80vh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" };
@@ -15,6 +15,7 @@ export default function AuthCallback() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const [error, setError] = useState(null);
+  const [retrying, setRetrying] = useState(false);
   // useSearchParams() hands back a fresh object on every render, so the effect
   // must depend on the plain strings instead. Depending on the object re-ran the
   // exchange after each setError, which fired /auth/me in a loop until the API
@@ -80,14 +81,36 @@ export default function AuthCallback() {
     })();
   }, [code, type, providerError, navigate]);
 
+  // A provider error means the retry that works is the provider again — sending
+  // someone to a "new link" screen after a refused Google sign-in is a dead end.
+  // An expired or incomplete link is the other way round.
+  const oauthFailed = Boolean(providerError);
+
+  const retryGoogle = () => {
+    setRetrying(true);
+    signInWithGoogle(authCallbackUrl).catch(() => {
+      setRetrying(false);
+      setError("Google sign-in did not start. Check your connection and try again.");
+    });
+  };
+
   return (
     <div className="noir" style={style}>
       {error ? (
-        <div style={{ display: "grid", gap: 12, maxWidth: 420 }}>
+        <div style={{ display: "grid", gap: 12, maxWidth: 420, justifyItems: "center" }}>
           <p style={{ letterSpacing: 2 }}>SIGN-IN FAILED</p>
           <p style={{ opacity: 0.7 }}>{error}</p>
-          <Link to="/login" style={{ textDecoration: "underline" }}>
-            Send a new link
+          {oauthFailed ? (
+            <button type="button" className="noir-btn" onClick={retryGoogle} disabled={retrying}>
+              {retrying ? "Opening Google…" : "Try Google again"}
+            </button>
+          ) : (
+            <Link to="/forgot-password" className="noir-btn">
+              Send me a new link
+            </Link>
+          )}
+          <Link to="/login" className="noir-quiet-link">
+            Back to sign in
           </Link>
         </div>
       ) : (
