@@ -4,6 +4,39 @@ Notable changes to ESSENTIALS. Dates are UTC.
 
 ## 2026-11-24
 
+### Mail in the console
+
+- **Every account with a mailbox gets a full mail client** at `/mail`: folders with
+  unread counts, a paged message list with search, a reading pane (HTML rendered in
+  a sandboxed frame), attachments as downloads, reply and forward with threading
+  headers, star, mark unread, archive, and delete — to Trash first, then for good.
+  It reads the real Dovecot store through `doveadm`, so the mailbox password keeps
+  working in any IMAP client.
+- **Sending leaves through a verified relay.** The host's DKIM record no longer
+  matched its signing key and its IP was outside the domain's SPF, so Gmail rejected
+  console mail with `550 5.7.26 … sender is unauthenticated`. With
+  `RESEND_API_KEY` set, user mail and account notifications submit to Resend's
+  verified domain; the local Postfix stays the fallback. The DKIM, SPF and MX
+  records still needed at Bluehost — including inbound delivery — are written out
+  in `docs/email-deliverability.md`.
+- **Drafts live in the mailbox, not the browser.** The composer saves into the
+  Drafts folder 1.5s after typing stops, replacing its previous copy, and the next
+  visit — on any device — reopens that draft. Send or Discard removes it.
+  Attachments are not kept in a draft.
+- **A signature, once.** A Signature panel on the mail screen stores per-account
+  plain text and adds it to the top of new mail, replies and forwards.
+- **Unread mail is visible everywhere.** The console nav carries the INBOX unread
+  count, refreshed on each navigation and once a minute.
+- **Unread counts were always zero before this.** `doveadm mailbox status` takes
+  its field list as one argument, so passing `messages` and `unseen` separately made
+  Dovecot silently omit the unseen count.
+
+### Front page
+
+- **DJ portraits load again.** All six stored profile images pointed at the old
+  apex host, which answers `/media/...` with an HTML page instead of the file; the
+  URLs now use the sonus host.
+
 ### Operational visibility
 
 - **`GET /api/health` is now a readiness probe.** It pings Postgres and Redis with

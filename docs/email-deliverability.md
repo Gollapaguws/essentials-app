@@ -73,6 +73,75 @@ After migration to Postal, regenerate DKIM keys in the Postal admin and update S
   sets the key; when unset, a purpose-specific key is derived from `QR_SECRET`.
 - **Suppression**: consent is checked at enqueue time *and* again inside the send worker.
 
+## DNS records this server currently needs
+
+Read this before changing anything: the VPS runs its own Postfix + Dovecot for the
+platform mailboxes (`/home/<localpart>/Maildir`), but the domain's DNS still points
+at the old Bluehost hosting. Two of those records block mail:
+
+1. **Outbound is unauthenticated.** Gmail answers
+   `550 5.7.26 … requires all senders to authenticate with either SPF or DKIM`
+   because the host's IP is not in SPF and the DKIM key it signs with is not the
+   one published in DNS.
+2. **Inbound does not arrive.** MX points at Bluehost, which has no mailbox for
+   these addresses, so external mail bounces before reaching Dovecot.
+
+Until the records below are applied (DNS is managed at Bluehost — `ns1/ns2.bluehost.com`,
+no API), outbound user and notification mail is relayed through **Resend**
+(`RESEND_API_KEY` in `.env`), whose `essentialsedm.com` domain is verified.
+
+### 1. DKIM — replace the stale record
+
+Host `default._domainkey` (TXT). The current record holds a key that no longer
+matches `/etc/opendkim/keys/essentialsedm.com/default.private`, so every signature
+fails. Replace the value with this single string (it is the two quoted chunks of
+`/etc/opendkim/keys/essentialsedm.com/default.txt`, concatenated):
+
+```
+v=DKIM1; h=sha256; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtD5rd3hd5Gtg2uZ23Kr7mHBcM1AxlLXY7Hgp/IhoSOjLCSeTEndFiWC2GPXZDnad9q8lGfBQWsYKPigFRu45ug+o/tfIbWlGp8xl8xirkESrQAViMyj/d7i96zGSo72g0q13z/jHn6FatjXRq8bed+N4WiWjWZ0VYzt2BqLcbtzK0in06VElvx2iFlHcBqb8O6FPYY/VFiXB2emeefpFcpi5OKbLUnuezVudWCFjZXEnfN9/9dqeRfw6aBsFXEWJSsbo7GwN99dTzTNU7q3l9/C0ofZbmido7PSyDw/chbzwo2JpL+Y9l0iYMMb5EyLhz+/0G92WTPFutmCxoq196wIDAQAB
+```
+
+Note `opendkim-testkey` reports `key OK` against the *local* key even when DNS is
+stale; compare with `dig` before trusting it.
+
+### 2. SPF — add this host's IP
+
+Host `@` (TXT), current value `v=spf1 a mx include:websitewelcome.com ~all`. Keep
+one SPF record and add the VPS:
+
+```
+v=spf1 a mx include:websitewelcome.com ip4:72.62.211.31 ~all
+```
+
+### 3. MX — point the domain at Dovecot (only if mailboxes live here)
+
+| Host | Type | Current | Required |
+|---|---|---|---|
+| `mail.essentialsedm.com` | A | `162.241.218.139` (Bluehost) | `72.62.211.31` |
+| `@` | MX | `0 mail.essentialsedm.com`, `10 essentialsedm.com` | `10 mail.essentialsedm.com` and drop the apex MX |
+
+Also set the PTR (rDNS) for `72.62.211.31` to `mail.essentialsedm.com` at the hosting
+provider, and keep `mail.essentialsedm.com` as Postfix's `myhostname`.
+
+### DMARC
+
+`_dmarc` is `v=DMARC1; p=none`, which is safe while records settle. Once DKIM and
+SPF pass, move to `v=DMARC1; p=quarantine; rua=mailto:dmarc@essentialsedm.com`.
+
+### Verifying
+
+```bash
+dig +short TXT default._domainkey.essentialsedm.com   # must equal the record above
+dig +short TXT essentialsedm.com                      # must contain ip4:72.62.211.31
+dig +short MX essentialsedm.com                       # must point at mail.essentialsedm.com
+opendkim-testkey -d essentialsedm.com -s default -vvv # local key vs DNS
+journalctl -u opendkim -n 20 --no-pager               # "DKIM-Signature field added"
+tail -f /var/log/mail.log                             # delivery and rejections
+```
+
+For inbound, send from an outside account and then check
+`doveadm search -u <localpart> mailbox INBOX ALL`.
+
 ## Flows
 | Flow | Trigger |
 |---|---|
