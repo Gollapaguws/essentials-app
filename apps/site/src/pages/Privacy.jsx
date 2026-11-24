@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import SiteNav from "@/components/SiteNav";
 import SiteFooter from "@/components/SiteFooter";
 import { api } from "@/lib/auth";
 import { useAuth } from "@/lib/AuthContext";
+import { setPageMeta } from "@/lib/share";
 
 const LAST_UPDATED = "23 November 2026";
 const POLICY_VERSION = "2026-11-23";
@@ -66,6 +67,15 @@ function DataExport() {
 
 /** Public privacy notice. */
 export default function Privacy() {
+  useEffect(() => {
+    setPageMeta({
+      title: "Privacy notice",
+      description:
+        "How SONUS handles your information: what we collect when you buy a ticket or sign in, why we hold it, who processes it, and how to export or delete it.",
+      path: "/privacy",
+    });
+  }, []);
+
   return (
     <div className="noir">
       <SiteNav />

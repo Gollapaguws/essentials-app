@@ -1,11 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { openDashboard, signInWithPassword, signInWithGoogle } from "@/lib/auth";
 import { authCallbackUrl } from "@/lib/supabase";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
+import { setPageMeta } from "@/lib/share";
 
 export default function Login() {
+  useEffect(() => {
+    setPageMeta({
+      title: "Sign in",
+      description: "Sign in to SONUS for your tickets, guestlists and event lineups.",
+      path: "/login",
+    });
+  }, []);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);

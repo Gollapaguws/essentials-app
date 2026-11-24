@@ -4,6 +4,7 @@ import SiteNav from "@/components/SiteNav";
 import SiteFooter from "@/components/SiteFooter";
 import { useAuth } from "@/lib/AuthContext";
 import { API_BASE } from "@/lib/apiBase";
+import { setPageMeta } from "@/lib/share";
 
 const API_URL = API_BASE;
 
@@ -96,6 +97,15 @@ function Notes() {
 
 export default function WhatsNew() {
   const { isAuthenticated, isLoadingAuth, authChecked, role } = useAuth();
+
+  useEffect(() => {
+    setPageMeta({
+      title: "What's new",
+      description:
+        "Release notes for SONUS: what changed in events, ticketing, lineups and the dashboard, newest first.",
+      path: "/whats-new",
+    });
+  }, []);
 
   if (isLoadingAuth || !authChecked) {
     return (
