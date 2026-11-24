@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useResource } from "@/hooks/useResource";
 import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
 import { api } from "@essentials/api-client";
@@ -38,12 +39,18 @@ const field = "bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-non
 
 /** Phase 2 venue portal: location, approval workflow, door ops, analytics. */
 export default function VenuePortal() {
-  const [venues, setVenues] = useState<Venue[]>([]);
+  const venuesSource = useResource<Venue[]>("/venues/mine");
+  const venues = venuesSource.data ?? [];
   const [venueId, setVenueId] = useState<string>("");
-  const [pending, setPending] = useState<PendingEvent[]>([]);
-  const [logs, setLogs] = useState<DoorLog[]>([]);
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [revenue, setRevenue] = useState<Revenue | null>(null);
+  // One resource per per-venue panel; `null` keeps them idle until a venue is picked.
+  const pendingSource = useResource<PendingEvent[]>(venueId ? "/venues/events/pending" : null);
+  const logsSource = useResource<DoorLog[]>(venueId ? `/venues/${venueId}/door-logs` : null);
+  const analyticsSource = useResource<Analytics>(venueId ? `/venues/${venueId}/analytics` : null);
+  const revenueSource = useResource<Revenue>(venueId ? `/venues/${venueId}/revenue` : null);
+  const pending = pendingSource.data ?? [];
+  const logs = logsSource.data ?? [];
+  const analytics = analyticsSource.data;
+  const revenue = revenueSource.data;
   const [details, setDetails] = useState({ name: "", address: "", lat: "", lng: "" });
   const [busyDetails, setBusyDetails] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -62,27 +69,23 @@ export default function VenuePortal() {
   const loadVenue = (id: string) => {
     setVenueId(id);
     setError(null);
-    api.get<PendingEvent[]>("/venues/events/pending").then(setPending).catch((e) => setError(errorMessage(e)));
-    api.get<DoorLog[]>(`/venues/${id}/door-logs`).then(setLogs).catch(() => {});
-    api.get<Analytics>(`/venues/${id}/analytics`).then(setAnalytics).catch(() => {});
-    api.get<Revenue>(`/venues/${id}/revenue`).then(setRevenue).catch(() => {});
+    // Same venue again (e.g. after an approval) has to re-read; a different one
+    // re-fetches by itself because each path changes.
+    pendingSource.reload();
+    logsSource.reload();
+    analyticsSource.reload();
+    revenueSource.reload();
   };
 
-  const refreshVenues = async (keepId?: string) => {
-    const list = await api.get<Venue[]>("/venues/mine");
-    setVenues(list);
-    const next = keepId ?? venueId;
-    if (!next || !list.some((v) => v.id === next)) {
-      if (list[0]) loadVenue(list[0].id);
-    }
+  const refreshVenues = (keepId?: string) => {
+    venuesSource.reload();
+    if (keepId) loadVenue(keepId);
   };
 
+  // Default to the first venue once the list lands, without overriding a choice.
   useEffect(() => {
-    api.get<Venue[]>("/venues/mine").then((v) => {
-      setVenues(v);
-      if (v[0]) loadVenue(v[0].id);
-    }).catch((e) => setError(errorMessage(e)));
-  }, []);
+    if (!venueId && venues[0]) setVenueId(venues[0].id);
+  }, [venues, venueId]);
 
   // Keep the form in sync with whichever venue is selected.
   useEffect(() => {
@@ -217,7 +220,11 @@ export default function VenuePortal() {
           )}
         </div>
         {notice && <p className="text-neon text-sm">{notice}</p>}
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {(error ?? venuesSource.error ?? pendingSource.error) && (
+          <p role="alert" className="text-red-400 text-sm">
+            {error ?? venuesSource.error ?? pendingSource.error}
+          </p>
+        )}
 
         {/* A promoter books nights into rooms that may not exist in the app yet. */}
         {(creating || !selected) && (

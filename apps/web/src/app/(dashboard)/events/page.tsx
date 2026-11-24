@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 import { useAuth } from "@/components/AuthProvider";
 import { DownloadButton } from "@/components/DownloadButton";
 import { ConsolePage } from "@/components/console/ConsolePage";
@@ -113,8 +114,11 @@ const hhmm = (minutes: number | null) =>
 
 /** Event manager: pick a venue from the list, CRUD, capacity caps, live guest lists. */
 export default function EventManager() {
-  const [events, setEvents] = useState<EventRow[]>([]);
-  const [venues, setVenues] = useState<VenueOption[]>([]);
+  // Newest first, capped at one page; the API clamps the same ceiling.
+  const eventsSource = useResource<EventRow[]>(`/events/manage/list?limit=${PAGE_SIZE}`);
+  const events = eventsSource.data ?? [];
+  const venuesSource = useResource<VenueOption[]>("/venues/options");
+  const venues = venuesSource.data ?? [];
   const [form, setForm] = useState({
     title: "",
     venueId: "",
@@ -131,8 +135,9 @@ export default function EventManager() {
   // Per-slot fee overrides, keyed by slot id, for the expanded plan panel.
   const [slotDrafts, setSlotDrafts] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
-  // Money across every upcoming night, not just the one being planned.
-  const [budgetOverview, setBudgetOverview] = useState<BudgetOverview | null>(null);
+  // Money across every upcoming night, not just the one being planned. A door-only
+  // account can read the night list but not the budgets, so the 403 is ignored.
+  const budgetOverview = useResource<BudgetOverview>("/events/budgets").data;
   // ?focus=<id> is how the ⌘K palette points at one night in a long table.
   const [focusId, setFocusId] = useState<string | null>(null);
   // One event's DJ applications, opened inline from its row.
@@ -147,6 +152,7 @@ export default function EventManager() {
   const isAdmin = me?.user.role === "admin";
   // Promoters shape the arc their own slot plans are tagged with.
   const canEditArc = isAdmin || me?.user.role === "promoter";
+  const arcSource = useResource<NightArcResponse>(canEditArc ? "/events/night-arc" : null);
   const [arc, setArc] = useState<ArcPhase[] | null>(null);
   const [arcDefaults, setArcDefaults] = useState<ArcPhase[]>([]);
   const [arcNotice, setArcNotice] = useState<string | null>(null);
@@ -157,19 +163,10 @@ export default function EventManager() {
   // approves it on creation and calls the DJ roster straight away.
   const venueIsMine = !!selectedVenue?.managerId && selectedVenue.managerId === me?.user.sub;
 
-  // Newest first, capped at one page; the API clamps the same ceiling.
-  const load = () =>
-    api
-      .get<EventRow[]>(`/events/manage/list?limit=${PAGE_SIZE}`)
-      .then(setEvents)
-      .catch((e) => setError(errorMessage(e)));
+  const load = () => eventsSource.reload();
+
   useEffect(() => {
     setFocusId(new URLSearchParams(window.location.search).get("focus"));
-    load();
-    api.get<VenueOption[]>("/venues/options").then(setVenues).catch((e) => setError(errorMessage(e)));
-    // A door-only account can read the night list but not the budgets.
-    api.get<BudgetOverview>("/events/budgets").then(setBudgetOverview).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -177,19 +174,16 @@ export default function EventManager() {
     document.getElementById(`event-${focusId}`)?.scrollIntoView({ block: "center" });
   }, [focusId, events.length]);
 
+  // The arc is edited locally, so the server copy seeds a draft rather than being
+  // bound to the fields.
   useEffect(() => {
-    if (!canEditArc) {
+    if (!arcSource.data) {
       setArc(null);
       return;
     }
-    api
-      .get<NightArcResponse>("/events/night-arc")
-      .then((r) => {
-        setArc(r.phases);
-        setArcDefaults(r.defaults);
-      })
-      .catch(() => setArc(null));
-  }, [canEditArc]);
+    setArc(arcSource.data.phases);
+    setArcDefaults(arcSource.data.defaults);
+  }, [arcSource.data]);
 
   const saveArc = async () => {
     if (!arc) return;
@@ -393,7 +387,11 @@ export default function EventManager() {
           Showing the {PAGE_SIZE} most recent nights — older nights stay in the database and export.
         </p>
       )}
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {(error ?? eventsSource.error ?? venuesSource.error) && (
+        <p role="alert" className="text-red-400 text-sm">
+          {error ?? eventsSource.error ?? venuesSource.error}
+        </p>
+      )}
       {notice && <p className="text-neon text-sm">{notice}</p>}
 
       {budgetOverview && budgetOverview.nights.length > 0 && (

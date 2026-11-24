@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { useAuth } from "@/components/AuthProvider";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 
 interface RegisteredUser {
   id: string;
@@ -78,8 +79,10 @@ export default function Users() {
   const { me } = useAuth();
   const isAdmin = me?.user.role === "admin";
 
-  const [users, setUsers] = useState<RegisteredUser[]>([]);
+
   const [q, setQ] = useState("");
+  // Only what was submitted travels to the API; typing does not query per keystroke.
+  const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [form, setForm] = useState<RoleForm | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -105,24 +108,23 @@ export default function Users() {
   const [catchAll, setCatchAll] = useState<string | null>(null);
   const [catchAllDraft, setCatchAllDraft] = useState("");
 
-  const load = useCallback(async (search: string) => {
-    setError(null);
-    try {
-      // One page, sized to what this screen renders; the API clamps it too.
-      const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
-      if (search.trim()) params.set("q", search.trim());
-      setUsers(await api.get<RegisteredUser[]>(`/users?${params}`));
-    } catch (e) {
-      setError(errorMessage(e) ?? "Could not load users.");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isAdmin) void load("");
-  }, [isAdmin, load]);
+  // One page, sized to what this screen renders; the API clamps it too. A
+  // non-admin never asks for the account table at all.
+  const usersSource = useResource<RegisteredUser[]>(
+    isAdmin
+      ? `/users?limit=${PAGE_SIZE}${search ? `&q=${encodeURIComponent(search)}` : ""}`
+      : null,
+  );
+  const users = usersSource.data ?? [];
+  const load = (_search?: string) => usersSource.reload();
+  const submitSearch = () => {
+    const next = q.trim();
+    if (next === search) usersSource.reload();
+    else setSearch(next);
+  };
 
   const replace = (updated: RegisteredUser) =>
-    setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+    usersSource.setData((prev) => (prev ?? []).map((u) => (u.id === updated.id ? updated : u)));
 
   const describe = (u: RegisteredUser) =>
     u.stageName
@@ -159,7 +161,7 @@ export default function Users() {
         email: newEmail.trim(),
         role: newRole,
       });
-      setUsers((prev) => [result.user, ...prev]);
+      usersSource.setData((prev) => [result.user, ...(prev ?? [])]);
       setProvisioned({ email: result.user.email, password: result.temporaryPassword });
       setNewEmail("");
     } catch (err) {
@@ -539,7 +541,7 @@ export default function Users() {
             className="flex gap-2"
             onSubmit={(e) => {
               e.preventDefault();
-              void load(q);
+              submitSearch();
             }}
           >
             <input
@@ -807,7 +809,11 @@ export default function Users() {
         )}
 
         {notice && <p className="text-neon text-sm">{notice}</p>}
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {(error ?? usersSource.error) && (
+          <p role="alert" className="text-red-400 text-sm">
+            {error ?? usersSource.error}
+          </p>
+        )}
 
         {resetResult && (
           <div className="border border-yellow-500/40 rounded-xl p-4">

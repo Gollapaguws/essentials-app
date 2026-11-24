@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { Stat } from "@/components/Stat";
 import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 import { doorSummary, recentEntries } from "@/lib/door";
+import { useResource } from "@/hooks/useResource";
 
 interface EventRow {
   id: string;
@@ -33,12 +34,24 @@ const field = "bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-non
  * scanner. Built for a phone at the door: big row targets, one action per guest.
  */
 export default function Door() {
-  const [events, setEvents] = useState<EventRow[]>([]);
+  const eventsSource = useResource<EventRow[]>("/events/manage/list?limit=200");
+  // Only nights that are at (or past) the door are useful here.
+  const events = (eventsSource.data ?? []).filter(
+    (e) => e.status === "approved" || e.status === "live" || e.status === "completed",
+  );
   const [eventId, setEventId] = useState("");
-  const [guests, setGuests] = useState<Guest[]>([]);
+  // The search only travels when SEARCH is pressed, not on every keystroke.
+  const [appliedQuery, setAppliedQuery] = useState("");
+  const guestsSource = useResource<Guest[]>(
+    eventId
+      ? `/events/${eventId}/guest-list${appliedQuery ? `?q=${encodeURIComponent(appliedQuery)}` : ""}`
+      : null,
+  );
+  const guests = guestsSource.data ?? [];
   // Unfiltered list for the headline numbers: searching must not change the
   // counts or what "recent entries" means.
-  const [allGuests, setAllGuests] = useState<Guest[]>([]);
+  const allGuestsSource = useResource<Guest[]>(eventId ? `/events/${eventId}/guest-list` : null);
+  const allGuests = allGuestsSource.data ?? [];
   const [query, setQuery] = useState("");
   // Arriving from the palette: ?event= picks the night and ?q= pre-fills the search.
   const [requestedEvent, setRequestedEvent] = useState<string | null>(null);
@@ -50,49 +63,30 @@ export default function Door() {
     const params = new URLSearchParams(window.location.search);
     setRequestedEvent(params.get("event"));
     const seeded = params.get("q");
-    if (seeded) setQuery(seeded);
+    if (seeded) {
+      setQuery(seeded);
+      setAppliedQuery(seeded);
+    }
   }, []);
 
+  // Pick the night from ?event=, otherwise the first one at the door.
   useEffect(() => {
-    api
-      .get<EventRow[]>("/events/manage/list")
-      .then((rows) => {
-        const usable = rows.filter((e) => e.status === "approved" || e.status === "live" || e.status === "completed");
-        setEvents(usable);
-        const wanted = usable.find((e) => e.id === requestedEvent);
-        if (wanted) setEventId(wanted.id);
-        else if (usable[0]) setEventId(usable[0].id);
-      })
-      .catch((e) => setError(errorMessage(e) ?? "Could not load your events."));
-  }, [requestedEvent]);
+    if (eventId || !events.length) return;
+    setEventId(events.find((e) => e.id === requestedEvent)?.id ?? events[0].id);
+  }, [events, eventId, requestedEvent]);
 
-  const load = useCallback(async () => {
-    if (!eventId) return;
-    try {
-      const q = query.trim();
-      setGuests(await api.get<Guest[]>(`/events/${eventId}/guest-list${q ? `?q=${encodeURIComponent(q)}` : ""}`));
-      setError(null);
-    } catch (e) {
-      setError(errorMessage(e) ?? "Could not load the door list.");
-    }
-  }, [eventId, query]);
+  /** SEARCH applies what was typed; pressing it twice re-reads the same list. */
+  const search = () => {
+    const next = query.trim();
+    if (next === appliedQuery) guestsSource.reload();
+    else setAppliedQuery(next);
+  };
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const loadAll = useCallback(async () => {
-    if (!eventId) return;
-    try {
-      setAllGuests(await api.get<Guest[]>(`/events/${eventId}/guest-list`));
-    } catch {
-      // The visible list already surfaces the error; this only feeds the summary.
-    }
-  }, [eventId]);
-
-  useEffect(() => {
-    void loadAll();
-  }, [loadAll]);
+  // A check-in changes both the filtered list and the headline numbers.
+  const load = () => {
+    guestsSource.reload();
+    allGuestsSource.reload();
+  };
 
   const checkIn = async (guest: Guest) => {
     setBusyId(guest.id);
@@ -107,8 +101,7 @@ export default function Door() {
           ? `${res.guest ?? "That guest"} is already inside.`
           : `${res.guest ?? "Guest"} checked in.`,
       );
-      await load();
-      await loadAll();
+      load();
     } catch (e) {
       setError(errorMessage(e) ?? "Could not check that guest in.");
     } finally {
@@ -133,7 +126,11 @@ export default function Door() {
         </div>
 
         {notice && <p className="text-neon text-sm">{notice}</p>}
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {(error ?? guestsSource.error ?? eventsSource.error) && (
+          <p role="alert" className="text-red-400 text-sm">
+            {error ?? guestsSource.error ?? eventsSource.error}
+          </p>
+        )}
 
         <label className="block text-xs text-neutral-400 space-y-1">
           <span>Night</span>
@@ -142,7 +139,7 @@ export default function Door() {
             value={eventId}
             onChange={(e) => {
               setEventId(e.target.value);
-              setGuests([]);
+
               setNotice(null);
             }}
           >
@@ -193,7 +190,7 @@ export default function Door() {
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Search the guest list"
           />
-          <button onClick={() => load()} className="bg-neon text-bg font-black rounded-lg px-4 py-2 text-xs tracking-widest">
+          <button onClick={search} className="bg-neon text-bg font-black rounded-lg px-4 py-2 text-xs tracking-widest">
             SEARCH
           </button>
         </div>

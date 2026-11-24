@@ -4,8 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/TopNav";
 import { useAuth } from "@/components/AuthProvider";
-import { api, API_URL } from "@essentials/api-client";
+import { API_URL } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
+import { useResource } from "@/hooks/useResource";
 
 interface LiveStatus {
   live: boolean;
@@ -181,11 +182,18 @@ export default function GoLive() {
   const [micId, setMicId] = useState("");
   const [audioReady, setAudioReady] = useState(false);
   const [meterStream, setMeterStream] = useState<MediaStream | null>(null);
-  const [status, setStatus] = useState<LiveStatus | null>(null);
+  // Polled: one broadcast runs at a time, so this page shows whether somebody
+  // else owns it, and whether the DJ's booking window is open right now.
+  const statusSource = useResource<LiveStatus>("/live/status");
+  const status = statusSource.data;
+  const gateSource = useResource<ActiveBookingResponse>(me ? "/live/bookings/active" : null);
+  const gate =
+    gateSource.data ??
+    (gateSource.error ? { required: role !== "admin", booking: null } : null);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [gate, setGate] = useState<ActiveBookingResponse | null>(null);
+
   const [signalSeen, setSignalSeen] = useState(false);
   const signalSeenRef = useRef(false);
 
@@ -198,37 +206,19 @@ export default function GoLive() {
     }
   }, []);
 
-  // DJs need a live-session booking covering now; admins are exempt.
+  // A booking can start while this page is open, and another browser can take the
+  // broadcast; both are re-read on a timer rather than fetched once.
+  const pollGate = gateSource.reload;
   useEffect(() => {
-    if (!me) return;
-    let active = true;
-    const load = () =>
-      api
-        .get<ActiveBookingResponse>("/live/bookings/active")
-        .then((data) => {
-          if (active) setGate(data);
-        })
-        .catch(() => {
-          // No profile or a failed lookup still blocks the DJ; the card below explains.
-          if (active) setGate({ required: role !== "admin", booking: null });
-        });
-    void load();
-    // A booking can start while this page is open, so re-check it.
-    const id = setInterval(load, 30_000);
-    return () => {
-      active = false;
-      clearInterval(id);
-    };
-  }, [me, role]);
-
-  // One broadcast runs at a time, so the page shows whether somebody else owns it.
-  useEffect(() => {
-    const load = () =>
-      api.get<LiveStatus>("/live/status").then(setStatus).catch(() => undefined);
-    void load();
-    const id = setInterval(load, 5000);
+    const id = setInterval(pollGate, 30_000);
     return () => clearInterval(id);
-  }, []);
+  }, [pollGate]);
+
+  const pollStatus = statusSource.reload;
+  useEffect(() => {
+    const id = setInterval(pollStatus, 5000);
+    return () => clearInterval(id);
+  }, [pollStatus]);
 
   useEffect(() => {
     if (phase !== "live") return;
