@@ -12,6 +12,10 @@ interface ErrorBody {
   message: string | string[];
   error: string;
   requestId?: string;
+  /** Machine-readable reason some guards attach (`MFA_REQUIRED`, …). */
+  code?: string;
+  /** Extra context a guard deliberately exposes, e.g. the role or a reset URL. */
+  [key: string]: unknown;
 }
 
 /**
@@ -72,6 +76,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const payload = exception.getResponse();
     let message: string | string[] = exception.message;
     let error = exception.name;
+    // Custom fields on the exception payload are part of the API contract: the
+    // dashboard branches on `code` (MFA_REQUIRED, PASSWORD_RESET_REQUIRED) and
+    // needs fields like `role`. Dropping them made those errors unrecognizable.
+    const extra: Record<string, unknown> = {};
 
     if (typeof payload === "string") {
       message = payload;
@@ -79,6 +87,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const shaped = payload as { message?: string | string[]; error?: string };
       if (shaped.message) message = shaped.message;
       if (shaped.error) error = shaped.error;
+      for (const [key, value] of Object.entries(payload)) {
+        if (!["statusCode", "message", "error", "requestId"].includes(key)) {
+          extra[key] = value;
+        }
+      }
     }
 
     // A deliberate 5xx (e.g. an upstream refusal) still must not describe internals.
@@ -87,6 +100,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       error = "Internal Server Error";
     }
 
-    return { statusCode: status, message, error, requestId };
+    return { ...extra, statusCode: status, message, error, requestId };
   }
 }

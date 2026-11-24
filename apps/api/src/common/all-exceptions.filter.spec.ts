@@ -1,4 +1,9 @@
-import { BadRequestException, Logger, ServiceUnavailableException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Logger,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { AllExceptionsFilter } from "./all-exceptions.filter";
 
 interface Sent {
@@ -53,6 +58,22 @@ describe("AllExceptionsFilter", () => {
     expect(status).toBe(400);
     expect(body.message).toEqual(["title should not be empty", "capacity must be a number"]);
     expect(body.error).toBe("Bad Request");
+  });
+
+  it("keeps the machine-readable code guards attach, so clients can act on it", () => {
+    const { status, body } = run(
+      new UnauthorizedException({
+        code: "MFA_REQUIRED",
+        role: "promoter",
+        message: "Verify your existing authenticator before changing two-step settings.",
+      }),
+    );
+    expect(status).toBe(401);
+    expect(body.code).toBe("MFA_REQUIRED");
+    expect(body.role).toBe("promoter");
+    expect(body.message).toBe(
+      "Verify your existing authenticator before changing two-step settings.",
+    );
   });
 
   it("masks a deliberate 5xx too, while keeping the status", () => {
