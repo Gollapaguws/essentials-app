@@ -3,9 +3,9 @@ import { SITE_URL } from "@/lib/apiBase";
 const SITE = SITE_URL;
 
 const DEFAULTS = {
-  title: "ESSENTIALS — Music Events",
+  title: "SONUS — Music Events",
   description:
-    "ESSENTIALS — a South African music events collective. Underground rooms, real sound systems, lineups built for the floor.",
+    "SONUS — a South African music events collective. Underground rooms, real sound systems, lineups built for the floor.",
   image: `${SITE}/og-default.png`,
   path: "/",
 };
@@ -46,7 +46,7 @@ function upsertCanonical(href) {
  */
 export function setPageMeta({ title, description, image, path, type = "website" } = {}) {
   const resolved = {
-    title: title ? `${limit(title, 70)} · ESSENTIALS` : DEFAULTS.title,
+    title: title ? `${limit(title, 70)} · SONUS` : DEFAULTS.title,
     description: limit(description || DEFAULTS.description, 200),
     image: image || DEFAULTS.image,
     url: `${SITE}${path ?? DEFAULTS.path}`,
@@ -55,7 +55,7 @@ export function setPageMeta({ title, description, image, path, type = "website" 
   document.title = resolved.title;
   upsertMeta("name", "description", resolved.description);
 
-  upsertMeta("property", "og:site_name", "ESSENTIALS");
+  upsertMeta("property", "og:site_name", "SONUS");
   upsertMeta("property", "og:type", type);
   upsertMeta("property", "og:title", resolved.title);
   upsertMeta("property", "og:description", resolved.description);

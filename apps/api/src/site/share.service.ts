@@ -67,15 +67,22 @@ export class ShareService {
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
   <defs>
-    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0a0a0a"/>
-      <stop offset="100%" stop-color="#000000"/>
-    </linearGradient>
+    <radialGradient id="space" cx="50%" cy="-10%" r="115%">
+      <stop offset="0%" stop-color="#0d1838"/>
+      <stop offset="52%" stop-color="#070c1c"/>
+      <stop offset="100%" stop-color="#03050c"/>
+    </radialGradient>
   </defs>
-  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#fade)"/>
-  <rect x="0" y="0" width="${WIDTH}" height="6" fill="#c6ff3d"/>
-  <text x="72" y="96" fill="#c6ff3d" font-family="Lato, DejaVu Sans, sans-serif" font-size="22" letter-spacing="8" font-weight="700">${esc(eyebrow)}</text>
-  <text x="72" y="150" fill="#f5f5f5" font-family="Lato, DejaVu Sans, sans-serif" font-size="30" letter-spacing="14" font-weight="700">ESSENTIALS</text>
+  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#space)"/>
+  <!-- The ringed orb from the front page, ghosted so the type stays legible. -->
+  <g fill="none" stroke="#cfe3ff">
+    <circle cx="1012" cy="198" r="150" stroke-opacity="0.10"/>
+    <ellipse cx="1012" cy="198" rx="262" ry="94" transform="rotate(-16 1012 198)" stroke-opacity="0.16"/>
+    <ellipse cx="1012" cy="198" rx="212" ry="150" transform="rotate(24 1012 198)" stroke-opacity="0.12"/>
+  </g>
+  <rect x="0.5" y="0.5" width="${WIDTH - 1}" height="${HEIGHT - 1}" fill="none" stroke="#cfe3ff" stroke-opacity="0.16"/>
+  <text x="72" y="96" fill="#9fd8ff" font-family="Lato, DejaVu Sans, sans-serif" font-size="22" letter-spacing="8" font-weight="700">${esc(eyebrow)}</text>
+  <text x="72" y="154" fill="#eaf6ff" font-family="DejaVu Serif, Georgia, serif" font-size="26" letter-spacing="13">SONUS</text>
 ${titleLines
   .map(
     (line, i) =>
@@ -85,10 +92,10 @@ ${titleLines
 ${metaLines
   .map(
     (line, i) =>
-      `  <text x="72" y="${metaTop + i * 42}" fill="#a3a3a3" font-family="Lato, DejaVu Sans, sans-serif" font-size="28">${esc(line)}</text>`,
+      `  <text x="72" y="${metaTop + i * 42}" fill="#9dbbdd" font-family="Lato, DejaVu Sans, sans-serif" font-size="28">${esc(line)}</text>`,
   )
   .join("\n")}
-  <text x="72" y="${HEIGHT - 56}" fill="#525252" font-family="Lato, DejaVu Sans, sans-serif" font-size="20" letter-spacing="4">${esc(footer)}</text>
+  <text x="72" y="${HEIGHT - 56}" fill="#6c86a8" font-family="Lato, DejaVu Sans, sans-serif" font-size="20" letter-spacing="4">${esc(footer)}</text>
 </svg>`;
 
     return sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toBuffer();
@@ -135,7 +142,7 @@ ${metaLines
     if (!dj) throw new NotFoundException("DJ not found");
 
     return this.card({
-      eyebrow: "ESSENTIALS ROSTER",
+      eyebrow: "SONUS ROSTER",
       title: dj.stageName,
       meta: [(dj.bio ?? "").slice(0, 90)].filter(Boolean),
       footer: `${siteUrl()}/djs/${id}`,

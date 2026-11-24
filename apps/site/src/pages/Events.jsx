@@ -23,7 +23,7 @@ export default function Events() {
     setPageMeta({
       title: "Events",
       description:
-        "Every announced ESSENTIALS night: warehouse parties, club nights and open-format sessions across South Africa.",
+        "Every announced SONUS night: warehouse parties, club nights and open-format sessions across South Africa.",
       path: "/events",
     });
   }, []);
