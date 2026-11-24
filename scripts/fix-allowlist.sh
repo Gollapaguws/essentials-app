@@ -2,7 +2,7 @@
 set -e
 python3 - <<'PYEOF'
 s=open("/opt/essentials/app/supabase/config.toml").read()
-s=s.replace('uri_allow_list = ["https://essentialsedm.com/**", "https://essentialsedm.com/auth/callback", "https://essentialsedm.com/dashboard/**", "essentials://**"]','additional_redirect_urls = ["https://essentialsedm.com/**", "https://essentialsedm.com/auth/callback", "https://essentialsedm.com/dashboard/**", "https://essentialsedm.com/login", "essentials://**"]')
+s=s.replace('uri_allow_list = ["https://sonus.essentialsedm.com/**", "https://sonus.essentialsedm.com/auth/callback", "https://sonus.essentialsedm.com/dashboard/**", "essentials://**"]','additional_redirect_urls = ["https://sonus.essentialsedm.com/**", "https://sonus.essentialsedm.com/auth/callback", "https://sonus.essentialsedm.com/dashboard/**", "https://sonus.essentialsedm.com/login", "essentials://**"]')
 open("/opt/essentials/app/supabase/config.toml","w").write(s)
 print("additional_redirect_urls" in s)
 PYEOF
@@ -15,4 +15,4 @@ systemctl restart essentials-api essentials-web
 sleep 6
 curl -s http://127.0.0.1:4000/api/health
 echo
-curl -sk https://essentialsedm.com/ -o /dev/null -w "site:%{http_code}\n"
+curl -sk https://sonus.essentialsedm.com/ -o /dev/null -w "site:%{http_code}\n"

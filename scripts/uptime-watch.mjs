@@ -44,7 +44,7 @@ if (existsSync(envFile)) {
 }
 
 const DRY_RUN = process.argv.includes("--dry-run");
-const ORIGIN = (process.env.SITE_URL ?? "https://essentialsedm.com").replace(/\/+$/, "");
+const ORIGIN = (process.env.SITE_URL ?? "https://sonus.essentialsedm.com").replace(/\/+$/, "");
 const API = (process.env.API_URL ?? `${ORIGIN}/api`).replace(/\/+$/, "");
 const TIMEOUT_MS = Number(process.env.UPTIME_TIMEOUT_MS ?? 10_000);
 const THRESHOLD = Number(process.env.UPTIME_FAIL_THRESHOLD ?? 3);

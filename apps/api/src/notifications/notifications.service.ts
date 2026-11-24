@@ -172,7 +172,7 @@ export class NotificationsService {
 
   /** Absolute links: the same URL is used in the bell feed and Telegram. */
   private appUrl() {
-    return (this.config.get<string>("APP_URL") ?? "https://essentialsedm.com").replace(/\/$/, "");
+    return (this.config.get<string>("APP_URL") ?? "https://sonus.essentialsedm.com").replace(/\/$/, "");
   }
 
   private telegramText(input: NotificationInput) {

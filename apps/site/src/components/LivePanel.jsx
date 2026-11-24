@@ -6,7 +6,7 @@ import { liveStatus, liveSchedule, setLiveSource, stopLiveSource, startScreenIng
 /**
  * LIVE section on the front page:
  * - restream: any RTSP/HTTP/HLS source set by an admin is played here (hls.js)
- * - GO LIVE: admin captures screen+audio → server FFmpeg → rtsp://essentialsedm.com:8554/essentials
+ * - GO LIVE: admin captures screen+audio → server FFmpeg → rtsp://sonus.essentialsedm.com:8554/essentials
  */
 const scheduleWhen = (iso) => {
   if (!iso) return "";

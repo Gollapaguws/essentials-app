@@ -17,7 +17,7 @@ git log --oneline -1
 env_value() { grep -m1 "^$1=" .env | cut -d= -f2- | sed 's/[[:space:]]*$//'; }
 export NEXT_PUBLIC_SUPABASE_URL="$(env_value NEXT_PUBLIC_SUPABASE_URL)"
 export NEXT_PUBLIC_SUPABASE_ANON_KEY="$(env_value NEXT_PUBLIC_SUPABASE_ANON_KEY)"
-export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://essentialsedm.com/api}"
+export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-/api}"
 # Must match the systemd unit's runtime value, or the HTML and the files disagree
 # about where /_next lives and every chunk 404s into the site's index.html.
 export NEXT_BASE_PATH="${NEXT_BASE_PATH:-/dashboard}"
@@ -50,9 +50,9 @@ systemctl is-active essentials-api essentials-web
 # The new build is live and its chunks are checked below; the previous one is
 # no longer needed.
 rm -rf apps/web/.next-old
-curl -s -o /dev/null -w "site:%{http_code}\n" https://essentialsedm.com/
-curl -s -o /dev/null -w "dashboard:%{http_code}\n" https://essentialsedm.com/dashboard
-curl -s -o /dev/null -w "api:%{http_code}\n" https://essentialsedm.com/api/auth/me
+curl -s -o /dev/null -w "site:%{http_code}\n" https://sonus.essentialsedm.com/
+curl -s -o /dev/null -w "dashboard:%{http_code}\n" https://sonus.essentialsedm.com/dashboard
+curl -s -o /dev/null -w "api:%{http_code}\n" https://sonus.essentialsedm.com/api/auth/me
 
 # The smoke run is the only thing that proves the stack works end to end, so it
 # is the deploy gate: it goes through nginx like a real client, and any failing
@@ -60,13 +60,13 @@ curl -s -o /dev/null -w "api:%{http_code}\n" https://essentialsedm.com/api/auth/
 # the script with a non-zero exit instead of reporting a success nobody checked.
 echo
 echo "Deploy gate: npm run smoke"
-API_URL=https://essentialsedm.com/api npm run smoke
+API_URL=https://sonus.essentialsedm.com/api npm run smoke
 
 # The plain smoke proves sign-in; this proves the second factor and recovery
 # codes against the deployed database and auth service.
 echo
 echo "Deploy gate: npm run smoke:mfa"
-API_URL=https://essentialsedm.com/api npm run smoke:mfa
+API_URL=https://sonus.essentialsedm.com/api npm run smoke:mfa
 
 # The smoke run proves the HTML and chunks are served; it never executes them.
 # This drives a real browser through the login page and a protected route, so a
@@ -74,4 +74,4 @@ API_URL=https://essentialsedm.com/api npm run smoke:mfa
 # reaching a user.
 echo
 echo "Deploy gate: npm run e2e:dashboard"
-SITE_URL=https://essentialsedm.com npm run e2e:dashboard
+SITE_URL=https://sonus.essentialsedm.com npm run e2e:dashboard

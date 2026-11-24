@@ -8,13 +8,13 @@
  * JavaScript content type, a protected route must redirect to the login form,
  * and no page error may be thrown on the way.
  *
- * Read-only: it signs nobody in. Set SITE_URL (default https://essentialsedm.com)
+ * Read-only: it signs nobody in. Set SITE_URL (default https://sonus.essentialsedm.com)
  * and CHROMIUM_PATH to point at a specific binary.
  */
 import { chromium } from "playwright-core";
 import { findChromium } from "./lib/chromium.mjs";
 
-const ORIGIN = (process.env.SITE_URL ?? process.env.DASHBOARD_URL ?? "https://essentialsedm.com").replace(/\/+$/, "");
+const ORIGIN = (process.env.SITE_URL ?? process.env.DASHBOARD_URL ?? "https://sonus.essentialsedm.com").replace(/\/+$/, "");
 const DASHBOARD = `${ORIGIN}/dashboard`;
 const TIMEOUT_MS = Number(process.env.E2E_TIMEOUT_MS ?? 20_000);
 

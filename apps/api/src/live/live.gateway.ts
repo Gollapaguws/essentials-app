@@ -45,8 +45,7 @@ export class LiveGateway {
       process.env.CORS_ORIGINS,
       process.env.SITE_URL,
       process.env.APP_URL,
-      "https://essentialsedm.com",
-      "https://www.essentialsedm.com",
+      "https://sonus.essentialsedm.com",
     ];
     const origins = new Set<string>();
     for (const value of values) {

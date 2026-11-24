@@ -6,7 +6,7 @@ import { SimulcastService } from "./simulcast.service";
 // RTSP is served by a dedicated MediaMTX server (ffmpeg 6.1 on Ubuntu cannot
 // bind its own RTSP muxer). ffmpeg pushes as a client; MediaMTX serves it
 // on 0.0.0.0:8554 to any number of viewers.
-const RTSP_HOST = "essentialsedm.com:8554";
+const RTSP_HOST = "sonus.essentialsedm.com:8554";
 const RTSP_PATH = "essentials";
 // Publisher credentials (env; used by the ingest ffmpeg push)
 const RTSP_PUSH = `rtsp://publish:${process.env.RTSP_PUBLISH_PASS ?? ""}@127.0.0.1:8554/${RTSP_PATH}`;
@@ -203,9 +203,9 @@ export class LiveService implements OnModuleDestroy {
       // A browser Go Live is published to MediaMTX, whose HLS is proxied at
       // /live-hls/. An admin restream still renders its own /hls/stream.m3u8.
       hls: live
-        ? `https://essentialsedm.com/live-hls/${RTSP_PATH}/index.m3u8`
+        ? `https://sonus.essentialsedm.com/live-hls/${RTSP_PATH}/index.m3u8`
         : this.sourceUrl
-          ? "https://essentialsedm.com/hls/stream.m3u8"
+          ? "https://sonus.essentialsedm.com/hls/stream.m3u8"
           : null,
     };
   }

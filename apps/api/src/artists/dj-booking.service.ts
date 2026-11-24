@@ -28,7 +28,7 @@ export class DjBookingService {
   ) {}
 
   private appUrl() {
-    return this.config.get("APP_URL") ?? "https://essentialsedm.com";
+    return this.config.get("APP_URL") ?? "https://sonus.essentialsedm.com";
   }
 
   /** Step 1 — called when an event gets approved: notify every artist + post to the front-page lineup. */

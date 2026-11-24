@@ -238,7 +238,7 @@ export class InvoicesService {
       kind: "invoice",
       title: `Invoice ${invoice.number} is due`,
       body: `${invoice.artist.stageName} is waiting on ${invoice.venue.name} for invoice ${invoice.number} — R${invoice.total.toLocaleString()}.`,
-      link: `${(this.config.get<string>("APP_URL") ?? "https://essentialsedm.com").replace(/\/$/, "")}/venue`,
+      link: `${(this.config.get<string>("APP_URL") ?? "https://sonus.essentialsedm.com").replace(/\/$/, "")}/venue`,
       channels: ["inapp"],
     });
     return { ...result, invoice: { id: invoice.id, number: invoice.number, total: invoice.total } };

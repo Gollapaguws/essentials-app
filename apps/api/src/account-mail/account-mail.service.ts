@@ -160,7 +160,7 @@ export class AccountMailService {
     const host = this.config.get<string>("SMTP_HOST")?.trim();
     this.from = this.config.get<string>("ACCOUNT_MAIL_FROM")?.trim() ?? "";
     this.replyTo = this.config.get<string>("ACCOUNT_MAIL_REPLY_TO")?.trim() || undefined;
-    this.appUrl = (this.config.get<string>("APP_URL")?.trim() || "https://essentialsedm.com").replace(
+    this.appUrl = (this.config.get<string>("APP_URL")?.trim() || "https://sonus.essentialsedm.com").replace(
       /\/+$/,
       "",
     );

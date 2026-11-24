@@ -113,13 +113,13 @@ export class LiveController {
     const key = this.config.get("MELD_STREAM_KEY") ?? "";
     // 443 carries both HTTPS and plain RTMP (nginx stream ssl_preread), so an
     // encoder that only fills in server + key lands on the MediaMTX path too.
-    const server = "rtmp://essentialsedm.com:443";
+    const server = "rtmp://sonus.essentialsedm.com:443";
     return {
       server,
       streamKey: key,
       fullUrl: key ? `${server}/${key}` : server,
-      viewerHls: "https://essentialsedm.com/hls/live.m3u8",
-      viewerRtsp: `rtsp://essentialsedm.com:8554/${key}`,
+      viewerHls: "https://sonus.essentialsedm.com/hls/live.m3u8",
+      viewerRtsp: `rtsp://sonus.essentialsedm.com:8554/${key}`,
     };
   }
 

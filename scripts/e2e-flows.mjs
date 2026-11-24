@@ -12,13 +12,13 @@
  * Set E2E_WRITE=1 to actually create the night, send the statement and check a
  * guest in. Point that at a staging database, not at a night people are attending.
  *
- * Env: E2E_BASE_URL (default https://essentialsedm.com), E2E_EMAIL, E2E_PASSWORD,
+ * Env: E2E_BASE_URL (default https://sonus.essentialsedm.com), E2E_EMAIL, E2E_PASSWORD,
  * E2E_WRITE, E2E_TIMEOUT_MS, CHROMIUM_PATH.
  */
 import { chromium } from "playwright-core";
 import { findChromium } from "./lib/chromium.mjs";
 
-const ORIGIN = (process.env.E2E_BASE_URL ?? "https://essentialsedm.com").replace(/\/+$/, "");
+const ORIGIN = (process.env.E2E_BASE_URL ?? "https://sonus.essentialsedm.com").replace(/\/+$/, "");
 const DASHBOARD = `${ORIGIN}/dashboard`;
 const EMAIL = process.env.E2E_EMAIL;
 const PASSWORD = process.env.E2E_PASSWORD;
