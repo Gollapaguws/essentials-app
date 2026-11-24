@@ -369,7 +369,7 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
       {
         title: "Accounts and roles",
         points: [
-          "Anyone can register at essentialsedm.com/register. A new account is a guest: it can RSVP to events but has no dashboard.",
+          "Anyone can register at sonus.essentialsedm.com/register. A new account is a guest: it can RSVP to events but has no dashboard.",
           "Users lists every account. Creating one asks for a temporary password and a role; the password is shown once and the account must choose its own at first sign-in.",
           "Role changes are made here and take effect on the person's next sign-in, because the API reads the role from the database rather than the token.",
           "There is no self-service upgrade and no application form inside the app, so a request to become a DJ is a decision for the team.",

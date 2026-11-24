@@ -36,7 +36,7 @@ const WS_URL = (() => {
     url.search = "";
     return url.toString();
   } catch {
-    return "wss://essentialsedm.com/live/ingest";
+    return "wss://sonus.essentialsedm.com/live/ingest";
   }
 })();
 
