@@ -6,7 +6,7 @@ import { GroupChatService, MAX_MESSAGE_LENGTH } from "./group-chat.service";
 import type { Response } from "express";
 import { Res } from "@nestjs/common";
 import { Auth, CurrentUser } from "../common/auth.decorator";
-import { pageArgs, parsePaging, type Paging } from "../common/paging";
+import { parsePaging } from "../common/paging";
 import type { JwtUser } from "../common/roles.guard";
 import { IsArray, IsBoolean, IsDateString, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
 

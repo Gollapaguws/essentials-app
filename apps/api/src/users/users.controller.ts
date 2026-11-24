@@ -4,7 +4,7 @@ import { Auth, CurrentUser } from "../common/auth.decorator";
 import type { JwtUser } from "../common/roles.guard";
 import { UsersService } from "./users.service";
 import { CreateUserDto, SetMfaDto, SetRoleDto, UpdateProfileDto } from "./users.dto";
-import { pageArgs, parsePaging, type Paging } from "../common/paging";
+import { parsePaging } from "../common/paging";
 
 /** Admin-only account administration: who is registered, and what they are. */
 @Controller("users")
