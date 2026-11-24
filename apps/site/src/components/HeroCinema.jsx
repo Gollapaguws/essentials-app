@@ -1,29 +1,41 @@
-import GoldWordmark from "@/components/GoldWordmark";
-import HeroSlider from "@/components/HeroSlider";
-import { slides as defaultSlides } from "@/data/siteContent";
+import CosmicBackdrop from "@/components/CosmicBackdrop";
 import { useSiteContent } from "@/lib/useSiteContent";
 
+/**
+ * The front page's opening frame: ESSENTIALS over a ringed orb, SONUS beneath it,
+ * and the two-line subtitle from the artwork. The next night's venue and city sit
+ * along the bottom edge, where a poster carries its billing block.
+ */
 export default function HeroCinema() {
   const c = useSiteContent();
-  const slides = c.heroSlides?.length ? c.heroSlides : defaultSlides;
+  const next = c.events?.[0];
+  const billingVenue = next?.venue ? `${next.venue} . ${next.city ?? c.city}` : c.city;
+
   return (
     <section id="top" className="noir-hero">
       <div className="noir-bar noir-bar-top">
-        <span className="noir-micro">ROLL 07</span>
+        <span className="noir-micro">ESSENTIALS</span>
         <span className="noir-micro">ALL SOUND. NO FILLER.</span>
         <span className="noir-micro">SEASON 07</span>
       </div>
 
-      <div className="noir-stage">
-        <HeroSlider slides={slides} />
+      <div className="noir-stage sonus-stage">
+        <CosmicBackdrop />
 
-        <h1 className="noir-wm">
-          <GoldWordmark text="SONUS" />
-        </h1>
-        <p className={c.heroPitch ? "noir-tag noir-pitch" : "noir-tag"}>
-          {c.heroPitch ?? c.tagline}
-        </p>
-        <a href="#contact" className="noir-btn">
+        <div className="sonus-lockup">
+          <h1 className="noir-wm sonus-wm">
+            <span className="sonus-wordmark">SONUS</span>
+          </h1>
+          <p className="sonus-sub">Amplitude</p>
+          <p className="sonus-sub sonus-sub-last">The Signal</p>
+        </div>
+
+        <div className="sonus-billing">
+          <span className="noir-micro">{c.tagline}</span>
+          <span className="noir-micro">{billingVenue}</span>
+        </div>
+
+        <a href="#contact" className="noir-btn sonus-cta">
           {c.ctaLabel}
         </a>
       </div>

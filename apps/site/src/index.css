@@ -220,7 +220,7 @@
   gap: 12px;
   padding: 9px var(--noir-gutter);
   border-bottom: 1px solid rgba(5, 7, 13, 0.35);
-  background: #ffd166;
+  background: #eaf6ff;
   color: var(--noir-void);
 }
 
@@ -256,7 +256,7 @@
   padding: 0 14px;
   border: 1px solid var(--noir-void);
   background: var(--noir-void);
-  color: #ffd166;
+  color: #eaf6ff;
   font: inherit;
   font-size: 10px;
   font-weight: 600;
@@ -293,7 +293,7 @@
 
 .noir-install-close:hover {
   background: var(--noir-void);
-  color: #ffd166;
+  color: #eaf6ff;
 }
 
 .noir-install-close:focus-visible {
@@ -477,7 +477,7 @@
 }
 
 .noir-dot.is-active {
-  background: #ffd166;
+  background: #eaf6ff;
 }
 
 .noir-slider-right {
@@ -499,7 +499,7 @@
   height: 40px;
   border: 1px solid rgba(255, 209, 102, 0.4);
   background: rgba(5, 7, 13, 0.45);
-  color: #ffd166;
+  color: #eaf6ff;
   font: inherit;
   font-size: 14px;
   cursor: pointer;
@@ -507,8 +507,8 @@
 }
 
 .noir-arrow:hover {
-  background: #ffd166;
-  border-color: #ffd166;
+  background: #eaf6ff;
+  border-color: #eaf6ff;
   color: var(--noir-void);
 }
 
@@ -538,28 +538,14 @@
   display: block;
   padding: 0.06em 0;
   font-family: 'Cinzel', 'Times New Roman', serif;
-  font-weight: 700;
+  font-weight: 500;
   font-size: clamp(1.9rem, 9vw, 8.8rem);
   line-height: 1;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.14em;
+  text-indent: 0.14em;
   text-align: center;
-  background-color: #c99533;
-  background-image: linear-gradient(
-      100deg,
-      rgba(255, 247, 206, 0.55) 0%,
-      rgba(255, 247, 206, 0) 30%,
-      rgba(60, 40, 6, 0.4) 52%,
-      rgba(255, 247, 206, 0.5) 74%,
-      rgba(255, 247, 206, 0) 100%
-    ),
-    url("https://media.base44.com/images/public/6ae368e034a3cd7d85cf47f2/8795aea43_image.png");
-  background-repeat: no-repeat;
-  background-size: 100% 100%, 175% 175%;
-  background-position: 18% 45%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: noir-gold-flow 18s ease-in-out infinite alternate;
+  color: #f2fbff;
+  text-shadow: 0 0 90px rgba(120, 186, 255, 0.35);
 }
 
 .noir-tag {
@@ -1133,7 +1119,7 @@ a.noir-dj:hover .noir-dj-name {
   padding: 0 14px;
   border: 1px solid rgba(255, 209, 102, 0.55);
   background: rgba(5, 7, 13, 0.72);
-  color: #ffd166;
+  color: #eaf6ff;
   font: inherit;
   font-size: 10px;
   font-weight: 500;
@@ -1144,7 +1130,7 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-stream-btn:hover {
-  background: #ffd166;
+  background: #eaf6ff;
   color: var(--noir-void);
 }
 
@@ -1299,11 +1285,11 @@ a.noir-dj:hover .noir-dj-name {
   width: 14px;
   height: 14px;
   margin-top: 2px;
-  accent-color: #ffd166;
+  accent-color: #eaf6ff;
 }
 
 .noir-consent a {
-  color: #ffd166;
+  color: #eaf6ff;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1317,8 +1303,8 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-foot a.noir-foot-newsletter:hover,
 .noir-foot a.noir-foot-newsletter:focus-visible {
-  color: #ffd166;
-  border-bottom-color: #ffd166;
+  color: #eaf6ff;
+  border-bottom-color: #eaf6ff;
 }
 
 .noir-foot {
@@ -1339,7 +1325,8 @@ a.noir-dj:hover .noir-dj-name {
   }
 }
 
-/* --- gold type pass --------------------------------------------------- */
+/* --- ice type pass: the reference is monochrome, so every accent is ----- */
+/* --- light on dark rather than gold on black. --------------------------- */
 .noir,
 .noir-brand,
 .noir-navlink,
@@ -1353,28 +1340,28 @@ a.noir-dj:hover .noir-dj-name {
 .noir-ticket,
 .noir-input,
 .noir-msg {
-  color: #ffd166;
+  color: #eaf6ff;
 }
 
 .noir-micro,
 .noir-note,
 .noir-cols p {
-  color: #c99533;
+  color: #9dbbdd;
 }
 
 .noir-input::placeholder {
-  color: rgba(201, 149, 51, 0.8);
+  color: rgba(157, 187, 221, 0.72);
 }
 
 .noir-menu:hover,
 .noir-btn:hover {
-  background: #ffd166;
-  border-color: #ffd166;
+  background: #eaf6ff;
+  border-color: #eaf6ff;
   color: var(--noir-void);
 }
 
 .noir ::selection {
-  background: #ffd166;
+  background: #eaf6ff;
   color: var(--noir-void);
 }
 
@@ -1542,7 +1529,7 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-door-mark {
   margin: 0;
-  color: #ffd166;
+  color: #eaf6ff;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.42em;
@@ -1563,7 +1550,7 @@ a.noir-dj:hover .noir-dj-name {
   margin: auto 0 0;
   padding-top: 16px;
   border-top: 1px solid var(--noir-line);
-  color: #c99533;
+  color: #9dbbdd;
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.4em;
@@ -1658,9 +1645,9 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-field:focus {
-  border-color: #ffd166;
+  border-color: #eaf6ff;
   outline: none;
-  box-shadow: 0 0 0 1px #ffd166;
+  box-shadow: 0 0 0 1px #eaf6ff;
 }
 
 .noir-auth-primary,
@@ -1685,14 +1672,14 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-auth-primary {
-  border: 1px solid #ffd166;
-  background: #ffd166;
+  border: 1px solid #eaf6ff;
+  background: #eaf6ff;
   color: var(--noir-void);
 }
 
 .noir-auth-primary:hover:not(:disabled) {
   background: transparent;
-  color: #ffd166;
+  color: #eaf6ff;
 }
 
 .noir-auth-primary:disabled {
@@ -1707,8 +1694,8 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-auth-google:hover {
-  border-color: #ffd166;
-  color: #ffd166;
+  border-color: #eaf6ff;
+  color: #eaf6ff;
 }
 
 .noir-auth-or {
@@ -1783,13 +1770,13 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-quiet-link:hover {
-  border-bottom-color: #ffd166;
-  color: #ffd166;
+  border-bottom-color: #eaf6ff;
+  color: #eaf6ff;
 }
 
 .noir-quiet-link--gold {
-  border-bottom-color: rgba(255, 209, 102, 0.45);
-  color: #ffd166;
+  border-bottom-color: rgba(157, 187, 221, 0.45);
+  color: #eaf6ff;
 }
 
 .noir-quiet-link--gold:hover {
@@ -1820,7 +1807,7 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-legal h2 {
   margin: 0 0 12px;
-  color: #ffd166;
+  color: #eaf6ff;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.24em;
@@ -1848,7 +1835,7 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-legal a {
-  color: #ffd166;
+  color: #eaf6ff;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1874,7 +1861,7 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-legal-msg {
   margin: 14px 0 0;
-  color: #ffd166;
+  color: #eaf6ff;
   font-size: 12px;
 }
 
@@ -1890,7 +1877,7 @@ a.noir-dj:hover .noir-dj-name {
   align-items: center;
   min-height: 44px;
   border-bottom: 1px solid transparent;
-  color: #ffd166;
+  color: #eaf6ff;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.3em;
@@ -1899,7 +1886,7 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-nav-quiet:hover {
-  border-bottom-color: #ffd166;
+  border-bottom-color: #eaf6ff;
 }
 
 .noir-overlay,
@@ -1943,7 +1930,7 @@ a.noir-dj:hover .noir-dj-name {
   border: 0;
   border-bottom: 1px solid rgba(255, 209, 102, 0.4);
   background: none;
-  color: #ffd166;
+  color: #eaf6ff;
   font: inherit;
   font-size: 12px;
   letter-spacing: 0.18em;
@@ -2005,5 +1992,208 @@ a.noir-dj:hover .noir-dj-name {
     min-height: 40px;
     font-size: 10px;
     letter-spacing: 0.14em;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Sonus — the artwork the front page is built from: an orb ringed by light in
+   deep space, ice-white capitals at wide tracking, and the billing block along
+   the bottom edge. Drawn in CSS and SVG so it scales and stays sharp.
+--------------------------------------------------------------------------- */
+.sonus-stage {
+  position: relative;
+  isolation: isolate;
+  min-height: clamp(560px, 84vh, 920px);
+  padding: clamp(56px, 9vw, 104px) var(--noir-gutter) clamp(96px, 10vw, 132px);
+  background:
+    radial-gradient(120% 95% at 50% -10%, #0d1838 0%, #070c1c 46%, #03050c 100%);
+}
+
+.sonus-space {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* A wash of violet and cyan behind the orb, the way the nebula sits in the art. */
+.sonus-nebula {
+  position: absolute;
+  inset: -10% -14% 0;
+  background:
+    radial-gradient(38% 46% at 24% 34%, rgba(122, 86, 214, 0.30) 0%, transparent 70%),
+    radial-gradient(42% 52% at 78% 30%, rgba(64, 148, 255, 0.26) 0%, transparent 72%),
+    radial-gradient(60% 60% at 50% 92%, rgba(28, 88, 168, 0.22) 0%, transparent 74%);
+  filter: blur(12px);
+}
+
+.sonus-stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 12% 22%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(1px 1px at 78% 14%, rgba(214, 236, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 34% 68%, rgba(255, 255, 255, 0.65), transparent),
+    radial-gradient(1px 1px at 88% 62%, rgba(206, 230, 255, 0.7), transparent),
+    radial-gradient(1px 1px at 58% 88%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 6% 78%, rgba(214, 236, 255, 0.55), transparent),
+    radial-gradient(1px 1px at 66% 34%, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 44% 8%, rgba(255, 255, 255, 0.6), transparent);
+  opacity: 0.9;
+}
+
+.sonus-orb {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: min(88vw, 660px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  filter: drop-shadow(0 0 40px rgba(120, 186, 255, 0.28));
+}
+
+.sonus-orb svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* The bright heart of the sphere. */
+.sonus-core {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  width: 42%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(236, 250, 255, 0.55) 0%, rgba(150, 214, 255, 0.18) 42%, transparent 72%);
+  filter: blur(6px);
+}
+
+.sonus-rings {
+  transform-origin: 300px 300px;
+  animation: sonus-orbit 46s linear infinite;
+}
+
+.sonus-filaments {
+  animation: sonus-drift 18s ease-in-out infinite alternate;
+}
+
+/* The column of light, brightest at the orb and fading at both edges. */
+.sonus-beam {
+  position: absolute;
+  top: -6%;
+  bottom: -6%;
+  left: 50%;
+  width: clamp(2px, 0.5vw, 5px);
+  translate: -50% 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(214, 240, 255, 0.10) 18%,
+    rgba(240, 252, 255, 0.85) 48%,
+    rgba(214, 240, 255, 0.14) 82%,
+    transparent 100%
+  );
+  filter: blur(0.4px);
+  box-shadow: 0 0 28px rgba(180, 226, 255, 0.35);
+}
+
+.sonus-lockup {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: clamp(10px, 1.4vw, 18px);
+  margin-top: clamp(28px, 6vw, 72px);
+}
+
+.sonus-wm {
+  width: auto;
+  margin: 0;
+}
+
+.sonus-wordmark {
+  display: block;
+  font-family: "Cinzel", "Times New Roman", serif;
+  font-weight: 500;
+  font-size: clamp(2.9rem, 12.5vw, 9.5rem);
+  line-height: 0.94;
+  letter-spacing: 0.16em;
+  /* The extra tracking would otherwise push the word off-centre. */
+  text-indent: 0.16em;
+  color: #f2fbff;
+  text-shadow:
+    0 0 24px rgba(206, 236, 255, 0.55),
+    0 0 90px rgba(120, 186, 255, 0.35),
+    0 0 180px rgba(90, 140, 255, 0.25);
+}
+
+.sonus-sub {
+  margin: 0;
+  font-size: clamp(9px, 1.15vw, 13px);
+  font-weight: 400;
+  letter-spacing: 0.62em;
+  text-indent: 0.62em;
+  text-transform: uppercase;
+  color: #cfe3ff;
+  opacity: 0.88;
+}
+
+.sonus-sub-last {
+  margin-top: -0.4em;
+}
+
+.sonus-billing {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: clamp(42px, 8vw, 110px);
+}
+
+.sonus-billing .noir-micro {
+  letter-spacing: 0.46em;
+  font-size: 10px;
+}
+
+.sonus-cta {
+  position: relative;
+  z-index: 2;
+  margin-top: clamp(22px, 3vw, 34px);
+}
+
+@keyframes sonus-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes sonus-drift {
+  from { opacity: 0.35; transform: translateY(-2px); }
+  to { opacity: 0.6; transform: translateY(2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sonus-rings,
+  .sonus-filaments {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .sonus-stage {
+    min-height: 78vh;
+  }
+  .sonus-orb {
+    width: 118vw;
+  }
+  .sonus-billing .noir-micro {
+    letter-spacing: 0.3em;
+    font-size: 9px;
   }
 }
