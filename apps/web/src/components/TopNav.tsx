@@ -196,6 +196,13 @@ const links: NavLink[] = [
     hint: "The browsers signed in to your account, and a way to sign one out if you lose it.",
   },
   {
+    href: "/statements",
+    label: "Door Statements",
+    group: "YOU",
+    hint: "Your door shifts grouped by month: fees, travel, invoices and what the venue has paid.",
+    roles: ["door"],
+  },
+  {
     href: "/help",
     label: "Help",
     group: "YOU",
@@ -359,10 +366,18 @@ export function TopNav() {
             <span className="text-[8px] font-black tracking-[0.22em] text-neutral-700">/ EDM</span>
           </Link>
           <p className="mt-1 text-[9px] font-bold tracking-[0.3em] text-neutral-600">CONTROL ROOM</p>
+          <a
+            href="https://essentialsedm.com"
+            title="Open the public essentialsedm.com site in a new tab."
+            className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-neon/40 bg-neon/10 px-3 py-2 text-[10px] font-black tracking-[0.16em] text-neon transition hover:border-neon hover:bg-neon/15"
+          >
+            <span>ESSENTIALSEDM.COM</span>
+            <span aria-hidden="true">↗</span>
+          </a>
           <button
             onClick={search}
             title="Find an event, a DJ or a guest without leaving this page. ⌘K (Ctrl-K) opens it anywhere."
-            className="mt-4 flex w-full items-center gap-2 rounded-lg border border-line/80 bg-white/[0.02] px-3 py-2 text-left text-[10px] font-bold tracking-[0.12em] text-neutral-500 transition hover:border-neon/35 hover:text-neon"
+            className="mt-2 flex w-full items-center gap-2 rounded-lg border border-line/80 bg-white/[0.02] px-3 py-2 text-left text-[10px] font-bold tracking-[0.12em] text-neutral-500 transition hover:border-neon/35 hover:text-neon"
           >
             <span className="text-sm leading-none">⌕</span>
             <span>SEARCH EVERYTHING</span>
@@ -414,6 +429,13 @@ export function TopNav() {
               </button>
             </div>
             {navigation(() => setOpen(false))}
+            <a
+              href="https://essentialsedm.com"
+              className="mx-3 mb-2 flex items-center justify-between gap-2 rounded-lg border border-neon/40 bg-neon/10 px-3 py-2 text-[10px] font-black tracking-[0.16em] text-neon transition hover:border-neon hover:bg-neon/15"
+            >
+              <span>ESSENTIALSEDM.COM</span>
+              <span aria-hidden="true">↗</span>
+            </a>
             {account}
           </aside>
         </div>

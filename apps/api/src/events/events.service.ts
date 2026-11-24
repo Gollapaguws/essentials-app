@@ -324,6 +324,7 @@ export class EventsService {
     venueId: string; title: string; description?: string; date: string | Date;
     lineup?: unknown; capacity: number; dressCode?: string; ticketUrl?: string; revenueSplitPromoterPct?: number;
     djFeePerHour?: number; budget?: number; slotCount?: number; slotMinutes?: number; slotStart?: string;
+    doorEnabled?: boolean; doorFee?: number;
   }) {
     const venue = await prisma.venue.findUnique({ where: { id: data.venueId } });
     if (!venue) throw new NotFoundException("Venue not found");
@@ -332,7 +333,11 @@ export class EventsService {
     // Validate the promoter's slot plan before anything is written: a bad plan
     // must not leave a half-created night behind.
     const plan = normalizePlan(data);
-    const { djFeePerHour, budget, slotCount, slotMinutes, slotStart, ...eventData } = data;
+    const { djFeePerHour, budget, slotCount, slotMinutes, slotStart, doorEnabled, doorFee, ...eventData } = data;
+    // A disabled door option never carries a fee: the money must not count
+    // against the budget for a host nobody is booking.
+    const wantsDoor = Boolean(doorEnabled);
+    const doorCost = wantsDoor ? Math.max(0, Math.trunc(doorFee ?? 0)) : 0;
     const date = new Date(data.date);
 
     // A promoter who manages the venue *is* the venue: there is nobody left to
@@ -351,6 +356,8 @@ export class EventsService {
         status: selfManaged ? EventStatus.approved : EventStatus.pending_venue_approval,
         djFeePerHour: plan?.djFeePerHour ?? 0,
         budget: plan?.budget ?? 0,
+        doorEnabled: wantsDoor,
+        doorFee: doorCost,
         slotCount: plan?.slotCount ?? null,
         slotMinutes: plan?.slotMinutes ?? null,
         slotStartMinute: plan?.slotStartMinute ?? null,
@@ -407,14 +414,20 @@ export class EventsService {
     // A ceiling under money already promised can never be honoured, and would
     // strand the night permanently over budget with no confirmation possible.
     if (plan.budget > 0) {
-      const committed = await prisma.artistBooking.aggregate({
-        where: { eventId, status: { in: ["confirmed", "completed"] } },
-        _sum: { performanceFee: true },
-      });
-      const spent = committed._sum.performanceFee ?? 0;
+      const [djCommitted, doorCommitted] = await Promise.all([
+        prisma.artistBooking.aggregate({
+          where: { eventId, status: { in: ["confirmed", "completed"] } },
+          _sum: { performanceFee: true },
+        }),
+        prisma.doorBooking.aggregate({
+          where: { eventId, status: { in: ["confirmed", "completed"] } },
+          _sum: { fee: true },
+        }),
+      ]);
+      const spent = (djCommitted._sum.performanceFee ?? 0) + (doorCommitted._sum.fee ?? 0);
       if (plan.budget < spent) {
         throw new ConflictException(
-          `Budget can't go below the R${spent.toLocaleString()} already committed to confirmed DJs. Raise it, or decline a DJ first.`,
+          `Budget can't go below the R${spent.toLocaleString()} already committed to confirmed DJs and door hosts. Raise it, or decline someone first.`,
         );
       }
     }
@@ -543,7 +556,11 @@ export class EventsService {
       where,
       include: {
         venue: { select: { name: true } },
-        _count: { select: { guestLists: true, artistBookings: true } },
+        _count: { select: { guestLists: true, artistBookings: true, doorBookings: true } },
+        doorBookings: {
+          where: { status: { in: ["confirmed", "completed"] } },
+          select: { fee: true },
+        },
         slots: {
           orderBy: { startsAt: "asc" },
           select: {
@@ -578,10 +595,13 @@ export class EventsService {
         // gigs and completed ones (completed is the stricter state).
         confirmed: s.bookings.some((b) => b.status === "confirmed" || b.status === "completed"),
       }));
+      const doorCommitted = e.doorBookings.reduce((sum, booking) => sum + booking.fee, 0);
       return {
         ...e,
         slots,
-        committed: slots.filter((s) => s.confirmed).reduce((sum, s) => sum + s.fee, 0),
+        doorCommitted,
+        committed:
+          slots.filter((s) => s.confirmed).reduce((sum, s) => sum + s.fee, 0) + doorCommitted,
       };
     });
   }
@@ -614,7 +634,13 @@ export class EventsService {
         title: true,
         date: true,
         budget: true,
+        doorEnabled: true,
+        doorFee: true,
         venue: { select: { name: true } },
+        doorBookings: {
+          where: { status: { in: ["confirmed", "completed"] } },
+          select: { fee: true },
+        },
         slots: {
           select: {
             id: true,
@@ -631,7 +657,9 @@ export class EventsService {
 
     const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
     const nights = events.map((e) => {
-      const committed = sum(e.slots.flatMap((s) => s.bookings.map((b) => b.performanceFee)));
+      const doorCommitted = sum(e.doorBookings.map((booking) => booking.fee));
+      const committed =
+        sum(e.slots.flatMap((s) => s.bookings.map((b) => b.performanceFee))) + doorCommitted;
       const budgeted = e.budget > 0;
       return {
         id: e.id,
@@ -639,6 +667,8 @@ export class EventsService {
         date: e.date,
         venue: e.venue.name,
         budget: e.budget,
+        doorFee: e.doorFee,
+        doorCommitted,
         committed,
         // Null rather than zero: an unbudgeted night has no ceiling to be under.
         remaining: budgeted ? e.budget - committed : null,

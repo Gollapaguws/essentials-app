@@ -3,6 +3,7 @@ import { prisma, EventStatus } from "@essentials/db";
 import { NotificationsService } from "../notifications/notifications.service";
 import { DjBookingService } from "../artists/dj-booking.service";
 import { ArtistsService } from "../artists/artists.service";
+import { DoorGigsService } from "../door-gigs/door-gigs.service";
 import type { JwtUser } from "../common/roles.guard";
 
 export interface VenueDetailsInput {
@@ -30,6 +31,7 @@ export class VenuesService {
     private notifications: NotificationsService,
     private djBooking: DjBookingService,
     private artists: ArtistsService,
+    private doorGigs: DoorGigsService,
   ) {}
   private async assertManager(venueId: string, user: JwtUser) {
     const venue = await prisma.venue.findUnique({ where: { id: venueId } });
@@ -173,6 +175,8 @@ export class VenuesService {
    */
   announceApproval(event: { id: string; title: string; date: Date; venueId: string }) {
     void this.djBooking.announceToArtists(event.id).catch(() => null);
+    // Door hosts get their own call, but only when the promoter asked for one.
+    void this.doorGigs.announceToDoorStaff(event.id).catch(() => null);
     void this.postToLineup(event).catch(() => null);
   }
 

@@ -88,6 +88,23 @@ describe("EventsService.create approval", () => {
     expect(announceApproval).not.toHaveBeenCalled();
   });
 
+  it("stores the door fee and counts the door option only when it is enabled", async () => {
+    db.venue.findUnique.mockResolvedValue({ id: "venue-1", capacity: 200, managerId: promoter.sub });
+    const { service } = build();
+
+    await service.create(promoter, { ...input, doorEnabled: true, doorFee: 650 });
+    expect(db.event.create.mock.calls[0][0].data).toMatchObject({
+      doorEnabled: true,
+      doorFee: 650,
+    });
+
+    await service.create(promoter, { ...input, doorEnabled: false, doorFee: 650 });
+    expect(db.event.create.mock.calls[1][0].data).toMatchObject({
+      doorEnabled: false,
+      doorFee: 0,
+    });
+  });
+
   it("does not call the roster when the capacity cap rejects the event", async () => {
     db.venue.findUnique.mockResolvedValue({ id: "venue-1", capacity: 100, managerId: promoter.sub });
     const { service, announceApproval } = build();

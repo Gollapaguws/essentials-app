@@ -110,7 +110,8 @@ describe("EventsService.listForPromoter", () => {
         date: new Date("2026-12-31T22:00:00.000Z"),
         budget: 5000,
         venue: { name: "The Vault" },
-        _count: { guestLists: 0, artistBookings: 1 },
+        _count: { guestLists: 0, artistBookings: 1, doorBookings: 0 },
+        doorBookings: [],
         slots: [
           {
             id: "slot-1",

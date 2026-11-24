@@ -55,6 +55,15 @@ enum InvoiceStatus {
   overdue
 }
 
+enum DoorBookingStatus {
+  pending
+  /// The promoter booked this door host for the night.
+  confirmed
+  /// The promoter confirmed the shift was worked — the only state that may be invoiced.
+  completed
+  cancelled
+}
+
 enum PaymentStatus {
   pending
   paid
@@ -98,6 +107,7 @@ model User {
   mfaRecoveryCodes MfaRecoveryCode[]
   referralsGiven  Referral[]     @relation("Referrer")
   artistProfile   ArtistProfile?
+  doorProfile     DoorProfile?
   artistNotes     ArtistNote[]
   mailbox         UserMailbox?
   nightArc        PromoterNightArc?
@@ -119,6 +129,7 @@ model Venue {
   // Phase 2: staff/door ops via DoorLog
   doorLogs  DoorLog[]
   invoices  Invoice[]
+  doorInvoices DoorInvoice[]
   createdAt DateTime     @default(now())
 
   @@index([managerId])
@@ -141,8 +152,12 @@ model Event {
   revenueSplitPromoterPct Int             @default(50)
   /// What the promoter will pay a DJ per hour. Each slot pays rate × its length.
   djFeePerHour            Int             @default(0)
-  /// Planning ceiling for the night's DJ spend; slots are priced off the rate.
+  /// Planning ceiling for the night's DJ and door spend; slots are priced off the rate.
   budget                  Int             @default(0)
+  /// Whether the promoter needs a door host for this night.
+  doorEnabled             Boolean         @default(false)
+  /// What the promoter pays the door host. Counts against `budget` like a DJ fee.
+  doorFee                 Int             @default(0)
   // The plan the slots were generated from, kept so the promoter can reopen and edit it.
   slotCount               Int?
   slotMinutes             Int?
@@ -152,6 +167,7 @@ model Event {
   guestLists              GuestList[]
   groupChat               EventGroupChat?
   artistBookings          ArtistBooking[]
+  doorBookings            DoorBooking[]
   slots                   EventSlot[]
   matches                 Match[]
   promotions              Promotion[]
@@ -451,6 +467,81 @@ model Invoice {
   venue    Venue?         @relation(fields: [venueId], references: [id])
   items    InvoiceItem[]
   payments Payment[]
+}
+
+/// Door staff profile: home base for invoice travel, and the bank account the
+/// venue pays. Separate from ArtistProfile because a door host is not a DJ.
+model DoorProfile {
+  id                          String   @id @default(cuid())
+  userId                      String   @unique
+  /// Private home base, geocoded when saved. Origin for invoice travel.
+  homeAddress                 String?
+  homeLat                     Float?
+  homeLng                     Float?
+  /// Copy of the platform travel rate, kept so an invoice is priced on the rate
+  /// that was in force when the profile last saved it.
+  travelRatePerKm             Float    @default(4.95)
+  bankAccountHolder           String?
+  bankName                    String?
+  bankAccountNumber           String?
+  bankBranchCode              String?
+  bankAccountType             String?
+  user                        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings                    DoorBooking[]
+  invoices                    DoorInvoice[]
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+}
+
+/// One door host applying for one night's door shift.
+model DoorBooking {
+  id           String            @id @default(cuid())
+  eventId      String
+  profileId    String
+  /// Agreed shift fee, copied from Event.doorFee when the host applies.
+  fee          Int               @default(0)
+  /// Travel actually billed, snapshotted when the invoice is raised.
+  travelFee    Int               @default(0)
+  status       DoorBookingStatus @default(pending)
+  appliedAt    DateTime?
+  completedAt  DateTime?
+  declineReason String?
+  event        Event             @relation(fields: [eventId], references: [id])
+  profile      DoorProfile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  invoice      DoorInvoice?
+  createdAt    DateTime          @default(now())
+
+  @@unique([eventId, profileId])
+  @@index([eventId, status])
+  @@index([profileId])
+}
+
+/// The door host's bill to the venue. Deliberately separate from Invoice so a
+/// DJ invoice and a door invoice can never be confused for each other.
+model DoorInvoice {
+  id            String          @id @default(cuid())
+  profileId     String
+  bookingId     String          @unique
+  /// Who pays: the venue the shift happened at.
+  venueId       String?
+  number        String          @unique
+  status        InvoiceStatus   @default(draft)
+  total         Int             @default(0)
+  profile       DoorProfile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  booking       DoorBooking     @relation(fields: [bookingId], references: [id])
+  venue         Venue?          @relation(fields: [venueId], references: [id])
+  items         DoorInvoiceItem[]
+  createdAt     DateTime        @default(now())
+
+  @@index([profileId])
+}
+
+model DoorInvoiceItem {
+  id        String      @id @default(cuid())
+  invoiceId String
+  label     String
+  amount    Int
+  invoice   DoorInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
 model InvoiceItem {

@@ -11,6 +11,10 @@ import { Panel } from "@/components/console/Panel";
 import { Stat } from "@/components/Stat";
 import { Badge } from "@/components/console/Badge";
 import { DownloadButton } from "@/components/DownloadButton";
+import {
+  DoorStatementsMine,
+  PromoterDoorStatementsPanel,
+} from "@/components/DoorStatements";
 
 interface StatementGig {
   id: string;
@@ -120,6 +124,7 @@ export default function Statements() {
   const { me } = useAuth();
   const role = me?.user.role;
   const isDj = role === "artist";
+  const isDoor = role === "door";
 
   // One resource per side of the desk; `null` keeps the unused one idle.
   const artistSource = useResource<ArtistStatements>(isDj ? "/artists/statements" : null);
@@ -155,6 +160,9 @@ export default function Statements() {
       setSendingId(null);
     }
   };
+
+  // Door hosts have their own months and invoices — same page, different money.
+  if (isDoor) return <DoorStatementsMine />;
 
   if (isDj) {
     const totals = artist?.totals;
@@ -409,6 +417,8 @@ export default function Statements() {
           </p>
         </Panel>
       )}
+
+      <PromoterDoorStatementsPanel />
     </ConsolePage>
   );
 }

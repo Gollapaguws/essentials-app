@@ -7,6 +7,8 @@ import { api } from "@essentials/api-client";
 import { errorMessage } from "@/lib/errors";
 import { doorSummary, recentEntries } from "@/lib/door";
 import { useResource } from "@/hooks/useResource";
+import { useAuth } from "@/components/AuthProvider";
+import { DoorGigs } from "@/components/DoorGigs";
 
 interface EventRow {
   id: string;
@@ -34,6 +36,10 @@ const field = "bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-non
  * scanner. Built for a phone at the door: big row targets, one action per guest.
  */
 export default function Door() {
+  const { me } = useAuth();
+  // Door hosts also work the list; only the role that applies for shifts gets
+  // the booking and invoice console.
+  const isDoorHost = me?.user.role === "door";
   const eventsSource = useResource<EventRow[]>("/events/manage/list?limit=200");
   // Only nights that are at (or past) the door are useful here.
   const events = (eventsSource.data ?? []).filter(
@@ -124,6 +130,8 @@ export default function Door() {
             door log.
           </p>
         </div>
+
+        {isDoorHost && <DoorGigs />}
 
         {notice && <p className="text-neon text-sm">{notice}</p>}
         {(error ?? guestsSource.error ?? eventsSource.error) && (

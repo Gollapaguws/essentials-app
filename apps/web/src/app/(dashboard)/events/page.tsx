@@ -30,11 +30,12 @@ interface EventSlotRow {
 interface EventRow {
   id: string; title: string; date: string; status: string; capacity: number;
   budget: number; djFeePerHour: number;
+  doorEnabled: boolean; doorFee: number; doorCommitted: number;
   slotCount: number | null; slotMinutes: number | null; slotStartMinute: number | null;
   slots: EventSlotRow[];
   committed: number;
   venue: { name: string };
-  _count: { guestLists: number; artistBookings: number };
+  _count: { guestLists: number; artistBookings: number; doorBookings: number };
 }
 
 interface ApplicationRow {
@@ -129,6 +130,8 @@ export default function EventManager() {
     slotCount: 4,
     slotMinutes: 60,
     slotStart: "20:00",
+    doorEnabled: false,
+    doorFee: 0,
   });
   // Re-planning an existing night uses the same fields, prefilled from the event.
   const [slots, setSlots] = useState<SlotForm>(EMPTY_SLOTS);
@@ -371,6 +374,9 @@ export default function EventManager() {
 
   const planFee = slotFee(form.djFeePerHour, form.slotMinutes);
   const planTotal = planFee * form.slotCount;
+  // Door money is part of the same ceiling, not an extra pot.
+  const planDoor = form.doorEnabled ? Math.max(0, form.doorFee) : 0;
+  const planGrandTotal = planTotal + planDoor;
   const editFee = slotFee(slots.djFeePerHour, slots.slotMinutes);
   const editTotal = editFee * slots.slotCount;
 
@@ -587,15 +593,47 @@ export default function EventManager() {
             </label>
           </div>
 
+          <div className="flex flex-wrap items-end gap-4">
+            <label className="flex items-center gap-2 text-xs text-neutral-300">
+              <input
+                type="checkbox"
+                checked={form.doorEnabled}
+                onChange={(e) =>
+                  setForm({ ...form, doorEnabled: e.target.checked, doorFee: e.target.checked ? form.doorFee : 0 })
+                }
+              />
+              Door staff needed for this night
+            </label>
+            {form.doorEnabled && (
+              <label className="text-xs text-neutral-400 space-y-1">
+                <span>Door fee (R) — comes out of the budget</span>
+                <input
+                  type="number"
+                  min={0}
+                  aria-label="Door fee"
+                  className={`${field} w-40`}
+                  value={form.doorFee}
+                  onChange={(e) => setForm({ ...form, doorFee: +e.target.value })}
+                />
+              </label>
+            )}
+            {form.doorEnabled && (
+              <p className="text-xs text-neutral-500">
+                The event goes to every door host once it is approved; they apply, you confirm.
+              </p>
+            )}
+          </div>
+
           <p className="text-xs text-neutral-500">
             {form.slotCount} × {form.slotMinutes} min from {form.slotStart} ·{" "}
             {form.djFeePerHour === 0 ? (
               <span className="text-neon">free gig — every slot pays R0 and DJs play unpaid</span>
             ) : (
               <>
-                <span className="text-neutral-300">R{planFee.toLocaleString()} per slot</span> · R{planTotal.toLocaleString()} total
-                {form.budget > 0 && (planTotal > form.budget
-                  ? <span className="text-yellow-400"> — plan is R{(planTotal - form.budget).toLocaleString()} above the R{form.budget.toLocaleString()} budget; you can only confirm DJs up to the budget</span>
+                <span className="text-neutral-300">R{planFee.toLocaleString()} per slot</span> · R{planTotal.toLocaleString()} DJs
+                {planDoor > 0 && <> + R{planDoor.toLocaleString()} door</>} · R{planGrandTotal.toLocaleString()} total
+                {form.budget > 0 && (planGrandTotal > form.budget
+                  ? <span className="text-yellow-400"> — plan is R{(planGrandTotal - form.budget).toLocaleString()} above the R{form.budget.toLocaleString()} budget; you can only confirm DJs and door hosts up to the budget</span>
                   : <span> of R{form.budget.toLocaleString()} budget</span>)}
               </>
             )}
@@ -663,8 +701,13 @@ export default function EventManager() {
                             {e.djFeePerHour > 0 ? `R${e.djFeePerHour.toLocaleString()}/h` : "Free gig"} ·{" "}
                             <span className="text-neutral-300">{e.djFeePerHour > 0 ? `R${fee.toLocaleString()}/slot` : "R0/slot"}</span> · R{e.committed.toLocaleString()} committed
                             {e.budget > 0 ? ` of R${e.budget.toLocaleString()}` : ""}
-                            {e.budget > 0 && allocated > e.budget && (
-                              <span className="text-yellow-400"> · plan R{(allocated - e.budget).toLocaleString()} over budget · confirmations stop at R{e.budget.toLocaleString()}</span>
+                            {e.doorEnabled && (
+                              <>
+                                {" "}· door R{e.doorFee.toLocaleString()} ({e._count.doorBookings} app{e._count.doorBookings === 1 ? "" : "s"})
+                              </>
+                            )}
+                            {e.budget > 0 && allocated + (e.doorEnabled ? e.doorFee : 0) > e.budget && (
+                              <span className="text-yellow-400"> · plan R{(allocated + (e.doorEnabled ? e.doorFee : 0) - e.budget).toLocaleString()} over budget · confirmations stop at R{e.budget.toLocaleString()}</span>
                             )}
                           </p>
                         ) : (

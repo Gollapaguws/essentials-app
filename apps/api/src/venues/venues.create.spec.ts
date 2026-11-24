@@ -12,7 +12,7 @@ const promoter = { sub: "promoter-user", role: "promoter", email: "promoter@exam
 
 /** Notifications, DJ booking and route rebuild play no part in creation. */
 function service() {
-  return new VenuesService({} as never, {} as never, {} as never);
+  return new VenuesService({} as never, {} as never, {} as never, {} as never);
 }
 
 const venues = (prisma as unknown as { venue: { create: jest.Mock; findFirst: jest.Mock } }).venue;

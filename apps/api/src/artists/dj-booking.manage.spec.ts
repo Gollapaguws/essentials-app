@@ -15,6 +15,7 @@ jest.mock("@essentials/db", () => ({
       aggregate: jest.fn(),
     },
     eventSlot: { findUnique: jest.fn() },
+    doorBooking: { aggregate: jest.fn() },
   },
 }));
 
@@ -28,6 +29,7 @@ const db = prisma as unknown as {
     aggregate: jest.Mock;
   };
   eventSlot: { findUnique: jest.Mock };
+  doorBooking: { aggregate: jest.Mock };
 };
 
 const deliver = jest.fn();
@@ -85,6 +87,7 @@ beforeEach(() => {
   db.artistBooking.update.mockReset().mockResolvedValue({ id: "booking-1", status: "cancelled" });
   db.artistBooking.aggregate.mockReset().mockResolvedValue({ _sum: { performanceFee: 750 } });
   db.eventSlot.findUnique.mockReset().mockResolvedValue(slot());
+  db.doorBooking.aggregate.mockReset().mockResolvedValue({ _sum: { fee: 0 } });
   deliver.mockReset();
 });
 

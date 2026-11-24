@@ -11,6 +11,7 @@ import { Panel } from "@/components/console/Panel";
 import { Badge, bookingTone } from "@/components/console/Badge";
 import { EmptyState } from "@/components/console/EmptyState";
 import { useResource } from "@/hooks/useResource";
+import { DoorApplicationsPanel } from "@/components/DoorApplicationsPanel";
 
 interface ArtistNote {
   id: string;
@@ -408,6 +409,8 @@ export default function Applications() {
           />
         )}
       </Panel>
+
+      <DoorApplicationsPanel />
     </ConsolePage>
   );
 }

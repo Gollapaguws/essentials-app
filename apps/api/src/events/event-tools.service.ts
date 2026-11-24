@@ -66,6 +66,8 @@ export class EventToolsService {
         genres: event.genres,
         djFeePerHour: event.djFeePerHour,
         budget: event.budget,
+        doorEnabled: event.doorEnabled,
+        doorFee: event.doorFee,
         slotCount: event.slotCount,
         slotMinutes: event.slotMinutes,
         slotStartMinute: event.slotStartMinute,
@@ -118,6 +120,11 @@ export class EventToolsService {
       const bookings = await tx.artistBooking.findMany({ where: { eventId }, select: { id: true } });
       await tx.bookingRouteLeg.deleteMany({ where: { bookingId: { in: bookings.map((b) => b.id) } } });
       await tx.artistBooking.deleteMany({ where: { eventId } });
+      // Door invoices point at door bookings, so they have to go first.
+      const doorInvoices = await tx.doorInvoice.findMany({ where: { booking: { eventId } }, select: { id: true } });
+      await tx.doorInvoiceItem.deleteMany({ where: { invoiceId: { in: doorInvoices.map((i) => i.id) } } });
+      await tx.doorInvoice.deleteMany({ where: { booking: { eventId } } });
+      await tx.doorBooking.deleteMany({ where: { eventId } });
       await tx.guestList.deleteMany({ where: { eventId } });
       await tx.match.deleteMany({ where: { eventId } });
       await tx.doorLog.deleteMany({ where: { eventId } });

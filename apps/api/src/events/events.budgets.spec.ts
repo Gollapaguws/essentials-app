@@ -39,6 +39,9 @@ function night(over: Record<string, unknown> = {}) {
     title: "Amapiano Sunrise",
     date: new Date("2027-03-13T00:00:00.000Z"),
     budget: 900,
+    doorEnabled: false,
+    doorFee: 0,
+    doorBookings: [],
     venue: { name: "The Warehouse" },
     slots: [
       { id: "s1", fee: 495, bookings: [{ performanceFee: 495 }] },
@@ -83,6 +86,22 @@ describe("EventsService.budgetOverview", () => {
       overBudgetNights: 0,
       unbudgetedNights: 0,
     });
+  });
+
+  it("counts a confirmed door host against the same ceiling as the DJs", async () => {
+    events.findMany.mockResolvedValue([
+      night({ doorEnabled: true, doorFee: 300, doorBookings: [{ fee: 300 }] }),
+    ]);
+
+    const overview = await service().budgetOverview(promoter);
+
+    expect(overview.nights[0]).toMatchObject({
+      committed: 795,
+      remaining: 105,
+      doorFee: 300,
+      doorCommitted: 300,
+    });
+    expect(overview.totals.committed).toBe(795);
   });
 
   it("flags a night already over its ceiling", async () => {

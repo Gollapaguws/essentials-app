@@ -16,6 +16,7 @@ jest.mock("@essentials/db", () => ({
       groupBy: jest.fn(),
     },
     artistNote: { findMany: jest.fn() },
+    doorBooking: { aggregate: jest.fn() },
   },
 }));
 
@@ -29,6 +30,7 @@ const db = prisma as unknown as {
     groupBy: jest.Mock;
   };
   artistNote: { findMany: jest.Mock };
+  doorBooking: { aggregate: jest.Mock };
 };
 
 const deliver = jest.fn();
@@ -69,6 +71,7 @@ beforeEach(() => {
   db.artistBooking.aggregate.mockReset().mockResolvedValue({ _sum: { performanceFee: 0 } });
   db.artistBooking.groupBy.mockReset().mockResolvedValue([]);
   db.artistNote.findMany.mockReset().mockResolvedValue([]);
+  db.doorBooking.aggregate.mockReset().mockResolvedValue({ _sum: { fee: 0 } });
   deliver.mockReset();
 });
 
@@ -102,6 +105,15 @@ describe("DjBookingService.decide — budget is a hard ceiling", () => {
     await expect(service().decide(promoter, "booking-1", true)).rejects.toThrow(/over budget/i);
     expect(db.artistBooking.update).not.toHaveBeenCalled();
     expect(deliver).not.toHaveBeenCalled();
+  });
+
+  it("counts a confirmed door host against the same DJ budget", async () => {
+    db.artistBooking.findUnique.mockResolvedValue(application(495, 1200));
+    db.artistBooking.aggregate.mockResolvedValue({ _sum: { performanceFee: 0 } });
+    db.doorBooking.aggregate.mockResolvedValue({ _sum: { fee: 800 } });
+
+    await expect(service().decide(promoter, "booking-1", true)).rejects.toThrow(/over budget/i);
+    expect(db.artistBooking.update).not.toHaveBeenCalled();
   });
 
   it("names the fee, what is committed and the ceiling in the refusal", async () => {

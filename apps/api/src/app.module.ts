@@ -13,6 +13,7 @@ import { AnalyticsModule } from "./analytics/analytics.module";
 import { VenuesModule } from "./venues/venues.module";
 import { PromotionsModule } from "./promotions/promotions.module";
 import { ArtistsModule } from "./artists/artists.module";
+import { DoorGigsModule } from "./door-gigs/door-gigs.module";
 import { PaymentsModule } from "./payments/payments.module";
 import { InsightsModule } from "./insights/insights.module";
 import { SiteModule } from "./site/site.module";
@@ -50,6 +51,7 @@ import { MailModule } from "./mail/mail.module";
     VenuesModule,
     PromotionsModule,
     ArtistsModule,
+    DoorGigsModule,
     AnalyticsModule,
     PaymentsModule,
     InsightsModule,

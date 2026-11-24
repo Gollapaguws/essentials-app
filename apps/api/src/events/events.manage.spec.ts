@@ -45,6 +45,7 @@ describe("EventsService.listForPromoter", () => {
           slot("slot-4", 495, []),
         ],
         venue: { name: "The Vault" },
+        doorBookings: [],
         _count: { guestLists: 0 },
       },
     ]);

@@ -134,6 +134,13 @@ export default function LoginPage() {
       <div className="w-full max-w-md border border-line bg-surface rounded-2xl p-8">
         <h1 className="text-neon text-3xl font-black tracking-widest">SONUS</h1>
         <p className="text-neutral-500 mt-2 text-sm">Dashboard — sign in to continue.</p>
+        <a
+          href="https://essentialsedm.com"
+          className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-neon/40 bg-neon/10 px-4 py-3 text-[11px] font-black tracking-[0.18em] text-neon transition hover:border-neon hover:bg-neon/15"
+        >
+          <span>VISIT ESSENTIALSEDM.COM</span>
+          <span aria-hidden="true">↗</span>
+        </a>
         {checking && (
           <p className="mt-6 text-xs uppercase tracking-widest text-neutral-500">Checking your session…</p>
         )}

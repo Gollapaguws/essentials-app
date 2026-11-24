@@ -170,16 +170,23 @@ export class DjBookingService {
     const budget = booking.event.budget;
     if (budget <= 0) return;
 
-    const committed = await prisma.artistBooking.aggregate({
-      where: {
-        eventId: booking.eventId,
-        ...(booking.id ? { id: { not: booking.id } } : {}),
-        // Agreed money: a confirmed gig and a played one both count.
-        status: { in: ["confirmed", "completed"] },
-      },
-      _sum: { performanceFee: true },
-    });
-    const before = committed._sum.performanceFee ?? 0;
+    // Agreed money: a confirmed gig and a played one both count, and so does a
+    // confirmed door host — the same ceiling covers both.
+    const [djCommitted, doorCommitted] = await Promise.all([
+      prisma.artistBooking.aggregate({
+        where: {
+          eventId: booking.eventId,
+          ...(booking.id ? { id: { not: booking.id } } : {}),
+          status: { in: ["confirmed", "completed"] },
+        },
+        _sum: { performanceFee: true },
+      }),
+      prisma.doorBooking.aggregate({
+        where: { eventId: booking.eventId, status: { in: ["confirmed", "completed"] } },
+        _sum: { fee: true },
+      }),
+    ]);
+    const before = (djCommitted._sum.performanceFee ?? 0) + (doorCommitted._sum.fee ?? 0);
     const after = before + booking.performanceFee;
     if (after > budget) {
       throw new ConflictException(
