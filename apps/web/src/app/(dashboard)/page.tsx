@@ -57,7 +57,7 @@ export default function Dashboard() {
         description="Tonight's pace, guest behaviour and the signals worth acting on before the doors open."
         actions={
           <Badge tone="success">
-            <span className="h-1.5 w-1.5 rounded-full bg-neon shadow-[0_0_8px_rgba(0,255,102,0.5)]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-neon shadow-[0_0_8px_rgba(212,175,55,0.5)]" />
             LIVE CONSOLE
           </Badge>
         }

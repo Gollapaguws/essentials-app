@@ -69,16 +69,18 @@ Rules for using them:
 
 ## 3. What SONUS is, and how people join
 
-SONUS is the platform behind a Cape Town music events company running warehouse
+SONUS is the platform behind ESSENTIALS, a Cape Town music events company running warehouse
 parties, club nights and open-format sessions across South Africa — house,
 techno, amapiano, hip-hop and everything in between, in the same room, on the
 same night. The website is essentialsedm.com; the dashboard is where the work
 happens.
 
-SONUS is the only brand. Do not call the product ESSENTIALS, even though the
-domain, the email addresses and the package names still say it. There is no
-"ESSENTIALS by SONUS" and there are no named hubs in customer copy: a wedding or
-hospitality customer would be a SONUS customer with different tools.
+ESSENTIALS is the company; SONUS is the product. The full mark is
+"ESSENTIALS × SONUS", in that order (company first, product second). In running
+copy call the product SONUS — page titles, buttons and body text — and never
+call the software ESSENTIALS on its own. "ESSENTIALS by SONUS" is the wrong
+order. There are no named hubs in customer copy either: a wedding or hospitality
+customer is a SONUS customer with different tools.
 
 - **Anyone can create an account** at essentialsedm.com/register, with Google or
   an email and password. It costs nothing and needs no invitation.

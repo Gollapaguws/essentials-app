@@ -1,8 +1,9 @@
 # What is SONUS?
 
-A plain-language explanation for people who do not work in tech. For the
-technical picture, see the [README](../README.md); for per-role instructions,
-see the [support manual](chatbot-manual.md).
+SONUS is the music-events platform from **ESSENTIALS**; the full mark is
+`ESSENTIALS × SONUS`. This is a plain-language explanation for people who do not
+work in tech. For the technical picture, see the [README](../README.md); for
+per-role instructions, see the [support manual](chatbot-manual.md).
 
 ## One-paragraph pitch (public homepage)
 
@@ -207,7 +208,7 @@ you — applying is not a booking.
 DJ played, the DJ invoices the venue. The venue pays the DJ directly; the app
 never holds the money.
 
-**Can I become a promoter or door staff?** Roles are granted by an SONUS
+**Can I become a promoter or door staff?** Roles are granted by a SONUS
 admin. Ask at `hello@essentialsedm.com`.
 
 **Who can see my details?** Only what is needed to run the night. The privacy

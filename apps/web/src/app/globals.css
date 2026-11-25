@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0a0a0a;
-  --color-surface: #141414;
-  --color-line: #222222;
-  --color-neon: #00ff66;
-  --font-sans: Inter, Helvetica, sans-serif;
+  --color-bg: #0b0b0d;
+  --color-surface: #141216;
+  --color-line: #2a2419;
+  --color-neon: #d4af37;
+  --font-sans: var(--font-montserrat), Montserrat, Inter, Helvetica, sans-serif;
+  --font-display: var(--font-cinzel), Cinzel, Georgia, serif;
 }
 
 /* Tailwind v4 defaults bare borders to currentColor; keep the v3 gray so
@@ -29,7 +30,7 @@
   }
 
   .console-title {
-    @apply text-2xl font-black tracking-[0.05em] text-white sm:text-3xl;
+    @apply font-display text-2xl tracking-[0.06em] text-white sm:text-3xl;
   }
 
   .console-lede {
@@ -92,10 +93,10 @@ html {
 
 body {
   min-height: 100vh;
-  color: #ededed;
-  background-color: #0a0a0a;
+  color: #f5efe0;
+  background-color: #0b0b0d;
   background-image:
-    radial-gradient(ellipse 70rem 34rem at 12% -8%, rgba(0, 255, 102, 0.07), transparent),
+    radial-gradient(ellipse 70rem 34rem at 12% -8%, rgba(212, 175, 55, 0.08), transparent),
     linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
   background-size: auto, 72px 72px, 72px 72px;
@@ -105,18 +106,18 @@ body {
 }
 
 ::selection {
-  background: rgba(0, 255, 102, 0.28);
+  background: rgba(212, 175, 55, 0.3);
   color: #ffffff;
 }
 
 :focus-visible {
-  outline: 2px solid rgba(0, 255, 102, 0.8);
+  outline: 2px solid rgba(212, 175, 55, 0.85);
   outline-offset: 2px;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2e2e2e #0a0a0a;
+  scrollbar-color: #2a2419 #0b0b0d;
 }
 
 .nav-scroll {

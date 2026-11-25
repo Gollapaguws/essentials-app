@@ -4,8 +4,9 @@ import { useSiteContent } from "@/lib/useSiteContent";
 /**
  * The front page's opening frame: the SONUS wordmark over a ringed orb, with the
  * two-line subtitle from the artwork. The next night's venue and city sit along
- * the bottom edge, where a poster carries its billing block. SONUS is the only
- * public brand; ESSENTIALS survives as a domain and identifier, never as a label.
+ * the bottom edge, where a poster carries its billing block. ESSENTIALS is the
+ * parent company and SONUS the product, so the top bar carries the full mark and
+ * the wordmark itself stays SONUS.
  */
 export default function HeroCinema() {
   const c = useSiteContent();
@@ -15,8 +16,8 @@ export default function HeroCinema() {
   return (
     <section id="top" className="noir-hero">
       <div className="noir-bar noir-bar-top">
-        <span className="noir-micro">SONUS</span>
-        <span className="noir-micro">ALL SOUND. NO FILLER.</span>
+        <span className="noir-micro">ESSENTIALS × SONUS</span>
+        <span className="noir-micro">AMPLIFY THE SIGNAL</span>
         <span className="noir-micro">SEASON 07</span>
       </div>
 
@@ -27,7 +28,7 @@ export default function HeroCinema() {
           <h1 className="noir-wm sonus-wm">
             <span className="sonus-wordmark">SONUS</span>
           </h1>
-          <p className="sonus-sub">Amplitude</p>
+          <p className="sonus-sub">Amplify</p>
           <p className="sonus-sub sonus-sub-last">The Signal</p>
         </div>
 

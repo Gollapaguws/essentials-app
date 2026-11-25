@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700&family=Abril+Fatface&family=Jost:wght@200;300;400;500;600&family=Cinzel:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700&family=Abril+Fatface&family=Jost:wght@200;300;400;500;600&family=Cinzel:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap');
 
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -7,79 +7,79 @@
 
 @layer base {
   :root {
-    --background: 224 71% 4%;
-    --foreground: 197 24% 94%;
-    --card: 235 22% 29%;
-    --card-foreground: 197 24% 94%;
-    --popover: 235 22% 29%;
-    --popover-foreground: 197 24% 94%;
-    --primary: 35 100% 55%;
-    --primary-foreground: 235 21% 21%;
-    --secondary: 235 22% 29%;
-    --secondary-foreground: 197 24% 94%;
-    --muted: 235 22% 29%;
-    --muted-foreground: 197 15% 72%;
-    --accent: 42 100% 70%;
-    --accent-foreground: 235 21% 21%;
+    --background: 240 8% 5%;
+    --foreground: 40 51% 92%;
+    --card: 240 6% 9%;
+    --card-foreground: 40 51% 92%;
+    --popover: 240 6% 9%;
+    --popover-foreground: 40 51% 92%;
+    --primary: 46 65% 52%;
+    --primary-foreground: 240 8% 5%;
+    --secondary: 240 5% 12%;
+    --secondary-foreground: 40 51% 92%;
+    --muted: 240 5% 12%;
+    --muted-foreground: 37 12% 61%;
+    --accent: 43 81% 75%;
+    --accent-foreground: 240 8% 5%;
     --destructive: 0 65% 52%;
-    --destructive-foreground: 197 24% 94%;
-    --border: 235 18% 40%;
-    --input: 235 18% 40%;
-    --ring: 35 100% 55%;
-    --chart-1: 35 100% 55%;
-    --chart-2: 42 100% 70%;
-    --chart-3: 197 24% 94%;
-    --chart-4: 235 22% 29%;
+    --destructive-foreground: 40 51% 92%;
+    --border: 35 19% 20%;
+    --input: 35 19% 20%;
+    --ring: 46 65% 52%;
+    --chart-1: 46 65% 52%;
+    --chart-2: 43 81% 75%;
+    --chart-3: 40 51% 92%;
+    --chart-4: 240 5% 12%;
     --chart-5: 0 65% 52%;
     --radius: 0.125rem;
-    --font-heading: 'Outfit', 'Helvetica Neue', Arial, sans-serif;
-    --font-body: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-    --font-display: 'Outfit', 'Helvetica Neue', Arial, sans-serif;
-    --font-mono: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-    --font-cinema: 'Jost', 'Helvetica Neue', Arial, sans-serif;
-    --sidebar-background: 235 21% 18%;
-    --sidebar-foreground: 197 24% 94%;
-    --sidebar-primary: 35 100% 55%;
-    --sidebar-primary-foreground: 235 21% 21%;
-    --sidebar-accent: 235 22% 29%;
-    --sidebar-accent-foreground: 197 24% 94%;
-    --sidebar-border: 235 18% 40%;
-    --sidebar-ring: 35 100% 55%;
+    --font-heading: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+    --font-body: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Cinzel', 'Times New Roman', serif;
+    --font-mono: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+    --font-cinema: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+    --sidebar-background: 240 6% 7%;
+    --sidebar-foreground: 40 51% 92%;
+    --sidebar-primary: 46 65% 52%;
+    --sidebar-primary-foreground: 240 8% 5%;
+    --sidebar-accent: 240 5% 12%;
+    --sidebar-accent-foreground: 40 51% 92%;
+    --sidebar-border: 35 19% 20%;
+    --sidebar-ring: 46 65% 52%;
   }
 
   .dark {
-    --background: 235 21% 21%;
-    --foreground: 197 24% 94%;
-    --card: 235 22% 29%;
-    --card-foreground: 197 24% 94%;
-    --popover: 235 22% 29%;
-    --popover-foreground: 197 24% 94%;
-    --primary: 35 100% 55%;
-    --primary-foreground: 235 21% 21%;
-    --secondary: 235 22% 29%;
-    --secondary-foreground: 197 24% 94%;
-    --muted: 235 22% 29%;
-    --muted-foreground: 197 15% 72%;
-    --accent: 42 100% 70%;
-    --accent-foreground: 235 21% 21%;
+    --background: 240 8% 5%;
+    --foreground: 40 51% 92%;
+    --card: 240 6% 9%;
+    --card-foreground: 40 51% 92%;
+    --popover: 240 6% 9%;
+    --popover-foreground: 40 51% 92%;
+    --primary: 46 65% 52%;
+    --primary-foreground: 240 8% 5%;
+    --secondary: 240 5% 12%;
+    --secondary-foreground: 40 51% 92%;
+    --muted: 240 5% 12%;
+    --muted-foreground: 37 12% 61%;
+    --accent: 43 81% 75%;
+    --accent-foreground: 240 8% 5%;
     --destructive: 0 65% 52%;
-    --destructive-foreground: 197 24% 94%;
-    --border: 235 18% 40%;
-    --input: 235 18% 40%;
-    --ring: 35 100% 55%;
-    --chart-1: 35 100% 55%;
-    --chart-2: 42 100% 70%;
-    --chart-3: 197 24% 94%;
-    --chart-4: 235 22% 29%;
+    --destructive-foreground: 40 51% 92%;
+    --border: 35 19% 20%;
+    --input: 35 19% 20%;
+    --ring: 46 65% 52%;
+    --chart-1: 46 65% 52%;
+    --chart-2: 43 81% 75%;
+    --chart-3: 40 51% 92%;
+    --chart-4: 240 5% 12%;
     --chart-5: 0 65% 52%;
-    --sidebar-background: 235 21% 18%;
-    --sidebar-foreground: 197 24% 94%;
-    --sidebar-primary: 35 100% 55%;
-    --sidebar-primary-foreground: 235 21% 21%;
-    --sidebar-accent: 235 22% 29%;
-    --sidebar-accent-foreground: 197 24% 94%;
-    --sidebar-border: 235 18% 40%;
-    --sidebar-ring: 35 100% 55%;
+    --sidebar-background: 240 6% 7%;
+    --sidebar-foreground: 40 51% 92%;
+    --sidebar-primary: 46 65% 52%;
+    --sidebar-primary-foreground: 240 8% 5%;
+    --sidebar-accent: 240 5% 12%;
+    --sidebar-accent-foreground: 40 51% 92%;
+    --sidebar-border: 35 19% 20%;
+    --sidebar-ring: 46 65% 52%;
   }
 }
 
@@ -167,15 +167,15 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Noir Cinema — a midnight screening: letterboxed photography, thin ice-blue
+   Noir Cinema — a midnight screening: letterboxed photography, thin champagne
    type, film-strip frames and a black signup panel.
 --------------------------------------------------------------------------- */
 .noir {
-  --noir-void: #05070d;
-  --noir-deep: #0d1424;
-  --noir-ice: #cfe3ff;
-  --noir-steel: #8aa2c8;
-  --noir-line: rgba(207, 227, 255, 0.16);
+  --noir-void: #0b0b0d;
+  --noir-deep: #141216;
+  --noir-ice: #f5efe0;
+  --noir-steel: #a89f91;
+  --noir-line: rgba(212, 175, 55, 0.18);
   --noir-gutter: clamp(20px, 6vw, 96px);
   position: relative;
   min-height: 100vh;
@@ -219,8 +219,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 9px var(--noir-gutter);
-  border-bottom: 1px solid rgba(5, 7, 13, 0.35);
-  background: #eaf6ff;
+  border-bottom: 1px solid rgba(11, 11, 13, 0.35);
+  background: #f5efe0;
   color: var(--noir-void);
 }
 
@@ -256,7 +256,7 @@
   padding: 0 14px;
   border: 1px solid var(--noir-void);
   background: var(--noir-void);
-  color: #eaf6ff;
+  color: #f5efe0;
   font: inherit;
   font-size: 10px;
   font-weight: 600;
@@ -282,7 +282,7 @@
   width: 40px;
   height: 40px;
   padding: 0;
-  border: 1px solid rgba(5, 7, 13, 0.4);
+  border: 1px solid rgba(11, 11, 13, 0.4);
   background: transparent;
   color: var(--noir-void);
   font: inherit;
@@ -293,7 +293,7 @@
 
 .noir-install-close:hover {
   background: var(--noir-void);
-  color: #eaf6ff;
+  color: #f5efe0;
 }
 
 .noir-install-close:focus-visible {
@@ -336,7 +336,7 @@
   cursor: pointer;
   min-height: 44px;
   padding: 0 20px;
-  border: 1px solid rgba(207, 227, 255, 0.34);
+  border: 1px solid rgba(212, 175, 55, 0.3);
   background: transparent;
   color: var(--noir-ice);
   font: inherit;
@@ -471,13 +471,13 @@
   height: 2px;
   padding: 0;
   border: 0;
-  background: rgba(255, 209, 102, 0.28);
+  background: rgba(243, 217, 139, 0.28);
   cursor: pointer;
   transition: background 0.3s;
 }
 
 .noir-dot.is-active {
-  background: #eaf6ff;
+  background: #f5efe0;
 }
 
 .noir-slider-right {
@@ -497,9 +497,9 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(255, 209, 102, 0.4);
-  background: rgba(5, 7, 13, 0.45);
-  color: #eaf6ff;
+  border: 1px solid rgba(243, 217, 139, 0.4);
+  background: rgba(11, 11, 13, 0.45);
+  color: #f5efe0;
   font: inherit;
   font-size: 14px;
   cursor: pointer;
@@ -507,8 +507,8 @@
 }
 
 .noir-arrow:hover {
-  background: #eaf6ff;
-  border-color: #eaf6ff;
+  background: #f5efe0;
+  border-color: #f5efe0;
   color: var(--noir-void);
 }
 
@@ -517,8 +517,8 @@
   inset: 0;
   background: radial-gradient(
     ellipse at 50% 45%,
-    rgba(5, 7, 13, 0.3) 0%,
-    rgba(5, 7, 13, 0.9) 82%
+    rgba(11, 11, 13, 0.3) 0%,
+    rgba(11, 11, 13, 0.9) 82%
   );
 }
 
@@ -544,8 +544,8 @@
   letter-spacing: 0.14em;
   text-indent: 0.14em;
   text-align: center;
-  color: #f2fbff;
-  text-shadow: 0 0 90px rgba(120, 186, 255, 0.35);
+  color: #f5efe0;
+  text-shadow: 0 0 90px rgba(212, 175, 55, 0.34);
 }
 
 .noir-tag {
@@ -614,7 +614,7 @@
 
 .noir-h2 {
   margin: 0;
-  color: #eaf2ff;
+  color: #f5efe0;
   font-size: clamp(32px, 6.2vw, 88px);
   font-weight: 200;
   line-height: 1;
@@ -669,7 +669,7 @@
   height: 7px;
   background-image: repeating-linear-gradient(
     90deg,
-    rgba(207, 227, 255, 0.3) 0 9px,
+    rgba(212, 175, 55, 0.26) 0 9px,
     transparent 9px 22px
   );
 }
@@ -683,7 +683,7 @@
 }
 
 .noir-frame-title {
-  color: #eaf2ff;
+  color: #f5efe0;
   font-size: clamp(17px, 1.7vw, 24px);
   font-weight: 300;
   line-height: 1.25;
@@ -710,11 +710,11 @@
   justify-content: space-between;
   gap: 10px;
   padding-top: 6px;
-  border-top: 1px dashed rgba(207, 227, 255, 0.16);
+  border-top: 1px dashed rgba(212, 175, 55, 0.18);
 }
 
 .noir-dj-name {
-  color: #eaf2ff;
+  color: #f5efe0;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.18em;
@@ -762,8 +762,8 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-dj-card:hover {
-  border-color: rgba(207, 227, 255, 0.5);
-  background: rgba(207, 227, 255, 0.04);
+  border-color: rgba(212, 175, 55, 0.5);
+  background: rgba(212, 175, 55, 0.04);
 }
 
 .noir-dj-photo {
@@ -772,7 +772,7 @@ a.noir-dj:hover .noir-dj-name {
   justify-content: center;
   aspect-ratio: 4 / 5;
   overflow: hidden;
-  background: linear-gradient(160deg, #12161c, #05070a);
+  background: linear-gradient(160deg, #141216, #0b0b0d);
   border-bottom: 1px solid var(--noir-line);
 }
 
@@ -798,7 +798,7 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-dj-cardname {
   padding: 0 20px;
-  color: #eaf2ff;
+  color: #f5efe0;
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.22em;
@@ -838,7 +838,7 @@ a.noir-dj:hover .noir-dj-name {
   aspect-ratio: 4 / 5;
   overflow: hidden;
   border: 1px solid var(--noir-line);
-  background: linear-gradient(160deg, #12161c, #05070a);
+  background: linear-gradient(160deg, #141216, #0b0b0d);
 }
 
 .noir-dj-portrait img {
@@ -871,7 +871,7 @@ a.noir-dj:hover .noir-dj-name {
   align-items: baseline;
   gap: 6px 14px;
   padding: 12px 0;
-  border-top: 1px dashed rgba(207, 227, 255, 0.16);
+  border-top: 1px dashed rgba(212, 175, 55, 0.18);
   color: var(--noir-ice);
   text-decoration: none;
 }
@@ -891,7 +891,7 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-dj-setname {
-  color: #eaf2ff;
+  color: #f5efe0;
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.16em;
@@ -911,7 +911,7 @@ a.noir-dj:hover .noir-dj-name {
 .noir-frame-empty {
   align-items: center;
   justify-content: center;
-  border-color: rgba(207, 227, 255, 0.3);
+  border-color: rgba(212, 175, 55, 0.26);
   border-style: dashed;
   text-align: center;
 }
@@ -924,13 +924,13 @@ a.noir-dj:hover .noir-dj-name {
   align-items: center;
   justify-content: center;
   gap: 20px;
-  border-color: rgba(207, 227, 255, 0.34);
+  border-color: rgba(212, 175, 55, 0.3);
   text-align: center;
   transition: background 0.3s;
 }
 
 .noir-frame-cta:hover {
-  background: rgba(207, 227, 255, 0.07);
+  background: rgba(212, 175, 55, 0.07);
 }
 
 .noir-scan {
@@ -940,7 +940,7 @@ a.noir-dj:hover .noir-dj-name {
   background: linear-gradient(
     100deg,
     transparent 30%,
-    rgba(207, 227, 255, 0.09) 50%,
+    rgba(212, 175, 55, 0.09) 50%,
     transparent 70%
   );
   transform: translateX(-120%);
@@ -956,7 +956,7 @@ a.noir-dj:hover .noir-dj-name {
   align-self: flex-start;
   margin-top: 6px;
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(207, 227, 255, 0.4);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.4);
   color: var(--noir-ice);
   font-size: 10px;
   font-weight: 500;
@@ -993,7 +993,7 @@ a.noir-dj:hover .noir-dj-name {
   pointer-events: none;
   background-image: repeating-linear-gradient(
     90deg,
-    rgba(255, 209, 102, 0.3) 0 9px,
+    rgba(243, 217, 139, 0.3) 0 9px,
     transparent 9px 22px
   );
 }
@@ -1117,9 +1117,9 @@ a.noir-dj:hover .noir-dj-name {
   bottom: 12px;
   min-height: 34px;
   padding: 0 14px;
-  border: 1px solid rgba(255, 209, 102, 0.55);
-  background: rgba(5, 7, 13, 0.72);
-  color: #eaf6ff;
+  border: 1px solid rgba(243, 217, 139, 0.55);
+  background: rgba(11, 11, 13, 0.72);
+  color: #f5efe0;
   font: inherit;
   font-size: 10px;
   font-weight: 500;
@@ -1130,7 +1130,7 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-stream-btn:hover {
-  background: #eaf6ff;
+  background: #f5efe0;
   color: var(--noir-void);
 }
 
@@ -1166,7 +1166,7 @@ a.noir-dj:hover .noir-dj-name {
 .noir-quote {
   max-width: 1100px;
   margin: clamp(20px, 3vw, 34px) auto 0;
-  color: #eaf2ff;
+  color: #f5efe0;
   font-size: clamp(28px, 5.4vw, 78px);
   font-weight: 200;
   line-height: 1.06;
@@ -1215,7 +1215,7 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-panel-h2 {
   margin: clamp(14px, 2vw, 20px) 0 0;
-  color: #eaf2ff;
+  color: #f5efe0;
   font-size: clamp(26px, 4.4vw, 54px);
   font-weight: 200;
   line-height: 1.06;
@@ -1239,9 +1239,9 @@ a.noir-dj:hover .noir-dj-name {
   min-height: 52px;
   padding: 0 6px;
   border: 0;
-  border-bottom: 1px solid rgba(207, 227, 255, 0.42);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.42);
   background: transparent;
-  color: #eaf2ff;
+  color: #f5efe0;
   font: inherit;
   font-size: 12px;
   font-weight: 400;
@@ -1250,7 +1250,7 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-input::placeholder {
-  color: rgba(138, 162, 200, 0.75);
+  color: rgba(168, 159, 145, 0.75);
 }
 
 .noir-input:focus {
@@ -1285,11 +1285,11 @@ a.noir-dj:hover .noir-dj-name {
   width: 14px;
   height: 14px;
   margin-top: 2px;
-  accent-color: #eaf6ff;
+  accent-color: #f5efe0;
 }
 
 .noir-consent a {
-  color: #eaf6ff;
+  color: #f5efe0;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1303,8 +1303,8 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-foot a.noir-foot-newsletter:hover,
 .noir-foot a.noir-foot-newsletter:focus-visible {
-  color: #eaf6ff;
-  border-bottom-color: #eaf6ff;
+  color: #f5efe0;
+  border-bottom-color: #f5efe0;
 }
 
 .noir-foot {
@@ -1340,28 +1340,28 @@ a.noir-dj:hover .noir-dj-name {
 .noir-ticket,
 .noir-input,
 .noir-msg {
-  color: #eaf6ff;
+  color: #f5efe0;
 }
 
 .noir-micro,
 .noir-note,
 .noir-cols p {
-  color: #9dbbdd;
+  color: #a89f91;
 }
 
 .noir-input::placeholder {
-  color: rgba(157, 187, 221, 0.72);
+  color: rgba(168, 159, 145, 0.72);
 }
 
 .noir-menu:hover,
 .noir-btn:hover {
-  background: #eaf6ff;
-  border-color: #eaf6ff;
+  background: #f5efe0;
+  border-color: #f5efe0;
   color: var(--noir-void);
 }
 
 .noir ::selection {
-  background: #eaf6ff;
+  background: #f5efe0;
   color: var(--noir-void);
 }
 
@@ -1508,7 +1508,7 @@ a.noir-dj:hover .noir-dj-name {
   place-items: center;
   min-height: calc(100vh - 68px);
   padding: clamp(28px, 6vw, 72px) var(--noir-gutter);
-  color: #eaf2ff;
+  color: #f5efe0;
 }
 
 .noir-door-pass {
@@ -1524,12 +1524,12 @@ a.noir-dj:hover .noir-dj-name {
   flex-direction: column;
   gap: 16px;
   padding: clamp(26px, 4vw, 44px);
-  border-right: 1px dashed rgba(207, 227, 255, 0.3);
+  border-right: 1px dashed rgba(212, 175, 55, 0.26);
 }
 
 .noir-door-mark {
   margin: 0;
-  color: #eaf6ff;
+  color: #f5efe0;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.42em;
@@ -1538,7 +1538,7 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-door-line {
   margin: 0;
-  color: #eaf2ff;
+  color: #f5efe0;
   font-size: clamp(19px, 2.1vw, 26px);
   font-weight: 200;
   line-height: 1.32;
@@ -1550,7 +1550,7 @@ a.noir-dj:hover .noir-dj-name {
   margin: auto 0 0;
   padding-top: 16px;
   border-top: 1px solid var(--noir-line);
-  color: #9dbbdd;
+  color: #a89f91;
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.4em;
@@ -1563,7 +1563,7 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-door-title {
   margin: 0;
-  color: #eaf2ff;
+  color: #f5efe0;
   font-size: clamp(25px, 3.2vw, 36px);
   font-weight: 200;
   line-height: 1.05;
@@ -1574,7 +1574,7 @@ a.noir-dj:hover .noir-dj-name {
 .noir-door-sub {
   max-width: 36ch;
   margin: 10px 0 0;
-  color: #8aa2c8;
+  color: #a89f91;
   font-size: 13px;
   font-weight: 300;
   line-height: 1.75;
@@ -1619,7 +1619,7 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-label {
-  color: #cfe3ff;
+  color: #f5efe0;
   font-size: 12px;
   font-weight: 400;
   letter-spacing: 0.06em;
@@ -1629,25 +1629,25 @@ a.noir-dj:hover .noir-dj-name {
   width: 100%;
   min-height: 50px;
   padding: 0 14px;
-  border: 1px solid rgba(207, 227, 255, 0.24);
+  border: 1px solid rgba(212, 175, 55, 0.24);
   border-radius: 2px;
-  background: rgba(5, 7, 13, 0.55);
-  color: #eaf2ff;
+  background: rgba(11, 11, 13, 0.55);
+  color: #f5efe0;
   font: inherit;
   font-size: 14px;
   letter-spacing: 0.04em;
 }
 
 .noir-field::placeholder {
-  color: rgba(138, 162, 200, 0.7);
+  color: rgba(168, 159, 145, 0.7);
   letter-spacing: 0.04em;
   text-transform: none;
 }
 
 .noir-field:focus {
-  border-color: #eaf6ff;
+  border-color: #f5efe0;
   outline: none;
-  box-shadow: 0 0 0 1px #eaf6ff;
+  box-shadow: 0 0 0 1px #f5efe0;
 }
 
 .noir-auth-primary,
@@ -1672,14 +1672,14 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-auth-primary {
-  border: 1px solid #eaf6ff;
-  background: #eaf6ff;
+  border: 1px solid #f5efe0;
+  background: #f5efe0;
   color: var(--noir-void);
 }
 
 .noir-auth-primary:hover:not(:disabled) {
   background: transparent;
-  color: #eaf6ff;
+  color: #f5efe0;
 }
 
 .noir-auth-primary:disabled {
@@ -1688,14 +1688,14 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-auth-google {
-  border: 1px solid rgba(207, 227, 255, 0.3);
+  border: 1px solid rgba(212, 175, 55, 0.26);
   background: transparent;
-  color: #eaf2ff;
+  color: #f5efe0;
 }
 
 .noir-auth-google:hover {
-  border-color: #eaf6ff;
-  color: #eaf6ff;
+  border-color: #f5efe0;
+  color: #f5efe0;
 }
 
 .noir-auth-or {
@@ -1703,7 +1703,7 @@ a.noir-dj:hover .noir-dj-name {
   align-items: center;
   gap: 12px;
   margin: 2px 0;
-  color: #8aa2c8;
+  color: #a89f91;
   font-size: 10.5px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -1719,7 +1719,7 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-auth-note {
   margin: 0;
-  color: #8aa2c8;
+  color: #a89f91;
   font-size: 11.5px;
   font-weight: 300;
   line-height: 1.75;
@@ -1727,7 +1727,7 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-auth-note strong {
-  color: #eaf2ff;
+  color: #f5efe0;
   font-weight: 400;
 }
 
@@ -1747,7 +1747,7 @@ a.noir-dj:hover .noir-dj-name {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 18px;
-  color: #8aa2c8;
+  color: #a89f91;
   font-size: 12px;
   letter-spacing: 0.04em;
 }
@@ -1759,9 +1759,9 @@ a.noir-dj:hover .noir-dj-name {
 .noir-quiet-link {
   padding: 0 0 1px;
   border: 0;
-  border-bottom: 1px solid rgba(207, 227, 255, 0.3);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.26);
   background: none;
-  color: #cfe3ff;
+  color: #f5efe0;
   font: inherit;
   font-size: 12px;
   letter-spacing: 0.04em;
@@ -1770,13 +1770,13 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-quiet-link:hover {
-  border-bottom-color: #eaf6ff;
-  color: #eaf6ff;
+  border-bottom-color: #f5efe0;
+  color: #f5efe0;
 }
 
 .noir-quiet-link--gold {
-  border-bottom-color: rgba(157, 187, 221, 0.45);
-  color: #eaf6ff;
+  border-bottom-color: rgba(168, 159, 145, 0.45);
+  color: #f5efe0;
 }
 
 .noir-quiet-link--gold:hover {
@@ -1807,7 +1807,7 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-legal h2 {
   margin: 0 0 12px;
-  color: #eaf6ff;
+  color: #f5efe0;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.24em;
@@ -1816,7 +1816,7 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-legal h3 {
   margin: 20px 0 6px;
-  color: #eaf2ff;
+  color: #f5efe0;
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.1em;
@@ -1835,7 +1835,7 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-legal a {
-  color: #eaf6ff;
+  color: #f5efe0;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1861,7 +1861,7 @@ a.noir-dj:hover .noir-dj-name {
 
 .noir-legal-msg {
   margin: 14px 0 0;
-  color: #eaf6ff;
+  color: #f5efe0;
   font-size: 12px;
 }
 
@@ -1877,7 +1877,7 @@ a.noir-dj:hover .noir-dj-name {
   align-items: center;
   min-height: 44px;
   border-bottom: 1px solid transparent;
-  color: #eaf6ff;
+  color: #f5efe0;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.3em;
@@ -1886,7 +1886,7 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-nav-quiet:hover {
-  border-bottom-color: #eaf6ff;
+  border-bottom-color: #f5efe0;
 }
 
 .noir-overlay,
@@ -1901,7 +1901,7 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-navnote {
-  color: #8aa2c8;
+  color: #a89f91;
   font-size: 12px;
   font-weight: 300;
   line-height: 1.5;
@@ -1920,7 +1920,7 @@ a.noir-dj:hover .noir-dj-name {
 }
 
 .noir-navwho {
-  color: #8aa2c8;
+  color: #a89f91;
   font-size: 12px;
   letter-spacing: 0.06em;
 }
@@ -1928,9 +1928,9 @@ a.noir-dj:hover .noir-dj-name {
 .noir-navquiet {
   padding: 0 0 3px;
   border: 0;
-  border-bottom: 1px solid rgba(255, 209, 102, 0.4);
+  border-bottom: 1px solid rgba(243, 217, 139, 0.4);
   background: none;
-  color: #eaf6ff;
+  color: #f5efe0;
   font: inherit;
   font-size: 12px;
   letter-spacing: 0.18em;
@@ -1965,7 +1965,7 @@ a.noir-dj:hover .noir-dj-name {
     gap: 10px;
     padding: 20px var(--noir-gutter);
     border-right: 0;
-    border-bottom: 1px dashed rgba(207, 227, 255, 0.3);
+    border-bottom: 1px dashed rgba(212, 175, 55, 0.26);
   }
 
   .noir-door-line {
@@ -2006,7 +2006,7 @@ a.noir-dj:hover .noir-dj-name {
   min-height: clamp(560px, 84vh, 920px);
   padding: clamp(56px, 9vw, 104px) var(--noir-gutter) clamp(96px, 10vw, 132px);
   background:
-    radial-gradient(120% 95% at 50% -10%, #0d1838 0%, #070c1c 46%, #03050c 100%);
+    radial-gradient(120% 95% at 50% -10%, #141216 0%, #0b0b0d 46%, #0b0b0d 100%);
 }
 
 .sonus-space {
@@ -2023,8 +2023,8 @@ a.noir-dj:hover .noir-dj-name {
   inset: -10% -14% 0;
   background:
     radial-gradient(38% 46% at 24% 34%, rgba(122, 86, 214, 0.30) 0%, transparent 70%),
-    radial-gradient(42% 52% at 78% 30%, rgba(64, 148, 255, 0.26) 0%, transparent 72%),
-    radial-gradient(60% 60% at 50% 92%, rgba(28, 88, 168, 0.22) 0%, transparent 74%);
+    radial-gradient(42% 52% at 78% 30%, rgba(212, 175, 55, 0.24) 0%, transparent 72%),
+    radial-gradient(60% 60% at 50% 92%, rgba(212, 175, 55, 0.22) 0%, transparent 74%);
   filter: blur(12px);
 }
 
@@ -2033,11 +2033,11 @@ a.noir-dj:hover .noir-dj-name {
   inset: 0;
   background-image:
     radial-gradient(1px 1px at 12% 22%, rgba(255, 255, 255, 0.9), transparent),
-    radial-gradient(1px 1px at 78% 14%, rgba(214, 236, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 78% 14%, rgba(245, 239, 224, 0.8), transparent),
     radial-gradient(1px 1px at 34% 68%, rgba(255, 255, 255, 0.65), transparent),
-    radial-gradient(1px 1px at 88% 62%, rgba(206, 230, 255, 0.7), transparent),
+    radial-gradient(1px 1px at 88% 62%, rgba(245, 239, 224, 0.7), transparent),
     radial-gradient(1px 1px at 58% 88%, rgba(255, 255, 255, 0.5), transparent),
-    radial-gradient(1px 1px at 6% 78%, rgba(214, 236, 255, 0.55), transparent),
+    radial-gradient(1px 1px at 6% 78%, rgba(245, 239, 224, 0.55), transparent),
     radial-gradient(1px 1px at 66% 34%, rgba(255, 255, 255, 0.45), transparent),
     radial-gradient(1px 1px at 44% 8%, rgba(255, 255, 255, 0.6), transparent);
   opacity: 0.9;
@@ -2050,7 +2050,7 @@ a.noir-dj:hover .noir-dj-name {
   width: min(88vw, 660px);
   aspect-ratio: 1;
   translate: -50% -50%;
-  filter: drop-shadow(0 0 40px rgba(120, 186, 255, 0.28));
+  filter: drop-shadow(0 0 40px rgba(212, 175, 55, 0.28));
 }
 
 .sonus-orb svg {
@@ -2069,7 +2069,7 @@ a.noir-dj:hover .noir-dj-name {
   aspect-ratio: 1;
   translate: -50% -50%;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(236, 250, 255, 0.55) 0%, rgba(150, 214, 255, 0.18) 42%, transparent 72%);
+  background: radial-gradient(circle, rgba(245, 239, 224, 0.55) 0%, rgba(243, 217, 139, 0.18) 42%, transparent 72%);
   filter: blur(6px);
 }
 
@@ -2093,13 +2093,13 @@ a.noir-dj:hover .noir-dj-name {
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(214, 240, 255, 0.10) 18%,
-    rgba(240, 252, 255, 0.85) 48%,
-    rgba(214, 240, 255, 0.14) 82%,
+    rgba(245, 239, 224, 0.10) 18%,
+    rgba(245, 239, 224, 0.85) 48%,
+    rgba(245, 239, 224, 0.14) 82%,
     transparent 100%
   );
   filter: blur(0.4px);
-  box-shadow: 0 0 28px rgba(180, 226, 255, 0.35);
+  box-shadow: 0 0 28px rgba(243, 217, 139, 0.35);
 }
 
 .sonus-lockup {
@@ -2125,11 +2125,11 @@ a.noir-dj:hover .noir-dj-name {
   letter-spacing: 0.16em;
   /* The extra tracking would otherwise push the word off-centre. */
   text-indent: 0.16em;
-  color: #f2fbff;
+  color: #f5efe0;
   text-shadow:
-    0 0 24px rgba(206, 236, 255, 0.55),
-    0 0 90px rgba(120, 186, 255, 0.35),
-    0 0 180px rgba(90, 140, 255, 0.25);
+    0 0 24px rgba(245, 239, 224, 0.55),
+    0 0 90px rgba(212, 175, 55, 0.34),
+    0 0 180px rgba(212, 175, 55, 0.22);
 }
 
 .sonus-sub {
@@ -2139,7 +2139,7 @@ a.noir-dj:hover .noir-dj-name {
   letter-spacing: 0.62em;
   text-indent: 0.62em;
   text-transform: uppercase;
-  color: #cfe3ff;
+  color: #f5efe0;
   opacity: 0.88;
 }
 

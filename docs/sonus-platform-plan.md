@@ -346,12 +346,13 @@ and support, not code.
 *One-page brief with recommendations and deadlines:
 [sonus-decisions.md](sonus-decisions.md).*
 
-1. ~~**Brand hierarchy**~~ — **decided: SONUS is the only public brand, and the
-   two-brand hierarchy in the vision document's §15 is rejected.** ESSENTIALS
-   survives only as an identifier — domain, addresses, npm scope, and the
-   internal name of the `edm` hub. [sonus-decisions.md](sonus-decisions.md)
-   records the reasoning. Remaining follow-through is the domain, sender address,
-   store listings and legal entity.
+1. ~~**Brand hierarchy**~~ — **decided: ESSENTIALS is the parent brand and SONUS
+   is the product; the full mark is `ESSENTIALS × SONUS`.** This supersedes both
+   the earlier SONUS-only ruling and the vision document's §15 ordering. Running
+   copy still says SONUS; ESSENTIALS is the company (domain, addresses, npm
+   scope, `edm` hub, legal entity). [sonus-decisions.md](sonus-decisions.md)
+   records the reasoning. The guideline's noir/gold visual system is applied to
+   the site, the dashboard and the deck, in Cinzel and Montserrat.
 2. **VAT and pricing** — inclusive or exclusive; are the listed prices launch
    hypotheses only (the document says they are)?
 3. **Music rights** — no public Viewing Room launch without performance,

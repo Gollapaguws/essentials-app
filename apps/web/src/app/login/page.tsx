@@ -132,7 +132,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen grid place-items-center px-6">
       <div className="w-full max-w-md border border-line bg-surface rounded-2xl p-8">
-        <h1 className="text-neon text-3xl font-black tracking-widest">SONUS</h1>
+        <h1 className="font-display text-neon text-3xl tracking-[0.18em]">SONUS</h1>
         <p className="text-neutral-500 mt-2 text-sm">Dashboard — sign in to continue.</p>
         <a
           href="https://essentialsedm.com"

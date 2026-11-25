@@ -46,6 +46,6 @@ export const defaultContent = {
   manifestoP2:
     "Every event is built the same way: a sound system that can carry a low end, a lineup with range, and a door that stays open until the last record.",
   events: [],
-  footerLeft: "© 2026 SONUS — CAPE TOWN",
+  footerLeft: "© 2026 ESSENTIALS × SONUS — CAPE TOWN",
   footerRight: "ALL SOUND. NO FILLER.",
 };

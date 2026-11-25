@@ -5,7 +5,7 @@ something engineering cannot decide, with a recommendation and what it blocks.*
 
 | # | Decision | Blocks | Needed by |
 | --- | --- | --- | --- |
-| 1 | ~~Which name is public~~ — **DECIDED: SONUS only; the ESSENTIALS co-brand is retired** | Domain, sender addresses, contracts, legal entity | Settled |
+| 1 | ~~Which name is public~~ — **DECIDED: ESSENTIALS is the parent, SONUS the product; the mark is `ESSENTIALS × SONUS`** | Domain, sender addresses, contracts, legal entity | Settled |
 | 2 | Are the listed prices VAT-inclusive | Billing checkout, receipts, plan data model | Phase 2 |
 | 3 | Music rights for the Viewing Room | Any paid streaming, public broadcast, recording | Phase 4 |
 | 4 | Does a shared audience network exist at all | Audience module, the R99/R49 products | Phase 5 |
@@ -14,37 +14,43 @@ something engineering cannot decide, with a recommendation and what it blocks.*
 
 ---
 
-**1. Brand hierarchy — DECIDED: SONUS is the only public brand.**
-The vision document asks this twice. Its §14 lists it as open, and its §15 answers
-it with a two-brand hierarchy: SONUS as the umbrella, "ESSENTIALS by SONUS" as
-the electronic-music hub, and future wedding/convention/hospitality hubs each
-with their own brand name. **That hierarchy is rejected for the public product.**
-
-The name SONUS is already live on the public site, the guest app, the dashboard,
-the emails and every internal doc. A second co-brand would double the surface
-every future copy or design change has to touch, and it asks an attendee, a DJ or
-a promoter to learn a distinction that only matters inside the company. The hub
-split is a configuration question, not a customer-facing one.
+**1. Brand hierarchy — DECIDED: ESSENTIALS is the parent, SONUS is the product.**
+This supersedes the earlier "SONUS only" ruling in this file, and the opposite
+ordering in the vision document's §15 ("ESSENTIALS by SONUS").
+`ESSENTIALS_SONUS_Updated_Brand_Guidelines.pdf` (November 2026) heads every page
+`ESSENTIALS × SONUS` and describes the product as "a child of ESSENTIALS". That
+is the hierarchy the business wants, so the marks and copy follow it. The two
+source documents conflicted on the order; this settles it as company first,
+product second.
 
 What this settles, so it does not get re-opened:
 
-- **Customer-facing surfaces say SONUS and nothing else.** No "ESSENTIALS by
-  SONUS", no per-hub brand names. A wedding hub is a SONUS hub with wedding
-  terminology, not "Wedding Hub by SONUS".
-- **ESSENTIALS survives as an identifier, not a brand:** the domain
-  `essentialsedm.com`, the addresses on it (`hello@`, `privacy@`, provisioned
-  mailboxes), the npm scope `@essentials/*`, and the internal name of the
-  electronic-music hub (`Hub.slug = "edm"`). None of these are shown as a brand.
-- **Marketing leads with music.** SONUS is described as a platform for music
-  events. The multi-industry and licensing story belongs in investor and partner
-  material until a second hub exists; it is not homepage copy.
-- **The old pitch deck and brand PDFs are historical.** Anything that presents
-  ESSENTIALS as the product name is out of date, not an alternative.
+- **The full mark is `ESSENTIALS × SONUS`.** Use it on the deck cover and
+  footers, the public site's title and social metadata, the dashboard's document
+  metadata, and the headings of customer-facing docs. "ESSENTIALS by SONUS" is
+  the wrong order and must not come back.
+- **Running copy says SONUS.** Page titles, app chrome, buttons and body text use
+  the short product name so the parent does not crowd every sentence.
+  "ESSENTIALS" alone never names the software.
+- **ESSENTIALS is the company:** the domain `essentialsedm.com`, the addresses on
+  it (`hello@`, `privacy@`, provisioned mailboxes), the npm scope
+  `@essentials/*`, the `edm` hub, and the legal entity. It is not a second
+  product.
+- **The tagline is "AMPLIFY THE SIGNAL"** (guideline p.1). "All sound. No
+  filler." survives as a campaign line, not as the brand's primary tagline.
+- **Still no third brand.** Hubs are SONUS hubs with their own terminology; the
+  wedding/convention/hospitality split is configuration, not naming.
+- **The visual identity follows the guideline.** Absolute Noir `#0B0B0D`,
+  metallic gold `#D4AF37` (champagne `#F3D98B`, bronze `#5C4312`) and warm cream
+  text `#F5EFE0` are now the public site's and the dashboard's tokens, with
+  Cinzel for display type and Montserrat for UI and body. Keep new work on those
+  tokens: the site exposes them as the HSL theme plus the `--noir-*` variables,
+  and the dashboard's `--color-neon` is the gold accent despite its name.
 
-Still open, and not engineering decisions: the domain, the sender address
-(currently `hello@essentials...`), the app-store listings, and the legal entity.
-Those follow the domain and store paperwork, so they are tracked here rather than
-guessed at. *Nothing is blocked by this any more.*
+Still open, and not engineering decisions: the sender address (currently
+`hello@essentials...`), the app-store listings, and the legal entity. Those
+follow the company paperwork, so they are tracked here rather than guessed at.
+*Nothing is blocked by this any more.*
 
 **2. Prices: VAT included or added on top?**
 *Recommendation: treat the published R99/R149/R199/R399 as the total a customer
