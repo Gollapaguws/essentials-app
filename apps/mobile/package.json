@@ -24,7 +24,7 @@
   "dependencies": {
     "@essentials/api-client": "*",
     "@essentials/auth": "*",
-    "@supabase/supabase-js": "^2",
+    "@supabase/supabase-js": "^2.119.2",
     "expo": "^57.0.33",
     "expo-clipboard": "~57.0.2",
     "expo-image-picker": "~57.0.21",
@@ -34,13 +34,13 @@
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "expo-web-browser": "~57.0.3",
-    "lucide-react-native": "^1.73.0",
+    "lucide-react-native": "^1.77.0",
     "react": "19.2.3",
-    "react-native": "0.86.3",
+    "react-native": "0.88.1",
     "react-native-qrcode-svg": "^6.3.1",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "~4.26.0",
-    "react-native-svg": "15.15.4"
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-screens": "~4.30.1",
+    "react-native-svg": "15.16.1"
   },
   "devDependencies": {
     "@types/react": "~19.2.4",

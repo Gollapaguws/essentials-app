@@ -12,7 +12,7 @@
   "dependencies": {
     "@essentials/api-client": "*",
     "@essentials/auth": "*",
-    "@supabase/supabase-js": "^2",
+    "@supabase/supabase-js": "^2.119.2",
     "next": "15.5.28",
     "qrcode": "^1.5.4",
     "react": "18.3.1",
