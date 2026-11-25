@@ -32,6 +32,11 @@ import { PlatformModule } from "../platform/platform.module";
     AuthUserService,
     SupabaseAdminService,
     DashboardSessionService,
+    // SupabaseAuthGuard injects PlatformService, and feature modules across the
+    // app use the guard by class. Because this module is @Global, re-exporting
+    // PlatformModule makes the service resolvable in those modules' injectors
+    // too; without it every module that guards a route fails at bootstrap.
+    PlatformModule,
   ],
 })
 export class AuthModule {}
