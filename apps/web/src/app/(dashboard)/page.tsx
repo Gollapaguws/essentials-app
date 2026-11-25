@@ -10,6 +10,7 @@ import { errorMessage } from "@/lib/errors";
 import { ConsolePage } from "@/components/console/ConsolePage";
 import { PageHeader } from "@/components/console/PageHeader";
 import { Badge } from "@/components/console/Badge";
+import { PromoterOnboarding } from "@/components/PromoterOnboarding";
 
 interface PacingRow { eventId: string; title: string; rsvps: number; previousRsvps: number | null; ratio: number | null; alert: boolean }
 interface Overview {
@@ -61,6 +62,7 @@ export default function Dashboard() {
           </Badge>
         }
       />
+      <PromoterOnboarding />
       {error && <p className="text-red-400 text-sm">{error}</p>}
         {data && (
           <>

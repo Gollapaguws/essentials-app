@@ -12,7 +12,7 @@ export class EventToolsService {
   async clone(user: JwtUser, eventId: string) {
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) throw new NotFoundException("Event not found");
-    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    if (!this.canEdit(event, user)) throw new ForbiddenException();
     return this.createCopy(event, new Date(event.date.getTime() + 7 * 86_400_000));
   }
 
@@ -23,7 +23,7 @@ export class EventToolsService {
   async repeat(user: JwtUser, eventId: string, weeks: number) {
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) throw new NotFoundException("Event not found");
-    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    if (!this.canEdit(event, user)) throw new ForbiddenException();
     if (!Number.isInteger(weeks) || weeks < 1 || weeks > 12) {
       throw new ConflictException("Repeat between 1 and 12 weeks");
     }
@@ -53,6 +53,7 @@ export class EventToolsService {
       data: {
         venueId: event.venueId,
         promoterId: event.promoterId,
+        orgId: event.orgId,
         // Titles are capped at 50 characters; keep the suffix even when the original fills the cap.
         title: `${event.title.slice(0, 43).trimEnd()} (copy)`,
         description: event.description,
@@ -86,7 +87,7 @@ export class EventToolsService {
   async cancel(user: JwtUser, eventId: string) {
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) throw new NotFoundException("Event not found");
-    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    if (!this.canEdit(event, user)) throw new ForbiddenException();
     if (event.status === "cancelled") throw new ConflictException("Event is already cancelled");
     return prisma.event.update({ where: { id: eventId }, data: { status: "cancelled" } });
   }
@@ -95,7 +96,7 @@ export class EventToolsService {
   async reopen(user: JwtUser, eventId: string) {
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) throw new NotFoundException("Event not found");
-    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    if (!this.canEdit(event, user)) throw new ForbiddenException();
     if (event.status !== "cancelled") throw new ConflictException("Event is not cancelled");
     return prisma.event.update({ where: { id: eventId }, data: { status: "pending_venue_approval" } });
   }
@@ -107,7 +108,7 @@ export class EventToolsService {
       include: { groupChat: { select: { id: true } } },
     });
     if (!event) throw new NotFoundException("Event not found");
-    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    if (!this.canEdit(event, user)) throw new ForbiddenException();
 
     await prisma.$transaction(async (tx) => {
       if (event.groupChat) {
@@ -137,7 +138,7 @@ export class EventToolsService {
   async exportCsv(user: JwtUser, eventId: string, res: Response) {
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) throw new NotFoundException("Event not found");
-    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    if (!this.canEdit(event, user)) throw new ForbiddenException();
 
     const rows = await prisma.guestList.findMany({
       where: { eventId },
@@ -163,7 +164,7 @@ export class EventToolsService {
   async exportSpendCsv(user: JwtUser, eventId: string, res: Response) {
     const event = await prisma.event.findUnique({ where: { id: eventId }, include: { venue: { select: { name: true } } } });
     if (!event) throw new NotFoundException("Event not found");
-    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    if (!this.canEdit(event, user)) throw new ForbiddenException();
 
     const bookings = await prisma.artistBooking.findMany({
       where: { eventId, status: { not: "cancelled" } },
@@ -203,7 +204,11 @@ export class EventToolsService {
       where: {
         status: { in: ["approved", "live"] },
         date: { gte: new Date() },
-        ...(user.role === "admin" ? {} : { promoterId: user.sub }),
+        ...(user.role === "admin"
+          ? {}
+          : user.orgId
+            ? { OR: [{ orgId: user.orgId }, { promoterId: user.sub }] }
+            : { promoterId: user.sub }),
       },
       include: { _count: { select: { guestLists: true } } },
       orderBy: { date: "asc" },
@@ -211,7 +216,12 @@ export class EventToolsService {
     const results = [];
     for (const e of events) {
       const previous = await prisma.event.findFirst({
-        where: { promoterId: e.promoterId, date: { lt: e.date } },
+        where: {
+          date: { lt: e.date },
+          ...(e.orgId
+            ? { OR: [{ orgId: e.orgId }, { promoterId: e.promoterId }] }
+            : { promoterId: e.promoterId }),
+        },
         include: { _count: { select: { guestLists: true } } },
         orderBy: { date: "desc" },
       });
@@ -228,5 +238,11 @@ export class EventToolsService {
       });
     }
     return results;
+  }
+
+  /** A workspace is shared; the creator is still the fallback for legacy rows. */
+  private canEdit(event: Pick<Event, "promoterId" | "orgId">, user: JwtUser) {
+    if (user.role === "admin") return true;
+    return event.promoterId === user.sub || Boolean(event.orgId && event.orgId === user.orgId);
   }
 }

@@ -47,8 +47,8 @@ export class VenuesController {
   /** Promoter picker when creating an event; flags venues with no coordinates. */
   @Get("options")
   @Auth("promoter", "admin")
-  options() {
-    return this.venues.listForPicker();
+  options(@CurrentUser() user: JwtUser) {
+    return this.venues.listForPicker(user);
   }
 
   @Get("events/pending")

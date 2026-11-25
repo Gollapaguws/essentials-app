@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
@@ -10,6 +11,7 @@ import type { Role } from "@prisma/client";
 import { SupabaseTokenService } from "./supabase-token.service";
 import { AuthUserService } from "./auth-user.service";
 import { DashboardSessionService } from "./dashboard-session.service";
+import { PlatformService } from "../platform/platform.service";
 import { SKIP_MFA_KEY } from "../common/skip-mfa.decorator";
 import { SKIP_PASSWORD_RESET_KEY } from "../common/skip-password-reset.decorator";
 import { ROLES_KEY } from "../common/roles.decorator";
@@ -19,10 +21,13 @@ export const MFA_REQUIRED_ROLES: ReadonlySet<Role> = new Set<Role>(["promoter", 
 
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
+  private readonly logger = new Logger(SupabaseAuthGuard.name);
+
   constructor(
     private readonly tokens: SupabaseTokenService,
     private readonly authUsers: AuthUserService,
     private readonly sessions: DashboardSessionService,
+    private readonly platform: PlatformService,
     private readonly reflector: Reflector,
   ) {}
 
@@ -84,6 +89,25 @@ export class SupabaseAuthGuard implements CanActivate {
       throw new UnauthorizedException({ code: "MFA_REQUIRED", role });
     }
 
+    // The workspace this request acts in. A client may select one with
+    // `x-org-id`; the service accepts it only when the account is a member, and
+    // otherwise falls back to the account's own workspace. A membership lookup
+    // failure must not turn sign-in into an outage: features then fall back to
+    // their original owner-based scoping.
+    const orgHeader = req.headers?.["x-org-id"];
+    const requestedOrg = Array.isArray(orgHeader) ? orgHeader[0] : orgHeader;
+    let orgId: string | null = null;
+    try {
+      orgId = await this.platform.activeOrgId(
+        identity.id,
+        role,
+        session.email,
+        typeof requestedOrg === "string" ? requestedOrg.trim() || undefined : undefined,
+      );
+    } catch (e) {
+      this.logger.warn(`organisation context unavailable: ${(e as Error).message}`);
+    }
+
     // Every controller treats `sub` as the Prisma User id (owners, promoterId,
     // guestList.userId...). Keep the Supabase uid available as `authUid`.
     // Sessions are owned by Supabase (short-lived JWTs verified above); the
@@ -96,6 +120,7 @@ export class SupabaseAuthGuard implements CanActivate {
       id: identity.id,
       authUid: session.sub,
       role,
+      orgId,
       mustResetPassword: identity.mustResetPassword,
       mfaDisabled: identity.mfaDisabled,
     };

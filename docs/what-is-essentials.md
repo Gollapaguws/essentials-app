@@ -10,17 +10,17 @@ SONUS is Cape Town's home for warehouse parties, club nights and
 open-format sessions — house, techno, amapiano and hip-hop in the same room on
 the same night. Find a night, RSVP in seconds and walk in with your door pass
 on your phone: no paper tickets, no queues at the list. Bring friends, earn free
-entries, book a table, and catch the room live when you can't be there. Behind
-the scenes, the same app lets the promoters, DJs, venues and door staff who make
-the night happen organise the line-up, book the sets and settle the money — so
-the music gets the attention, not the admin.
+entries, and catch the room live when you can't be there. Behind the scenes, the
+same app lets the promoters, DJs, venues and door staff who make the night happen
+organise the line-up, book the sets and settle the money — with no cut of the
+door and no cut of a DJ's fee. The music gets the attention, not the admin.
 
 ## In one sentence
 
 SONUS is a nightlife app for a Cape Town music-events company: partygoers
 find nights, get on the guest list and enter with their phone, while the people
-running the party use the same system to organise the night, book DJs, sell
-tables and pay everyone.
+running the party use the same system to organise the night, book DJs and pay
+everyone.
 
 ## For people going out
 
@@ -29,12 +29,11 @@ tables and pay everyone.
 - **RSVP / get on the list.** Your phone gets a **door pass** — a personal QR
   code that door staff scan or look up at the entrance. It cannot be forged or
   passed around.
-- See how full a night is getting ("180 of 250 going"), join a waitlist when it
-  is full, and book a **VIP table**.
+- See how full a night is getting ("180 of 250 going") and join a waitlist when
+  it is full.
 - **Loyalty:** go to 5 events, get a free entry. There is also a personal invite
   link — bring friends, earn rewards.
-- On the website you can **watch the DJ live**, follow the room chat, and get
-  emails about nights that suit your taste.
+- On the website you can **watch the DJ live** and follow the room chat.
 - There is a members' **What's new** page and a **privacy page** where you can
   download everything the company holds about you.
 
@@ -62,8 +61,10 @@ The short version: a promoter posts a night with a set number of **DJ slots**
 (like 3 sets, each with a time and a fee). DJs **apply** for a slot. The
 promoter **confirms one DJ per slot**. After the night, the promoter marks that
 the DJ **actually played**. Only then can the DJ **send an invoice to the
-venue** — and the venue pays the DJ directly. The app never moves money itself:
-it keeps the record and the paper trail, but it is not a bank.
+venue** — and the venue pays the DJ directly. A DJ fee never passes through the
+app: it keeps the record and the paper trail, but it is not a bank, and it takes
+no cut. (The paid part of SONUS is the professional software — see
+[What it costs](#what-it-costs).)
 
 **1. The promoter plans the night.** In the dashboard they create the event and
 choose how many slots there are, how long each lasts, when the first starts and
@@ -135,6 +136,9 @@ Rules worth remembering:
 - **The promoter pays nothing through the app** — the DJ invoices the venue and
   the venue pays the DJ.
 - **There is no commission line.** The fee is the fee.
+- **Attendees are never charged by the platform.** No booking fee, no cut of the
+  door price. Paid SONUS modules are software subscriptions for the
+  professional side, and they buy tools, never a share of an event.
 - **Travel is automatic**: return distance at the platform rate, not a figure the
   DJ types in.
 - **A cancelled event keeps its bookings**, so a confirmed fee still stands; that
@@ -153,7 +157,25 @@ Think of it as **three things joined into one**:
 
 Money is in South African rand, the events are for over-18s, and the platform is
 built to follow South African and European privacy law (POPIA/GDPR). The app
-takes no commission: DJs invoice the venue directly.
+takes no commission: DJs invoice the venue directly. That stays true when the
+paid modules launch — a subscription buys software, never a share of the door or
+of a DJ's fee.
+
+## What it costs
+
+Two different things, often confused:
+
+- **Going out is free.** Browsing, RSVP, the waitlist, the door pass, loyalty and
+  referrals cost an attendee nothing, and SONUS takes no cut of a door price.
+- **The professional side is the paid side.** Promoter, venue and DJ tools are
+  sold as optional monthly modules, alongside a free basic account: month to
+  month, cancellable, no fixed term. Nothing is charged today — the paid modules
+  are still being built.
+- **The DJ fee is untouched either way.** SONUS never takes a percentage of a
+  DJ's fee, and the venue pays the DJ directly.
+
+A SONUS subscription pays for software. It never buys a share of an event, a
+guest list or a DJ's invoice.
 
 ## Common questions
 
@@ -162,7 +184,9 @@ phone app if you want notifications. Both show the same nights and the same door
 pass.
 
 **Does it cost anything to get on the list?** No. RSVP is free. What you pay at
-the door, if anything, is the promoter's entry price — the app takes no cut.
+the door, if anything, is the promoter's entry price — the app takes no cut. The
+paid part of SONUS is the professional software: optional monthly modules for the
+people running nights, which never apply to attendees.
 
 **What happens if a night is full?** You can join the waitlist, and you are told
 when a place opens up.

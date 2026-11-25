@@ -2,6 +2,29 @@
 
 Notable changes to ESSENTIALS. Dates are UTC.
 
+## 2026-11-25
+
+### Promoter workspaces
+
+- **The platform can host more than one promoter.** New `Organisation` and
+  `Membership` models give each customer promoter a workspace, and events,
+  venues and social posts carry an `orgId`. A promoter's console only sees its
+  own workspace; legacy owner-scoped rows stay visible to their original owner.
+- **Admin onboarding names the workspace.** Creating a promoter account takes an
+  optional organisation name and otherwise derives "<email localpart> Presents".
+  Admins and venue/door staff join the SONUS platform workspace automatically.
+- **Tenancy is resolved per request.** `x-org-id` selects a workspace the account
+  belongs to; otherwise the first membership is used, with lazy creation for a
+  promoter who has none. A failed lookup falls back to owner scoping rather than
+  blocking sign-in.
+- **Admins get workspace administration** under `/platform`: list, create, and
+  add or remove members. See `docs/organisations.md` for the model, scoping rules
+  and known limits.
+- **New promoters get a first-run checklist** on the dashboard: set up a venue,
+  create the first night, open DJ slots, confirm the first DJ. Progress is read
+  from the workspace's real rows, so a step cannot be ticked while its page is
+  still empty, and the checklist disappears once the first booking is confirmed.
+
 ## 2026-11-24
 
 ### Mail in the console
@@ -17,8 +40,8 @@ Notable changes to ESSENTIALS. Dates are UTC.
   console mail with `550 5.7.26 … sender is unauthenticated`. With
   `RESEND_API_KEY` set, user mail and account notifications submit to Resend's
   verified domain; the local Postfix stays the fallback. The DKIM, SPF and MX
-  records still needed at Bluehost — including inbound delivery — are written out
-  in `docs/email-deliverability.md`.
+  records the mail host needs, and how to check them, are written out in
+  `docs/email-deliverability.md`.
 - **Drafts live in the mailbox, not the browser.** The composer saves into the
   Drafts folder 1.5s after typing stops, replacing its previous copy, and the next
   visit — on any device — reopens that draft. Send or Discard removes it.

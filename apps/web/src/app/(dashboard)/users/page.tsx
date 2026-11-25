@@ -20,6 +20,8 @@ interface RegisteredUser {
   stageName: string | null;
   venue: { id: string; name: string; capacity: number } | null;
   mailbox: { address: string; status: string } | null;
+  organisation: { id: string; name: string; slug: string } | null;
+  organisationRole: string | null;
 }
 
 interface Mailbox {
@@ -89,6 +91,7 @@ export default function Users() {
   const [notice, setNotice] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState("");
   const [newRole, setNewRole] = useState<"guest" | "artist" | "promoter" | "venue_manager" | "door" | "admin">("guest");
+  const [newOrganisation, setNewOrganisation] = useState("");
   const [creating, setCreating] = useState(false);
   const [provisioned, setProvisioned] = useState<{ email: string; password: string } | null>(null);
   const [resetResult, setResetResult] = useState<{
@@ -160,10 +163,14 @@ export default function Users() {
       const result = await api.post<{ user: RegisteredUser; temporaryPassword: string }>("/users", {
         email: newEmail.trim(),
         role: newRole,
+        ...(newRole === "promoter" && newOrganisation.trim()
+          ? { organisationName: newOrganisation.trim() }
+          : {}),
       });
       usersSource.setData((prev) => [result.user, ...(prev ?? [])]);
       setProvisioned({ email: result.user.email, password: result.temporaryPassword });
       setNewEmail("");
+      setNewOrganisation("");
     } catch (err) {
       setError(errorMessage(err) ?? "Could not create the account.");
     } finally {
@@ -584,6 +591,14 @@ export default function Users() {
                 </option>
               ))}
             </select>
+            {newRole === "promoter" && (
+              <input
+                className={field}
+                placeholder="Organisation name (optional)"
+                value={newOrganisation}
+                onChange={(e) => setNewOrganisation(e.target.value)}
+              />
+            )}
             <button
               disabled={creating || !newEmail.includes("@")}
               className="bg-neon text-bg font-black rounded-lg px-3 py-2 text-xs tracking-widest disabled:opacity-50"
@@ -894,6 +909,11 @@ export default function Users() {
                       >
                         {ROLE_LABEL[u.role] ?? u.role}
                       </span>
+                      {u.organisation && (
+                        <p className="text-neutral-500 text-[11px] mt-1">
+                          {u.organisation.name}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-2">

@@ -106,6 +106,7 @@ model User {
   dashboardSessions DashboardSession[]
   mfaRecoveryCodes MfaRecoveryCode[]
   referralsGiven  Referral[]     @relation("Referrer")
+  memberships     Membership[]
   artistProfile   ArtistProfile?
   doorProfile     DoorProfile?
   artistNotes     ArtistNote[]
@@ -124,7 +125,11 @@ model Venue {
   capacity  Int
   amenities String[]     @default([])
   managerId String?
+  /// Customer workspace that owns this room. Nullable for legacy rows, which
+  /// stay reachable through `managerId`.
+  orgId     String?
   manager   User?        @relation("VenueManagers", fields: [managerId], references: [id])
+  organisation Organisation? @relation(fields: [orgId], references: [id], onDelete: SetNull)
   events    Event[]
   // Phase 2: staff/door ops via DoorLog
   doorLogs  DoorLog[]
@@ -133,6 +138,7 @@ model Venue {
   createdAt DateTime     @default(now())
 
   @@index([managerId])
+  @@index([orgId])
 }
 
 model Event {
@@ -140,6 +146,10 @@ model Event {
   genres                  String[]        @default([])
   venueId                 String
   promoterId              String
+  /// The customer workspace this night belongs to. Nullable only for rows that
+  /// predate organisations; the API always sets it on create and falls back to
+  /// the promoter's own events for anything still unowned.
+  orgId                   String?
   /// Capped at 50 characters; the API validates the same limit.
   title                   String          @db.VarChar(50)
   description             String?
@@ -164,6 +174,7 @@ model Event {
   slotStartMinute         Int?
   venue                   Venue           @relation(fields: [venueId], references: [id])
   promoter                User            @relation("EventPromoter", fields: [promoterId], references: [id])
+  organisation            Organisation?   @relation(fields: [orgId], references: [id], onDelete: SetNull)
   guestLists              GuestList[]
   groupChat               EventGroupChat?
   artistBookings          ArtistBooking[]
@@ -176,6 +187,7 @@ model Event {
 
   @@index([venueId])
   @@index([promoterId])
+  @@index([orgId, date])
   @@index([date, status])
 }
 
@@ -656,17 +668,25 @@ model StreamTarget {
 // ===== Social media posting hub =====
 model SocialPost {
   id          String    @id @default(cuid())
+  /// The promoter workspace whose calendar this post belongs to.
+  orgId       String?
   content     String
   platforms   String[]
   mediaUrl    String?
   status      String    @default("draft") // draft | scheduled | publishing | published | partial | failed
   scheduledAt DateTime?
   results     Json      @default("{}") // { platform: { status, detail } }
+  /// Set once this post's publish has been counted against the workspace's
+  /// allowance — at creation for a scheduled post, after a successful publish
+  /// otherwise. Stops a scheduled post being counted twice.
+  meteredAt   DateTime?
   createdBy   String
+  organisation Organisation? @relation(fields: [orgId], references: [id], onDelete: SetNull)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@index([status, scheduledAt])
+  @@index([orgId, createdAt])
 }
 
 // ===== DJ booking flow (event → notify artists → apply → confirm) =====
@@ -699,6 +719,119 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, read])
+}
+
+/// A paying customer of the platform. One organisation can hold several people
+/// (a promoter and their staff); every night, room and social post belongs to
+/// exactly one, so two customers never share a workspace.
+model Organisation {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  kind      String   @default("promoter") // promoter | venue | artist | platform
+  /// Nullable because workspaces predate hubs; the commercial migration
+  /// backfills every row onto the `edm` hub.
+  hubId     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hub           Hub?          @relation(fields: [hubId], references: [id], onDelete: SetNull)
+  members       Membership[]
+  events        Event[]
+  venues        Venue[]
+  socialPosts   SocialPost[]
+  subscription  Subscription?
+  usageCounters UsageCounter[]
+
+  @@index([kind])
+  @@index([hubId])
+}
+
+/// Who may act inside an organisation. The role is kept alongside the account's
+/// platform role so per-organisation roles can replace it without a migration.
+model Membership {
+  id        String   @id @default(cuid())
+  orgId     String
+  userId    String
+  role      Role
+  createdAt DateTime @default(now())
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+  @@index([userId])
+  @@index([orgId, role])
+}
+
+model Hub {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  brand     String   @default("SONUS")
+  status    String   @default("pilot") // pilot | live | retired
+  config    Json     @default("{}") // genres, labels, enabled modules
+  createdAt DateTime @default(now())
+
+  organisations Organisation[]
+  plans         Plan[]
+
+  @@index([status])
+}
+
+/// A sellable module or bundle. `priceZar` is cents and, until decision 2 says
+/// otherwise, the gross price a customer pays. `entitlements` maps a metric to a
+/// monthly limit; a metric absent from it is not metered by the plan.
+model Plan {
+  id           String   @id @default(cuid())
+  hubId        String
+  key          String // basic | email | database | social | viewing | pro
+  name         String
+  priceZar     Int      @default(0)
+  entitlements Json     @default("{}")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  hub           Hub            @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+
+  @@unique([hubId, key])
+}
+
+/// One billing relationship per workspace. Phase 1 seeds a comped `pro` row for
+/// every existing workspace so nothing breaks and nothing is charged.
+model Subscription {
+  id                 String    @id @default(cuid())
+  orgId              String    @unique
+  planId             String
+  status             String    @default("active") // trialing | active | past_due | cancelled
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean   @default(false)
+  provider           String? // comp | stripe | payfast | manual
+  providerRef        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  plan         Plan         @relation(fields: [planId], references: [id])
+
+  @@index([status, currentPeriodEnd])
+}
+
+/// One row per metric per billing period — the only thing an allowance check may
+/// read. Written through `BillingService.record`, never by hand.
+model UsageCounter {
+  id          String   @id @default(cuid())
+  orgId       String
+  metric      String // email.sends | email.contacts | social.publishes | viewing.sessions
+  periodStart DateTime
+  used        Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  organisation Organisation @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, metric, periodStart])
+  @@index([orgId, periodStart])
 }
 
 /// Live-room chat under the front-page stream. Anonymous display name, throttled

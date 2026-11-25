@@ -29,14 +29,16 @@ function build() {
   const tokens = { verify: jest.fn() };
   const authUsers = { resolveUser: jest.fn() };
   const sessions = { resolve: jest.fn() };
+  const platform = { activeOrgId: jest.fn().mockResolvedValue("org-1") };
   const reflector = { getAllAndOverride: jest.fn() };
   const guard = new SupabaseAuthGuard(
     tokens as unknown as SupabaseTokenService,
     authUsers as unknown as AuthUserService,
     sessions as unknown as DashboardSessionService,
+    platform as never,
     reflector as unknown as Reflector,
   );
-  return { guard, tokens, authUsers, sessions, reflector };
+  return { guard, tokens, authUsers, sessions, platform, reflector };
 }
 
 type Guard = ReturnType<typeof build>;
@@ -94,6 +96,25 @@ describe("SupabaseAuthGuard", () => {
 
     expect(g.authUsers.resolveUser).toHaveBeenCalledWith("auth-uid-1", "dj@example.test");
     expect(req.user).toMatchObject({ role: "artist" });
+  });
+
+  it("attaches the workspace and only forwards a requested org id", async () => {
+    const g = build();
+    allow(g, { id: "user-1", role: "promoter" });
+    g.tokens.verify.mockResolvedValue(session({ role: "promoter", aal: "aal2" }));
+    const req: TestRequest = {
+      headers: { authorization: "Bearer jwt-1", "x-org-id": " org-2 " },
+    };
+
+    await expect(g.guard.canActivate(ctx(req))).resolves.toBe(true);
+
+    expect(g.platform.activeOrgId).toHaveBeenCalledWith(
+      "user-1",
+      "promoter",
+      "dj@example.test",
+      "org-2",
+    );
+    expect(req.user).toMatchObject({ orgId: "org-1" });
   });
 
   it("blocks a promoter who has not passed MFA", async () => {

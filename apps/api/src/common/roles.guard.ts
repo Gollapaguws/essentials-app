@@ -11,6 +11,11 @@ export interface JwtUser {
   authUid?: string;
   email: string;
   role: Role;
+  /**
+   * The customer workspace this request acts in, resolved from membership.
+   * Null for guests and DJs, who do not own a workspace.
+   */
+  orgId?: string | null;
 }
 
 @Injectable()

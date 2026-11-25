@@ -1,11 +1,11 @@
-# SONUS — the remaining five decisions before the build moves
+# SONUS — the remaining decisions before the build moves
 
 *One page for the people who own the business, not the code. Each item is
 something engineering cannot decide, with a recommendation and what it blocks.*
 
 | # | Decision | Blocks | Needed by |
 | --- | --- | --- | --- |
-| 1 | ~~Which name is public~~ — **DECIDED: SONUS** | Domain, sender addresses, contracts, legal entity | Settled |
+| 1 | ~~Which name is public~~ — **DECIDED: SONUS only; the ESSENTIALS co-brand is retired** | Domain, sender addresses, contracts, legal entity | Settled |
 | 2 | Are the listed prices VAT-inclusive | Billing checkout, receipts, plan data model | Phase 2 |
 | 3 | Music rights for the Viewing Room | Any paid streaming, public broadcast, recording | Phase 4 |
 | 4 | Does a shared audience network exist at all | Audience module, the R99/R49 products | Phase 5 |
@@ -14,13 +14,37 @@ something engineering cannot decide, with a recommendation and what it blocks.*
 
 ---
 
-**1. Brand hierarchy — DECIDED: the app is called SONUS.**
-Done: the visible name in the public site, guest app, dashboard, emails and docs
-now reads SONUS. Hubs stay configuration, so a second vertical later is a new hub,
-not a new brand. Still open, and not engineering decisions: the domain, the
-sender address (currently `hello@essentials...`), the app-store listings, and the
-legal entity. Those follow the domain and store paperwork, so they are tracked
-here rather than guessed at. *Nothing is blocked by this any more.*
+**1. Brand hierarchy — DECIDED: SONUS is the only public brand.**
+The vision document asks this twice. Its §14 lists it as open, and its §15 answers
+it with a two-brand hierarchy: SONUS as the umbrella, "ESSENTIALS by SONUS" as
+the electronic-music hub, and future wedding/convention/hospitality hubs each
+with their own brand name. **That hierarchy is rejected for the public product.**
+
+The name SONUS is already live on the public site, the guest app, the dashboard,
+the emails and every internal doc. A second co-brand would double the surface
+every future copy or design change has to touch, and it asks an attendee, a DJ or
+a promoter to learn a distinction that only matters inside the company. The hub
+split is a configuration question, not a customer-facing one.
+
+What this settles, so it does not get re-opened:
+
+- **Customer-facing surfaces say SONUS and nothing else.** No "ESSENTIALS by
+  SONUS", no per-hub brand names. A wedding hub is a SONUS hub with wedding
+  terminology, not "Wedding Hub by SONUS".
+- **ESSENTIALS survives as an identifier, not a brand:** the domain
+  `essentialsedm.com`, the addresses on it (`hello@`, `privacy@`, provisioned
+  mailboxes), the npm scope `@essentials/*`, and the internal name of the
+  electronic-music hub (`Hub.slug = "edm"`). None of these are shown as a brand.
+- **Marketing leads with music.** SONUS is described as a platform for music
+  events. The multi-industry and licensing story belongs in investor and partner
+  material until a second hub exists; it is not homepage copy.
+- **The old pitch deck and brand PDFs are historical.** Anything that presents
+  ESSENTIALS as the product name is out of date, not an alternative.
+
+Still open, and not engineering decisions: the domain, the sender address
+(currently `hello@essentials...`), the app-store listings, and the legal entity.
+Those follow the domain and store paperwork, so they are tracked here rather than
+guessed at. *Nothing is blocked by this any more.*
 
 **2. Prices: VAT included or added on top?**
 *Recommendation: treat the published R99/R149/R199/R399 as the total a customer
@@ -50,8 +74,9 @@ the whole document, it is what gets a sending domain blacklisted, and there is n
 evidence yet that promoters will pay R99 for it. Keep the R49 add-on as
 import/management of a customer's own contacts, and revisit the network only with
 a POPIA opinion and fresh, purpose-specific opt-in from each person.
-*Cost of delay:* none — this removes work, and the paid email product still
-exists on owned lists.
+*Cost of delay:* none — this removes work, and the paid email product can still
+be sold on owned lists once email exists in the platform again (see the note at
+the end: the in-platform email system was removed).
 
 **5. Unused Viewing Room sessions — roll over or expire?**
 *Recommendation: expire at the end of each monthly period, with sessions already
@@ -75,3 +100,10 @@ needs to know which of the two it is before it runs.
 **If only three get decided this month:** 6 (free to decide, unblocks the
 migration), 2 (needed before the first rand is charged) and 5 (a one-line
 policy). Items 3 and 4 are scope reductions waiting to be accepted.
+
+**One decision added after the email system was removed**
+(`20261123120000_remove_email_systems`): the R99 email module has no
+implementation, and the R399 bundle is defined as all four modules. Either email
+is rebuilt in-platform or bulk mail stays on the separate PHPList deploy — and
+until that is answered, no plan, price or bundle copy is final. See item 7 in
+[sonus-platform-plan.md](sonus-platform-plan.md) §5.

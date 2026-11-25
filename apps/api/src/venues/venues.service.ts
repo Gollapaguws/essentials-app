@@ -22,8 +22,9 @@ export interface VenueCreateInput {
 }
 
 /**
- * Phase 2 venue portal backend. All queries scoped: a venue is reachable only by
- * the manager recorded on it (which includes a promoter who created it); admin all.
+ * Phase 2 venue portal backend. A venue is reachable by the manager recorded on
+ * it (which includes a promoter who created it) and by members of its workspace;
+ * admins reach everything.
  */
 @Injectable()
 export class VenuesService {
@@ -36,13 +37,23 @@ export class VenuesService {
   private async assertManager(venueId: string, user: JwtUser) {
     const venue = await prisma.venue.findUnique({ where: { id: venueId } });
     if (!venue) throw new NotFoundException("Venue not found");
-    if (user.role !== "admin" && venue.managerId !== user.sub) throw new ForbiddenException("Not your venue");
+    // A room belongs to a workspace, so every member of that workspace can
+    // manage it; `managerId` keeps pre-organisation venues reachable.
+    const sameOrg = Boolean(venue.orgId && venue.orgId === user.orgId);
+    if (user.role !== "admin" && venue.managerId !== user.sub && !sameOrg) {
+      throw new ForbiddenException("Not your venue");
+    }
     return venue;
   }
 
   async myVenues(user: JwtUser) {
     return prisma.venue.findMany({
-      where: user.role === "admin" ? {} : { managerId: user.sub },
+      where:
+        user.role === "admin"
+          ? {}
+          : user.orgId
+            ? { OR: [{ orgId: user.orgId }, { managerId: user.sub }] }
+            : { managerId: user.sub },
       include: { _count: { select: { events: true } } },
     });
   }
@@ -85,6 +96,7 @@ export class VenuesService {
         lat: input.lat ?? 0,
         lng: input.lng ?? 0,
         managerId: user.sub,
+        orgId: user.orgId ?? null,
       },
     });
   }
@@ -92,9 +104,11 @@ export class VenuesService {
   /**
    * Picker for promoters creating an event. Venues without coordinates are
    * returned too (they still exist), flagged so the UI can warn: DJ routing
-   * measures between venue locations.
+   * measures between venue locations. The picker deliberately spans every venue:
+   * rooms are physical places that several promoters book, and the venue manager
+   * — not workspace membership — approves each night.
    */
-  async listForPicker() {
+  async listForPicker(_user: JwtUser) {
     const venues = await prisma.venue.findMany({
       select: { id: true, name: true, address: true, lat: true, lng: true, capacity: true, managerId: true },
       orderBy: { name: "asc" },
@@ -147,7 +161,15 @@ export class VenuesService {
     return prisma.event.findMany({
       where: {
         status: EventStatus.pending_venue_approval,
-        ...(user.role === "admin" ? {} : { venue: { managerId: user.sub } }),
+        ...(user.role === "admin"
+          ? {}
+          : user.orgId
+            ? {
+                venue: {
+                  OR: [{ orgId: user.orgId }, { managerId: user.sub }],
+                },
+              }
+            : { venue: { managerId: user.sub } }),
         ...(venueId ? { venueId } : {}),
       },
       include: { venue: { select: { name: true } }, promoter: { select: { name: true } } },
@@ -158,7 +180,10 @@ export class VenuesService {
   async decideEvent(user: JwtUser, eventId: string, approve: boolean) {
     const event = await prisma.event.findUnique({ where: { id: eventId }, include: { venue: true } });
     if (!event) throw new NotFoundException("Event not found");
-    if (user.role !== "admin" && event.venue.managerId !== user.sub) throw new ForbiddenException();
+    const managesVenue =
+      event.venue.managerId === user.sub ||
+      Boolean(event.venue.orgId && event.venue.orgId === user.orgId);
+    if (user.role !== "admin" && !managesVenue) throw new ForbiddenException();
     if (event.status !== EventStatus.pending_venue_approval) throw new BadRequestException("Event is not pending approval");
     const updated = await prisma.event.update({
       where: { id: eventId },

@@ -22,6 +22,13 @@ export class SetRoleDto {
   @IsIn(ASSIGNABLE_ROLES as unknown as string[])
   role!: Role;
 
+  /** Workspace name when promoting someone to promoter; a default is generated. */
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  organisationName?: string;
+
   @IsOptional()
   @IsString()
   @MinLength(1)
@@ -70,6 +77,16 @@ export class CreateUserDto {
   @IsOptional()
   @IsIn(ASSIGNABLE_ROLES as unknown as string[])
   role?: Role;
+
+  /**
+   * Workspace name for a promoter account. Defaults to "<email localpart>
+   * Presents" when omitted; ignored for roles that do not own a workspace.
+   */
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  organisationName?: string;
 
   @IsOptional()
   @IsString()

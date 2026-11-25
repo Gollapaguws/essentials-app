@@ -13,6 +13,7 @@ import { DashboardSessionService } from "../auth/dashboard-session.service";
 import { ArtistsService } from "../artists/artists.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { AccountMailService } from "../account-mail/account-mail.service";
+import { PlatformService } from "../platform/platform.service";
 import { pageArgs, parsePaging, type Paging } from "../common/paging";
 import { TelegramService } from "../telegram/telegram.service";
 import type { CreateUserDto, SetRoleDto, UpdateProfileDto } from "./users.dto";
@@ -45,6 +46,11 @@ const USER_SELECT = {
     orderBy: { createdAt: "desc" },
     take: 1,
   },
+  memberships: {
+    select: { role: true, organisation: { select: { id: true, name: true, slug: true } } },
+    orderBy: { createdAt: "asc" },
+    take: 1,
+  },
 } as const;
 
 interface UserRow {
@@ -61,6 +67,10 @@ interface UserRow {
   artistProfile: { stageName: string } | null;
   mailbox: { address: string; status: string } | null;
   managedVenues: { id: string; name: string; capacity: number }[];
+  memberships: {
+    role: Role;
+    organisation: { id: string; name: string; slug: string };
+  }[];
 }
 
 /** A temporary password that satisfies the platform's upper/lower/digit rule. */
@@ -69,7 +79,7 @@ function temporaryPassword(): string {
 }
 
 function shape(row: UserRow) {
-  const { authUid, artistProfile, managedVenues, telegramChatId, ...rest } = row;
+  const { authUid, artistProfile, managedVenues, memberships, telegramChatId, ...rest } = row;
   return {
     ...rest,
     // `linked` = the person has signed in at least once (has a Supabase identity).
@@ -77,6 +87,8 @@ function shape(row: UserRow) {
     telegram: Boolean(telegramChatId),
     stageName: artistProfile?.stageName ?? null,
     venue: managedVenues[0] ?? null,
+    organisation: memberships[0]?.organisation ?? null,
+    organisationRole: memberships[0]?.role ?? null,
   };
 }
 
@@ -98,6 +110,7 @@ export class UsersService {
     private readonly admin: SupabaseAdminService,
     private readonly sessions: DashboardSessionService,
     private readonly accountMail: AccountMailService,
+    private readonly platform: PlatformService,
   ) {}
 
   /**
@@ -158,6 +171,14 @@ export class UsersService {
         },
       })
       .catch(() => undefined);
+
+    // The workspace is part of onboarding, but a hiccup there must not leave a
+    // signed-in account stranded: first use creates a default one if needed.
+    await this.platform
+      .attachNewUser(userId, email, role, dto.organisationName)
+      .catch((err: unknown) =>
+        this.logger.warn(`organisation not created for ${email}: ${(err as Error).message}`),
+      );
 
     // Best-effort: the account exists even if the relay does not take the notice.
     void this.accountMail.send(email, { kind: "account-created", role });
@@ -399,6 +420,18 @@ export class UsersService {
       if (role === "artist") {
         await this.inviteDjToTelegram(existing.id, stageName ?? null).catch(() => null);
       }
+    }
+
+    // A promoted promoter needs a workspace before signing in; `attachNewUser`
+    // is a no-op when one already exists. Staff join the platform workspace.
+    if (role === "promoter" || role === "admin" || role === "venue_manager" || role === "door") {
+      await this.platform
+        .attachNewUser(id, existing.email, role, dto.organisationName)
+        .catch((err: unknown) =>
+          this.logger.warn(
+            `organisation not attached for ${existing.email}: ${(err as Error).message}`,
+          ),
+        );
     }
 
     return shape(await prisma.user.findUniqueOrThrow({ where: { id }, select: USER_SELECT }));

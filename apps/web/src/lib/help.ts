@@ -179,10 +179,27 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
     role: "promoter",
     title: "Promoter manual",
     summary:
-      "Running a night end to end: the venue, the lineup and fees, the guest list, the door, and settling with DJs afterwards.",
+      "Starting from an empty workspace: the first-night checklist, then running a night end to end — venue, lineup and fees, guest list, door, and settling with DJs afterwards.",
     screens:
       "Analytics · Events · Venue Portal · Artists · Promotions · Insights · DJ Applications · Door · Settlements · Social Hub · Notifications · Account",
     topics: [
+      {
+        title: "Your first night, step by step",
+        intro:
+          "Dashboard home shows a four-step checklist until your workspace has a venue, a night, DJ slots and one confirmed DJ. Nothing is locked — the checklist is the shortest path, not a gate.",
+        steps: [
+          "Open Venue Portal and add the room you run: name, address, capacity and map point. If you are using someone else's room, skip this and pick it when you create the night.",
+          "Open Events and create the night. Name it, choose the date and venue, and save. An event at a room you manage is approved immediately; at someone else's room it waits for that manager first.",
+          "On the event, open Slots & budget. Set the fee per hour, number of slots, slot length and first start time. These are the slots DJs see on Gig Calendar.",
+          "When applications arrive, open DJ Applications and confirm one. The agreed fee locks, the DJ is notified, and they join the event lineup.",
+        ],
+        points: [
+          "The checklist reads the workspace's real records, so it ticks itself. If a step stays unticked after you have done it, reload the page; if it still does not change, email " + CONTACT + " with the event name.",
+          "It disappears once all four steps are done; the Help pages stay available from the navigation.",
+          "You do not need a full lineup before confirming one DJ, and you can start from any screen — the order above is the one that avoids backtracking.",
+          "The budget is a ceiling. A confirmation that would pass it is refused, so raise the budget or pick a cheaper slot.",
+        ],
+      },
       {
         title: "Before you can create a night",
         points: [
@@ -380,7 +397,8 @@ export const HELP_MANUALS: Record<HelpRole, HelpManual> = {
         points: [
           "Settings holds the platform travel rate in rand per kilometre. Saving it applies to every DJ profile.",
           "It cannot be saved as zero; the floor is R0.01.",
-          "There is no commission setting — the platform takes no cut of a DJ's fee, and the venue pays the DJ's invoice directly.",
+          "There is no commission setting — the platform takes no cut of a DJ's fee or of door takings, and the venue pays the DJ's invoice directly.",
+          "Paid modules are a separate thing: a subscription buys software for the professional side, never a share of an event's money. Nothing is billed yet, so do not quote a price or promise a launch date.",
         ],
       },
       {

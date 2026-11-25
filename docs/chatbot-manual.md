@@ -1,7 +1,7 @@
-# ESSENTIALS support manual
+# SONUS support manual
 
-Knowledge base for the ESSENTIALS support agent. It describes what the platform
-does, how each role uses it, and the rules the agent must follow when answering.
+Knowledge base for the SONUS support agent. It describes what the platform does,
+how each role uses it, and the rules the agent must follow when answering.
 Keep it in step with the app: if a screen or rule changes, change it here too.
 
 ## 1. How to use this manual
@@ -67,12 +67,18 @@ Rules for using them:
 - The public site sends no context. A visitor is a stranger: do not assume a
   role, a name or an account.
 
-## 3. What ESSENTIALS is, and how people join
+## 3. What SONUS is, and how people join
 
-ESSENTIALS is a music events company in Cape Town running warehouse parties,
-club nights and open-format sessions across South Africa — house, techno,
-amapiano, hip-hop and everything in between, in the same room, on the same
-night. The website is essentialsedm.com; the dashboard is where the work happens.
+SONUS is the platform behind a Cape Town music events company running warehouse
+parties, club nights and open-format sessions across South Africa — house,
+techno, amapiano, hip-hop and everything in between, in the same room, on the
+same night. The website is essentialsedm.com; the dashboard is where the work
+happens.
+
+SONUS is the only brand. Do not call the product ESSENTIALS, even though the
+domain, the email addresses and the package names still say it. There is no
+"ESSENTIALS by SONUS" and there are no named hubs in customer copy: a wedding or
+hospitality customer would be a SONUS customer with different tools.
 
 - **Anyone can create an account** at essentialsedm.com/register, with Google or
   an email and password. It costs nothing and needs no invitation.
@@ -89,13 +95,17 @@ night. The website is essentialsedm.com; the dashboard is where the work happens
   their slot, and the DJ invoices the venue through the invoice's payment link.
   The venue pays; the platform does not hold or forward the money. If someone
   asks about commission, say there is none rather than quoting a percentage.
+- **Nothing is charged today.** There is no subscription, no booking fee and no
+  cut of a door price. Paid modules for professional tools are planned, and when
+  they launch a subscription pays for software — never a share of an event or a
+  DJ's fee. Never quote a price and never promise a launch date.
 
 ## 4. Roles and what each can do
 
 | Role | Sees |
 | --- | --- |
 | `artist` (DJ) | Artist Portal, My Profile, Live Calendar, Go Live, Gig Calendar, Earnings, Notifications, Account |
-| `promoter` | Analytics, Events, Email Engine, Venue Portal, Artists, Promotions, Insights, DJ Applications, Door, Settlements, Social Hub, Notifications, Account |
+| `promoter` | Analytics, Events, Venue Portal, Artists, Promotions, Insights, DJ Applications, Door, Settlements, Social Hub, Notifications, Account |
 | `venue_manager` | Venue Portal, Door, Notifications, Account |
 | `door` (door staff) | Door, Notifications, Account |
 | `admin` | Everything, plus Users, Audit, Settings, Mailboxes, Streaming, Front Page, Notifications test |
@@ -285,10 +295,23 @@ the session and channel checks block GO LIVE.
 - The bell feed lives under **Notifications**. Telegram can be linked from the
   Account tab in the mobile app; once linked, gig alerts also arrive there.
   Email is used for the messages that matter outside the app.
-- A new release note is also emailed to members once, with a link to the site's
-  **What's new** page.
+- A new release note is not emailed: it simply appears on the site's **What's
+  new** page. The old per-release broadcast went with the email system.
 
 ## 7. For promoters
+
+### First-run checklist
+- Dashboard home shows a four-step checklist to a new promoter: add a venue,
+  create a night, open DJ slots, confirm a DJ. It is a guide, not a gate — every
+  screen stays usable in any order.
+- The steps tick from real workspace records, not a saved wizard state. If a
+  step stays unticked after the work is done, ask them to reload; if it still
+  does not change, pass it to the team with the event name.
+- The card disappears once all four steps are complete. It does not need to be
+  dismissed or marked done.
+- Creating the night at an existing venue also satisfies the venue step. The
+  venue step is only for a room the promoter has to add themselves.
+- The same walkthrough is the first topic in the promoter manual under **Help**.
 
 ### Venues and events
 - **Venue Portal** lists rooms you manage and rooms you can book. Creating a
@@ -334,17 +357,12 @@ the session and channel checks block GO LIVE.
   a scanner. A guest's door pass is a signed token; the QR encodes the event, the
   guest and a signature, so it cannot be forged.
 
-### Guests, email and promotions
-- **Email Engine**: segments (filters over taste, attendance, vibe) and campaigns
-  (welcome series, weekly drop, 24h and 1h reminders, winback, one-off), with
-  attribution showing which RSVPs a send produced.
-- **Importing a mailing list** requires a tick confirming every contact opted
-  in; without it the upload is refused. The attestation and policy version are
-  stored with the segment, and an address that already unsubscribed stays
-  unsubscribed.
-- Unsubscribe and preference links in mail are signed and expire. A bare
-  `?email=` link will not work; mail already sent shows "invalid or has expired".
-  Preferences can be re-enabled from the resubscribe link.
+### Guests and promotions
+- **There is no email engine.** Segments, campaigns, list imports and RSVP
+  attribution were removed from the dashboard. Newsletters are handled outside
+  the app through PHPList (`newsletters.essentialsedm.com`). If someone asks to
+  send a campaign, upload a list or edit a segment, say the dashboard does not
+  do it and do not promise it is coming back.
 - **Promotions**: per-event codes of kind discount, free entry or bottle upgrade,
   with a use cap and optional expiry. Redemption is recorded per guest.
 - **Insights**: guest lifetime value and cohort retention. **Analytics** shows
@@ -422,13 +440,13 @@ open the promoter pages.
   first, three releases shown. It is members only — a signed-out visitor is
   sent to sign-in, a guest sees a members-only notice, and the menu entry is
   hidden for both.
-- A new release date in the changelog mails every member once (every role
-  except guest, minus unsubscribes). The send is recorded per release in
-  `WhatsNewBroadcast`, so a restart or a redeploy cannot repeat it, and editing
-  an existing release sends nothing.
+- A new release date in the changelog appears on the page and sends nothing.
+  The per-release broadcast and its `WhatsNewBroadcast` record were removed with
+  the email system, so there is no mailing to explain or retry.
 - Guests RSVP from an event page; the door pass is issued to the signed-in guest.
-- The newsletter box in the site footer is unticked by default and requires
-  explicit consent. A subscribe request without consent is refused.
+- The site footer links out to the PHPList newsletter sign-up at
+  `newsletters.essentialsedm.com`. Consent and unsubscribe are handled by that
+  list, not in SONUS, so never claim the app can unsubscribe someone.
 
 ## 12. Troubleshooting
 
@@ -436,14 +454,13 @@ open the promoter pages.
 | --- | --- | --- |
 | "I signed in with Google and the dashboard asks me to log in again" | The site's session was not exchanged for the dashboard cookie. | Sign out of the site and click **Dashboard** again; the site now hands the session to the API. If it still fails, clear the site's cookies for essentialsedm.com and retry. |
 | "It says the dashboard is for DJs, promoters, venue managers and admins" | The account's role is `guest`. | An admin changes the role on Users. |
-| "It asks for a code after my password" | Promoter, venue manager and admin accounts need a 6-digit authenticator code. | Add ESSENTIALS to their authenticator app if they have not, or ask an admin. |
+| "It asks for a code after my password" | Promoter, venue manager and admin accounts need a 6-digit authenticator code. | Add SONUS to their authenticator app if they have not, or ask an admin. |
 | "The reset link says invalid or expired" | Recovery links are single-use and expire, and mail already sent can point at an older flow. | Request a new link from Forgot password. |
 | "No reset email arrives" | The mail relay may be down; the sign-in screen warns when it is. | Ask an admin to set a password from Users while mail is down. |
 | "I cannot confirm this DJ" | The confirmation would pass the event budget. | Raise the budget on Slots & budget, or confirm a cheaper slot. |
 | "The slot fee is greyed out" | A DJ is confirmed for that slot, so the fee is locked. | Decline the DJ first if the fee must change. |
 | "I cannot invoice my gig" | Only a gig the promoter marked played (completed) can be invoiced. | Ask the promoter to mark it played on the booking. |
 | "I was declined with no reason" | The reason is optional. | They can ask the promoter; nothing is missing on their side. |
-| "The unsubscribe link does not work" | Links are signed and expire; a copied `?email=` link is refused. | Use the unsubscribe button in the latest mail, or re-subscribe from preferences. |
 | "My DJ photo will not upload" | The file must be a real image under 5 MB. | Resize or convert to JPG/PNG and retry. |
 | "I lost my phone / someone else is signed in" | Sessions are rows on the server. | Account → Signed-in devices → revoke the one that is not theirs. |
 | "I need a role changed" | Only an admin can change roles. | Point them to an admin; do not promise it. |

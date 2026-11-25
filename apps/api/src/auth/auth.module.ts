@@ -9,10 +9,12 @@ import { SupabaseTokenService } from "./supabase-token.service";
 import { SupabaseAuthGuard } from "./supabase-auth.guard";
 import { AuthUserService } from "./auth-user.service";
 import { SupabaseAdminService } from "./supabase-admin.service";
+import { PlatformModule } from "../platform/platform.module";
 
 /** Global so @UseGuards(SupabaseAuthGuard) resolves from every feature module. */
 @Global()
 @Module({
+  imports: [PlatformModule],
   controllers: [AuthController, SessionController],
   providers: [
     SupabaseTokenService,

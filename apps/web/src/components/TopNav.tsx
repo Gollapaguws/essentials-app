@@ -178,6 +178,13 @@ const links: NavLink[] = [
     roles: ["admin"],
   },
   {
+    href: "/plan",
+    label: "Plan & usage",
+    group: "PLATFORM",
+    hint: "Every workspace's plan, billing period and usage counters. Read-only — nothing is charged yet.",
+    roles: ["admin"],
+  },
+  {
     href: "/mail",
     label: "Mail",
     group: "YOU",

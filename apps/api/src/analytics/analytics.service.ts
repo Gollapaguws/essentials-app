@@ -7,7 +7,12 @@ export class AnalyticsService {
   /** Promoter dashboard overview. All queries scoped to the promoter's events. */
   async overview(user: JwtUser) {
     if (user.role !== "promoter" && user.role !== "admin") throw new ForbiddenException();
-    const promoterFilter = user.role === "admin" ? {} : { promoterId: user.sub };
+    const promoterFilter =
+      user.role === "admin"
+        ? {}
+        : user.orgId
+          ? { OR: [{ orgId: user.orgId }, { promoterId: user.sub }] }
+          : { promoterId: user.sub };
 
     const events = await prisma.event.findMany({
       where: promoterFilter,
@@ -63,7 +68,12 @@ export class AnalyticsService {
    */
   async pacing(user: JwtUser) {
     if (user.role !== "promoter" && user.role !== "admin") throw new ForbiddenException();
-    const promoterFilter = user.role === "admin" ? {} : { promoterId: user.sub };
+    const promoterFilter =
+      user.role === "admin"
+        ? {}
+        : user.orgId
+          ? { OR: [{ orgId: user.orgId }, { promoterId: user.sub }] }
+          : { promoterId: user.sub };
 
     const events = await prisma.event.findMany({
       where: promoterFilter,
@@ -75,7 +85,8 @@ export class AnalyticsService {
     const previousRsvpsByPromoter = new Map<string, number>();
     const rows = [];
     for (const e of events) {
-      const previousRsvps = previousRsvpsByPromoter.get(e.promoterId) ?? null;
+      const scopeKey = e.orgId ?? e.promoterId;
+      const previousRsvps = previousRsvpsByPromoter.get(scopeKey) ?? null;
       const upcoming = e.date >= now && (e.status === "approved" || e.status === "live");
       if (upcoming) {
         const rsvps = e._count.guestLists;
@@ -89,7 +100,7 @@ export class AnalyticsService {
           alert: previousRsvps ? rsvps >= previousRsvps * 2 : false,
         });
       }
-      previousRsvpsByPromoter.set(e.promoterId, e._count.guestLists);
+      previousRsvpsByPromoter.set(scopeKey, e._count.guestLists);
     }
     return rows;
   }

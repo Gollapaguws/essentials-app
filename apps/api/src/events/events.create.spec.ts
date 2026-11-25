@@ -88,6 +88,18 @@ describe("EventsService.create approval", () => {
     expect(announceApproval).not.toHaveBeenCalled();
   });
 
+  it("stamps the active workspace on the event", async () => {
+    db.venue.findUnique.mockResolvedValue({ id: "venue-1", capacity: 200, managerId: promoter.sub });
+    const member = { ...promoter, orgId: "org-1" } as JwtUser;
+
+    await build().service.create(member, input);
+
+    expect(db.event.create.mock.calls[0][0].data).toMatchObject({
+      promoterId: promoter.sub,
+      orgId: "org-1",
+    });
+  });
+
   it("stores the door fee and counts the door option only when it is enabled", async () => {
     db.venue.findUnique.mockResolvedValue({ id: "venue-1", capacity: 200, managerId: promoter.sub });
     const { service } = build();

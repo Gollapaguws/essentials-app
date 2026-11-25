@@ -9,7 +9,7 @@ export class PromotionsService {
   }) {
     const event = await prisma.event.findUnique({ where: { id: data.eventId } });
     if (!event) throw new NotFoundException("Event not found");
-    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException("Not your event");
+    this.assertCanManage(event, user, "Not your event");
     return prisma.promotion.create({
       data: {
         eventId: data.eventId,
@@ -25,7 +25,7 @@ export class PromotionsService {
   async listForEvent(user: JwtUser, eventId: string) {
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     if (!event) throw new NotFoundException("Event not found");
-    if (user.role !== "admin" && event.promoterId !== user.sub) throw new ForbiddenException();
+    this.assertCanManage(event, user);
     return prisma.promotion.findMany({
       where: { eventId },
       include: { _count: { select: { redemptions: true } } },
@@ -52,5 +52,17 @@ export class PromotionsService {
       prisma.promotion.update({ where: { id: promo.id }, data: { uses: { increment: 1 } } }),
     ]);
     return { redeemed: true, kind: promo.kind, discountPct: promo.discountPct };
+  }
+
+  /** Workspace members can run promotions on any of the workspace's nights. */
+  private assertCanManage(
+    event: { promoterId: string; orgId: string | null },
+    user: JwtUser,
+    message?: string,
+  ) {
+    if (user.role === "admin") return;
+    if (event.promoterId === user.sub) return;
+    if (event.orgId && event.orgId === user.orgId) return;
+    throw new ForbiddenException(message);
   }
 }

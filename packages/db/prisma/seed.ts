@@ -38,6 +38,37 @@ async function main() {
     create: { email: "venue@essentials.example", name: "Venue Manager", role: Role.venue_manager, referralCode: "VNM-001" },
   });
 
+  // The demo promoter gets their own workspace; admins and venue staff sit in
+  // the platform workspace. Fresh databases seed after migrations run, so these
+  // rows are created here rather than backfilled.
+  const promoterOrg = await prisma.organisation.upsert({
+    where: { slug: `promoter-${promoter.id}` },
+    update: {},
+    create: {
+      name: "Demo Promoter Presents",
+      slug: `promoter-${promoter.id}`,
+      kind: "promoter",
+    },
+  });
+  await prisma.membership.upsert({
+    where: { orgId_userId: { orgId: promoterOrg.id, userId: promoter.id } },
+    update: { role: Role.promoter },
+    create: { orgId: promoterOrg.id, userId: promoter.id, role: Role.promoter },
+  });
+
+  const platformOrg = await prisma.organisation.upsert({
+    where: { slug: "sonus" },
+    update: {},
+    create: { id: "org-sonus", name: "SONUS", slug: "sonus", kind: "platform" },
+  });
+  for (const member of [admin, manager]) {
+    await prisma.membership.upsert({
+      where: { orgId_userId: { orgId: platformOrg.id, userId: member.id } },
+      update: { role: member.role },
+      create: { orgId: platformOrg.id, userId: member.id, role: member.role },
+    });
+  }
+
   const venue = await prisma.venue.upsert({
     where: { id: "demo-venue" },
     update: {},
@@ -50,6 +81,7 @@ async function main() {
       capacity: 250,
       amenities: ["Sound 4K", "VIP area", "Rooftop"],
       managerId: manager.id,
+      orgId: platformOrg.id,
     },
   });
 
@@ -60,6 +92,7 @@ async function main() {
       id: "demo-event",
       venueId: venue.id,
       promoterId: promoter.id,
+      orgId: promoterOrg.id,
       title: "SONUS: Amapiano Sunrise",
       description: "Rooftop opener. Afro & Amapiano till late.",
       date: new Date(Date.now() + 6 * 24 * 3600 * 1000),

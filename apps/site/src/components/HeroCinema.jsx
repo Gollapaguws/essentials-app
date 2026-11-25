@@ -2,9 +2,10 @@ import CosmicBackdrop from "@/components/CosmicBackdrop";
 import { useSiteContent } from "@/lib/useSiteContent";
 
 /**
- * The front page's opening frame: ESSENTIALS over a ringed orb, SONUS beneath it,
- * and the two-line subtitle from the artwork. The next night's venue and city sit
- * along the bottom edge, where a poster carries its billing block.
+ * The front page's opening frame: the SONUS wordmark over a ringed orb, with the
+ * two-line subtitle from the artwork. The next night's venue and city sit along
+ * the bottom edge, where a poster carries its billing block. SONUS is the only
+ * public brand; ESSENTIALS survives as a domain and identifier, never as a label.
  */
 export default function HeroCinema() {
   const c = useSiteContent();
@@ -14,7 +15,7 @@ export default function HeroCinema() {
   return (
     <section id="top" className="noir-hero">
       <div className="noir-bar noir-bar-top">
-        <span className="noir-micro">ESSENTIALS</span>
+        <span className="noir-micro">SONUS</span>
         <span className="noir-micro">ALL SOUND. NO FILLER.</span>
         <span className="noir-micro">SEASON 07</span>
       </div>

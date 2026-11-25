@@ -113,7 +113,7 @@ export class EventsService {
     // people who run this night get the guest list.
     const canRsvp = user.role === "guest" || user.role === "admin";
     const myRsvp = canRsvp ? event.guestLists.find((g) => g.userId === user.sub) ?? null : null;
-    const canManage = this.canManage(event.promoterId, event.venue.managerId, user);
+    const canManage = this.canManage(event.promoterId, event.venue.managerId, user, event.orgId);
     return {
       ...event,
       going,
@@ -229,6 +229,7 @@ export class EventsService {
     if (
       entry.event.promoterId !== user.sub &&
       entry.event.venue.managerId !== user.sub &&
+      !(entry.event.orgId && entry.event.orgId === user.orgId) &&
       user.role !== "admin" &&
       user.role !== "door"
     ) {
@@ -257,7 +258,7 @@ export class EventsService {
       include: { venue: { select: { managerId: true } } },
     });
     if (!event) throw new NotFoundException("Event not found");
-    this.assertCanManage(event.promoterId, event.venue.managerId, user);
+    this.assertCanManage(event.promoterId, event.venue.managerId, user, event.orgId);
 
     const rows = await prisma.guestList.findMany({
       where: {
@@ -299,7 +300,7 @@ export class EventsService {
       },
     });
     if (!entry) throw new NotFoundException("Guest not on this list");
-    this.assertCanManage(entry.event.promoterId, entry.event.venue.managerId, user);
+    this.assertCanManage(entry.event.promoterId, entry.event.venue.managerId, user, entry.event.orgId);
 
     if (entry.status === "checked_in") return { result: "duplicate" as const, guest: entry.user.name };
     await prisma.guestList.update({
@@ -352,6 +353,7 @@ export class EventsService {
         title: data.title.trim(),
         date,
         promoterId: user.sub,
+        orgId: user.orgId ?? null,
         lineup: (data.lineup ?? []) as object,
         status: selfManaged ? EventStatus.approved : EventStatus.pending_venue_approval,
         djFeePerHour: plan?.djFeePerHour ?? 0,
@@ -406,7 +408,7 @@ export class EventsService {
   }) {
     const event = await prisma.event.findUnique({ where: { id: eventId }, include: { venue: true } });
     if (!event) throw new NotFoundException("Event not found");
-    this.assertCanManage(event.promoterId, event.venue.managerId, user);
+    this.assertCanManage(event.promoterId, event.venue.managerId, user, event.orgId);
 
     const plan = normalizePlan(data);
     if (!plan) throw new BadRequestException("Slot count, slot length and start time are required");
@@ -484,7 +486,7 @@ export class EventsService {
   async setSlotFee(user: JwtUser, eventId: string, slotId: string, fee: number) {
     const event = await prisma.event.findUnique({ where: { id: eventId }, include: { venue: true } });
     if (!event) throw new NotFoundException("Event not found");
-    this.assertCanManage(event.promoterId, event.venue.managerId, user);
+    this.assertCanManage(event.promoterId, event.venue.managerId, user, event.orgId);
     if (!Number.isInteger(fee) || fee <= 0) throw new BadRequestException("A slot fee must be a positive amount");
 
     const slot = await prisma.eventSlot.findUnique({ where: { id: slotId } });
@@ -509,7 +511,7 @@ export class EventsService {
   async update(user: JwtUser, eventId: string, input: EventUpdateInput) {
     const event = await prisma.event.findUnique({ where: { id: eventId }, include: { venue: true } });
     if (!event) throw new NotFoundException("Event not found");
-    this.assertCanManage(event.promoterId, event.venue.managerId, user);
+    this.assertCanManage(event.promoterId, event.venue.managerId, user, event.orgId);
 
     const data: Prisma.EventUpdateInput = {};
     if (input.title !== undefined) data.title = input.title.trim();
@@ -551,7 +553,9 @@ export class EventsService {
           ? { status: { in: [EventStatus.approved, EventStatus.live, EventStatus.completed] } }
           : user.role === "venue_manager"
             ? { venue: { managerId: user.sub } }
-            : { promoterId: user.sub };
+            : user.orgId
+              ? { OR: [{ orgId: user.orgId }, { promoterId: user.sub }] }
+              : { promoterId: user.sub };
     const events = await prisma.event.findMany({
       where,
       include: {
@@ -625,7 +629,9 @@ export class EventsService {
         ? {}
         : user.role === "venue_manager"
           ? { venue: { managerId: user.sub } }
-          : { promoterId: user.sub }),
+          : user.orgId
+            ? { OR: [{ orgId: user.orgId }, { promoterId: user.sub }] }
+            : { promoterId: user.sub }),
     };
     const events = await prisma.event.findMany({
       where,
@@ -692,15 +698,29 @@ export class EventsService {
     };
   }
 
-  private canManage(promoterId: string, venueManagerId: string | null | undefined, user: JwtUser) {
+  private canManage(
+    promoterId: string,
+    venueManagerId: string | null | undefined,
+    user: JwtUser,
+    orgId?: string | null,
+  ) {
     if (user.role === "admin") return true;
-    if (user.role === "promoter" && user.sub === promoterId) return true;
+    // A workspace is shared: anyone in the same organisation may manage its
+    // nights, even if another member created this one.
+    if (user.role === "promoter" && (user.sub === promoterId || (orgId && orgId === user.orgId))) {
+      return true;
+    }
     if (user.role === "venue_manager" && venueManagerId === user.sub) return true;
     // Door staff work the guest list and check-in for the night they are on.
     return user.role === "door";
   }
 
-  private assertCanManage(promoterId: string, venueManagerId: string | null | undefined, user: JwtUser) {
-    if (!this.canManage(promoterId, venueManagerId, user)) throw new ForbiddenException();
+  private assertCanManage(
+    promoterId: string,
+    venueManagerId: string | null | undefined,
+    user: JwtUser,
+    orgId?: string | null,
+  ) {
+    if (!this.canManage(promoterId, venueManagerId, user, orgId)) throw new ForbiddenException();
   }
 }

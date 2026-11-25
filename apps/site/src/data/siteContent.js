@@ -36,7 +36,7 @@ export const visuals = [
 // Editable defaults (server overrides via admin editor, GET /api/site/content)
 export const defaultContent = {
   heroPitch:
-    "SONUS is Cape Town's home for warehouse parties, club nights and open-format sessions — house, techno, amapiano and hip-hop in the same room on the same night. Find a night, RSVP in seconds and walk in with your door pass on your phone: no paper tickets, no queues at the list. Bring friends, earn free entries, book a table, and catch the room live when you can't be there. Behind the scenes, the same app lets the promoters, DJs, venues and door staff who make the night happen organise the line-up, book the sets and settle the money — so the music gets the attention, not the admin.",
+    "SONUS is Cape Town's home for warehouse parties, club nights and open-format sessions — house, techno, amapiano and hip-hop in the same room on the same night. Find a night, RSVP in seconds and walk in with your door pass on your phone: no paper tickets, no queues at the list. Bring friends, earn free entries, and catch the room live when you can't be there. Behind the scenes, the same app lets the promoters, DJs, venues and door staff who make the night happen organise the line-up, book the sets and settle the money — with no cut of the door and no cut of a DJ's fee. The music gets the attention, not the admin.",
   tagline: "All sound. No filler. Underground rooms, real sound systems and lineups built for the floor.",
   ctaLabel: "GET ON THE LIST",
   city: "CAPE TOWN",

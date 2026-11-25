@@ -13,7 +13,12 @@ import type { JwtUser } from "../common/roles.guard";
 export class InsightsService {
   async ltv(user: JwtUser) {
     if (user.role !== "promoter" && user.role !== "admin") throw new ForbiddenException();
-    const promoterFilter = user.role === "admin" ? {} : { event: { promoterId: user.sub } };
+    const promoterFilter =
+      user.role === "admin"
+        ? {}
+        : user.orgId
+          ? { event: { OR: [{ orgId: user.orgId }, { promoterId: user.sub }] } }
+          : { event: { promoterId: user.sub } };
 
     const guests = await prisma.user.findMany({
       where: { role: "guest" },
@@ -48,7 +53,12 @@ export class InsightsService {
   /** Monthly cohorts with 6-month retention curve. */
   async cohorts(user: JwtUser) {
     if (user.role !== "promoter" && user.role !== "admin") throw new ForbiddenException();
-    const promoterFilter = user.role === "admin" ? {} : { event: { promoterId: user.sub } };
+    const promoterFilter =
+      user.role === "admin"
+        ? {}
+        : user.orgId
+          ? { event: { OR: [{ orgId: user.orgId }, { promoterId: user.sub }] } }
+          : { event: { promoterId: user.sub } };
 
     const checkins = await prisma.guestList.findMany({
       where: { ...promoterFilter, status: "checked_in" },

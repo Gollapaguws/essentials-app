@@ -26,6 +26,8 @@ import { HealthModule } from "./health/health.module";
 import { AccountMailModule } from "./account-mail/account-mail.module";
 import { UserMailModule } from "./user-mail/user-mail.module";
 import { MailModule } from "./mail/mail.module";
+import { PlatformModule } from "./platform/platform.module";
+import { BillingModule } from "./billing/billing.module";
 
 @Module({
   imports: [
@@ -45,6 +47,8 @@ import { MailModule } from "./mail/mail.module";
       }),
     }),
     AuthModule,
+    PlatformModule,
+    BillingModule,
     UsersModule,
     EventsModule,
     LoyaltyModule,
