@@ -70,12 +70,24 @@ export class MailController {
     @Query("offset") offset?: string,
     @Query("limit") limit?: string,
     @Query("q") q?: string,
+    @Query("everywhere") everywhere?: string,
   ) {
     return this.mail.list(actor.sub, folder, {
       offset: offset ? Number(offset) : 0,
       limit: limit ? Number(limit) : 25,
       query: q,
+      everywhere: everywhere === "1" || everywhere === "true",
     });
+  }
+
+  /** Every message in one conversation, for a threaded reader. */
+  @Get("thread")
+  thread(
+    @CurrentUser() actor: JwtUser,
+    @Query("folder") folder?: string,
+    @Query("uids") uids?: string,
+  ) {
+    return this.mail.thread(actor.sub, folder, uids ?? "");
   }
 
   @Get("messages/:uid")
@@ -111,6 +123,27 @@ export class MailController {
       seen: typeof body?.seen === "boolean" ? body.seen : undefined,
       flagged: typeof body?.flagged === "boolean" ? body.flagged : undefined,
     });
+  }
+
+  /** Filing rules: what the sweep moves where, without a client having to run. */
+  @Get("rules")
+  rules(@CurrentUser() actor: JwtUser) {
+    return this.mail.rules(actor.sub);
+  }
+
+  @Patch("rules")
+  setRules(@CurrentUser() actor: JwtUser, @Body() body: { rules?: unknown }) {
+    return this.mail.setRules(actor.sub, body?.rules);
+  }
+
+  /** "Junk" and "Not junk": file the message, and teach the filter as well. */
+  @Post("messages/:uid/spam")
+  spam(
+    @CurrentUser() actor: JwtUser,
+    @Param("uid") uid: string,
+    @Body() body: { folder?: string; action?: string },
+  ) {
+    return this.mail.spam(actor.sub, body?.folder, uid, body?.action);
   }
 
   @Post("messages/:uid/move")

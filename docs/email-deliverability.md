@@ -1,151 +1,134 @@
-# Email Deliverability — ESSENTIALS
+# Email — the mail host and its DNS
 
-Phase 1 sends via **Resend** behind the swappable `MailProvider` interface
-(`apps/api/src/mail/mail-provider.interface.ts`). Phase 2 migrates to self-hosted
-**listmonk** (campaigns/segments) + **Postal** (MTA) — implement a new
-`MailProvider` (e.g. `ListmonkProvider`) and flip `MAIL_PROVIDER`.
+The VPS runs the domain's mail itself: Postfix on `25` (inbound) and `587`
+(submission), Dovecot on `143`/`993`, mailboxes in `/home/<localpart>/Maildir`.
+The console reads that store through `doveadm`, so the same mailbox password works
+in any IMAP client.
 
-## Personal mail via Bluehost
+`essentialsedm.com` DNS lives at **Hostinger**, delegated from the `.com` zone to
+`aurora.dns-parking.com` and `nebula.dns-parking.com`. Records are edited in
+hPanel → *Domains → DNS / Nameservers → DNS records*; there is no API. The old
+Bluehost zone (`ns1/ns2.bluehost.com`) still answers if queried directly but is no
+longer authoritative — ignore it.
 
-Bluehost cPanel mail is a **mailbox host, not a bulk sender**. Use it for
-person-to-person and low-volume transactional mail, and keep newsletter/weekly
-campaigns on Resend (or listmonk) — Bluehost applies per-mailbox sending limits and
-an acceptable-use policy that bulk flows will trip.
+## How mail moves
 
-Mailbox creation, passwords and forwarding stay in Bluehost's control panel; there
-is no API for that. The dashboard's `/mailboxes` page manages the VPS's own
-Dovecot mailboxes and is unrelated to Bluehost.
+**Inbound.** External MTA → `MX 10 mail.essentialsedm.com` → `72.62.211.31:25`
+(Postfix) → `relay=local … delivered to maildir` → Dovecot. Verified end to end on
+2026-11-24 with a live message from Amazon SES: accepted, delivered, readable over
+IMAP and visible in the console.
 
-### SMTP settings
+**Outbound.** Console and account mail submit through **Resend**, whose
+`essentialsedm.com` domain is verified (DKIM, SPF, MX and return-path all green in
+Resend → Domains). `relay()` in `apps/api/src/mail/mail.service.ts` picks
+`smtp.resend.com` whenever `RESEND_API_KEY` is set in
+`/opt/essentials/app/.env`, falling back to `SMTP_HOST` (`127.0.0.1:25`, local
+Postfix) otherwise.
 
-| | Bluehost cPanel mail | Bluehost Professional Email (Titan) |
-|---|---|---|
-| Host | `mail.<your-domain>` (or `<your-domain>`) | `smtp.titan.email` |
-| Port | 465 SSL/TLS (or 587 STARTTLS) | 465 SSL/TLS |
-| Username | full address, e.g. `hello@essentialsedm.com` | same |
-| Password | that mailbox's password | same |
-| Note | — | enable third-party app access first |
+That fallback is **not authenticated today**: Postfix signs with selector
+`default`, but `default._domainkey` is unpublished, and the apex SPF does not list
+`72.62.211.31`. Anything that falls back to local Postfix will fail both SPF and
+DKIM at Gmail (`550 5.7.26 … sender is unauthenticated`). Fixing that needs the two
+records under *Outstanding* below. Mail sent through Resend is unaffected.
 
-Point the app at it in `.env`:
+## The zone as it stands
 
-```dotenv
-MAIL_PROVIDER="smtp"
-SMTP_HOST="mail.essentialsedm.com"
-SMTP_PORT="465"
-SMTP_SECURE="true"
-SMTP_USER="hello@essentialsedm.com"
-SMTP_PASS="…"
-MAIL_FROM="ESSENTIALS <hello@essentialsedm.com>"
-```
+All of these are live at `aurora.dns-parking.com` (serial `2026112403`).
 
-`MAIL_FROM` must be a mailbox Bluehost owns for the domain, otherwise the send is
-rejected. `MAIL_PROVIDER` is global, so this routes **all** API mail through
-Bluehost; if campaigns must stay on Resend, send them through a second deployment
-or add per-flow provider routing before switching. The health check at
-`GET /api/mail/status` follows `SMTP_HOST`/`SMTP_PORT` and probes 465 over TLS.
+| Record | Host | Value | Purpose |
+|---|---|---|---|
+| A | `@` | `72.62.211.31` | the VPS |
+| CNAME | `www` | `essentialsedm.com.` | site |
+| A | `sonus` | `72.62.211.31` | console host |
+| A | `mail` | `72.62.211.31` | the MX target |
+| MX | `@` | `10 mail.essentialsedm.com.` | inbound mail |
+| TXT | `@` | `v=spf1 include:_spf.mail.hostinger.com ~all` | SPF |
+| TXT | `_dmarc` | `v=DMARC1; p=none` | DMARC (monitor only) |
+| TXT | `resend._domainkey` | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDCPJg2wkA4oN51ZmPBhoU1ItAFIPbUluHuK60ECkoLh14yqsf1i6xAlv3wmmbWBIgf81nWLVLJ09DElXvnykoQ9jw55PSYglA4gBKy5HhtHcIX5pXuJ9FF+wL3j9z6SmgOPmIPvc01yjCnl54TiZSHjBglTlY1b1+Jvnm9usiyLwIDAQAB` | Resend DKIM |
+| MX | `send` | `10 feedback-smtp.eu-west-1.amazonses.com.` | Resend bounce domain |
+| TXT | `send` | `v=spf1 include:amazonses.com ~all` | Resend bounce SPF |
+| CNAME | `rsend` | `send.forge.rmta.net.` | Resend return-path |
 
-### DNS
+PTR for `72.62.211.31` is `mail.essentialsedm.com.` — keep it, most receivers
+require forward-confirmed reverse DNS from a sending host.
 
-If Bluehost also handles inbound personal mail, move the domain's **MX** records to
-Bluehost and copy the **SPF** and **DKIM** values cPanel shows under *Email
-Deliverability*. Keep a single SPF TXT record (no second `v=spf1`); if the domain's
-MX stays elsewhere, add Bluehost's sending IPs to the existing SPF instead and
-publish the DKIM keys cPanel provides. Stay within SPF's 10-DNS-lookup limit when
-Resend is still in the record.
+Keep the apex TXT as one SPF record. A second `v=spf1` record makes SPF
+permanently fail, and stay inside the 10-DNS-lookup limit when adding includes.
 
-## DNS records (set at your DNS provider for `essentials.example`)
+## Outstanding — apply at Hostinger
 
-| Record | Host | Value |
-|---|---|---|
-| SPF (TXT) | `@` | `v=spf1 include:resend.dev ~all` (swap to your Postal SPF when migrating, e.g. `include:postal.essentials.example`) |
-| DKIM (CNAME ×3) | per Resend domain setup | Provided in Resend dashboard → Domains → verify |
-| DMARC (TXT) | `_dmarc` | `v=DMARC1; p=quarantine; rua=mailto:dmarc@essentials.example; adkim=s; aspf=s` |
-
-After migration to Postal, regenerate DKIM keys in the Postal admin and update SPF.
-
-## Compliance built into v1
-- **Consent records**: `Consent` table (email channel, granted/revoked, source).
-- **One-click unsubscribe**: every bulk email carries `List-Unsubscribe` headers via
-  `unsubscribeUrl`; `GET /api/email/unsubscribe?token=…` revokes consent and logs an
-  `unsubscribe` EmailEvent. Preference center at `GET /api/email/preferences?token=…`.
-  The token is an HMAC (`base64url(email).expiry.signature`, 90 days) so a public
-  link cannot unsubscribe an address it was not issued for. `EMAIL_UNSUBSCRIBE_SECRET`
-  sets the key; when unset, a purpose-specific key is derived from `QR_SECRET`.
-- **Suppression**: consent is checked at enqueue time *and* again inside the send worker.
-
-## DNS records this server currently needs
-
-Read this before changing anything: the VPS runs its own Postfix + Dovecot for the
-platform mailboxes (`/home/<localpart>/Maildir`), but the domain's DNS still points
-at the old Bluehost hosting. Two of those records block mail:
-
-1. **Outbound is unauthenticated.** Gmail answers
-   `550 5.7.26 … requires all senders to authenticate with either SPF or DKIM`
-   because the host's IP is not in SPF and the DKIM key it signs with is not the
-   one published in DNS.
-2. **Inbound does not arrive.** MX points at Bluehost, which has no mailbox for
-   these addresses, so external mail bounces before reaching Dovecot.
-
-Until the records below are applied (DNS is managed at Bluehost — `ns1/ns2.bluehost.com`,
-no API), outbound user and notification mail is relayed through **Resend**
-(`RESEND_API_KEY` in `.env`), whose `essentialsedm.com` domain is verified.
-
-### 1. DKIM — replace the stale record
-
-Host `default._domainkey` (TXT). The current record holds a key that no longer
-matches `/etc/opendkim/keys/essentialsedm.com/default.private`, so every signature
-fails. Replace the value with this single string (it is the two quoted chunks of
-`/etc/opendkim/keys/essentialsedm.com/default.txt`, concatenated):
+**1. Publish `default._domainkey`** (TXT, host `default._domainkey`). Postfix's
+milter signs every `*@essentialsedm.com` message with this key, so publishing it is
+what makes local-Postfix mail pass DKIM. Value, as one string (`h=sha256; k=rsa; p=…`):
 
 ```
 v=DKIM1; h=sha256; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtD5rd3hd5Gtg2uZ23Kr7mHBcM1AxlLXY7Hgp/IhoSOjLCSeTEndFiWC2GPXZDnad9q8lGfBQWsYKPigFRu45ug+o/tfIbWlGp8xl8xirkESrQAViMyj/d7i96zGSo72g0q13z/jHn6FatjXRq8bed+N4WiWjWZ0VYzt2BqLcbtzK0in06VElvx2iFlHcBqb8O6FPYY/VFiXB2emeefpFcpi5OKbLUnuezVudWCFjZXEnfN9/9dqeRfw6aBsFXEWJSsbo7GwN99dTzTNU7q3l9/C0ofZbmido7PSyDw/chbzwo2JpL+Y9l0iYMMb5EyLhz+/0G92WTPFutmCxoq196wIDAQAB
 ```
 
-Note `opendkim-testkey` reports `key OK` against the *local* key even when DNS is
-stale; compare with `dig` before trusting it.
+`opendkim-testkey -d essentialsedm.com -s default -vvv` reports `key OK` against the
+local key even when DNS is empty or stale — compare with `dig` before believing it.
 
-### 2. SPF — add this host's IP
-
-Host `@` (TXT), current value `v=spf1 a mx include:websitewelcome.com ~all`. Keep
-one SPF record and add the VPS:
+**2. Add this host's IP to SPF** — `@` (TXT):
 
 ```
-v=spf1 a mx include:websitewelcome.com ip4:72.62.211.31 ~all
+v=spf1 include:_spf.mail.hostinger.com ip4:72.62.211.31 ~all
 ```
 
-### 3. MX — point the domain at Dovecot (only if mailboxes live here)
+Only needed for mail that leaves from the VPS directly rather than through Resend.
 
-| Host | Type | Current | Required |
-|---|---|---|---|
-| `mail.essentialsedm.com` | A | `162.241.218.139` (Bluehost) | `72.62.211.31` |
-| `@` | MX | `0 mail.essentialsedm.com`, `10 essentialsedm.com` | `10 mail.essentialsedm.com` and drop the apex MX |
+**3. Tighten DMARC once 1 and 2 pass** (optional):
 
-Also set the PTR (rDNS) for `72.62.211.31` to `mail.essentialsedm.com` at the hosting
-provider, and keep `mail.essentialsedm.com` as Postfix's `myhostname`.
+```
+v=DMARC1; p=quarantine; rua=mailto:dmarc@essentialsedm.com
+```
 
-### DMARC
+## Mailbox client settings
 
-`_dmarc` is `v=DMARC1; p=none`, which is safe while records settle. Once DKIM and
-SPF pass, move to `v=DMARC1; p=quarantine; rua=mailto:dmarc@essentialsedm.com`.
+| | Value |
+|---|---|
+| IMAP | `mail.essentialsedm.com`, port `993`, SSL/TLS |
+| SMTP | `mail.essentialsedm.com`, port `587`, STARTTLS, authentication required |
+| Username | the full address, e.g. `refrakt@essentialsedm.com` |
+| Password | issued at provisioning; reset from Account → Mailbox |
 
-### Verifying
+Port 25 is inbound only — never offer it as a submission port to clients.
+
+## Verifying
 
 ```bash
-dig +short TXT default._domainkey.essentialsedm.com   # must equal the record above
-dig +short TXT essentialsedm.com                      # must contain ip4:72.62.211.31
-dig +short MX essentialsedm.com                       # must point at mail.essentialsedm.com
-opendkim-testkey -d essentialsedm.com -s default -vvv # local key vs DNS
-journalctl -u opendkim -n 20 --no-pager               # "DKIM-Signature field added"
-tail -f /var/log/mail.log                             # delivery and rejections
+dig +short MX essentialsedm.com                    # 10 mail.essentialsedm.com.
+dig +short A mail.essentialsedm.com                # 72.62.211.31
+dig +short TXT essentialsedm.com                   # one SPF record, with ip4:
+dig +short TXT default._domainkey.essentialsedm.com  # empty = still outstanding
+opendkim-testkey -d essentialsedm.com -s default -vvv
 ```
 
-For inbound, send from an outside account and then check
-`doveadm search -u <localpart> mailbox INBOX ALL`.
+Inbound, in one pass: send from an outside account, then
 
-## Flows
-| Flow | Trigger |
-|---|---|
-| `welcome_series` | invite redemption (AuthService) |
-| `weekly_drop` | "ESSENTIALS this week" — manual or scheduled sweep |
-| `reminder_24h` / `reminder_1h` | `RemindersService` 10-min sweep before approved events |
-| `winback` | segment of guests whose last visit > N weeks (create via Segments UI) |
+```bash
+journalctl -u postfix --since '-5 min' | grep -E 'connect from|status=sent'
+doveadm search -u refrakt mailbox INBOX ALL
+doveadm mailbox status -u refrakt "messages unseen" INBOX
+```
+
+The status command takes its field list as a single argument — split fields make
+Dovecot silently omit `unseen`, which is how the console once showed zero unread
+everywhere.
+
+## Gotchas worth remembering
+
+- **Reachability, not `ufw`, is the usual cause of "mail does not arrive".** On
+  2026-11-24 every mail port was filtered upstream at the provider while 443
+  worked: `ss` showed listeners, `ufw` allowed them, and only a packet capture
+  proved no SYN ever arrived. Test with `tcpdump -i eth0 -n 'tcp port 25'` during a
+  probe from outside; port scanners frequently report false negatives because they
+  block outbound 25 themselves.
+- **Resend suppressions persist.** A bounced test recipient stays suppressed and
+  later sends return `suppressed` rather than delivering. Clear one with
+  `DELETE https://api.resend.com/suppressions/<address>`.
+- **Cached MX outlives the change.** Resolvers holding the old answer keep sending
+  to it until their TTL expires; Google and Cloudflare moved within the hour,
+  Quad9 and OpenDNS took hours. Check with
+  `dig +short MX essentialsedm.com @9.9.9.9`.
+- Unknown recipients are rejected on purpose — there is no catch-all; pointing MX
+  here for an address with no mailbox produces a legitimate `550`.
