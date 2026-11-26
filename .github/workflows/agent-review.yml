@@ -1,0 +1,48 @@
+name: Agent review
+
+# Puck reads every pull request and posts the review as a comment, so a change
+# is read by something other than the agent that wrote it. Review only: it
+# cannot fail a build or block a merge.
+#
+# Requires one repository secret: PUCK_API_KEY (Base44 editor -> Developer /
+# API Docs). Without it the job warns and passes.
+#
+# Fork pull requests are skipped: this repository is public, and a stranger's
+# branch should not spend the account's agent credits.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: agent-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Review the diff
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Review
+        env:
+          PUCK_API_KEY: ${{ secrets.PUCK_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: node scripts/agent-review.mjs

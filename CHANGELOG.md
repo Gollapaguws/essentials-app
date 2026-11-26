@@ -2,6 +2,20 @@
 
 Notable changes to ESSENTIALS. Dates are UTC.
 
+## 2026-11-26
+
+### Automated change review
+
+- **Every pull request is read by a second agent.** `scripts/agent-review.mjs`
+  and `.github/workflows/agent-review.yml` send the diff to the Puck Norris
+  Superagent and post its review as a PR comment. The reviewer is pointed at
+  this platform's own hazards: cross-tenant reads, lost auth guards, Prisma
+  migrations without a rollback, tests weakened to get a change through, and
+  any new in-platform email system.
+- **It reviews, it does not gate.** The job cannot fail a build or block a
+  merge, skips draft pull requests and fork branches, and warns instead of
+  failing when `PUCK_API_KEY` is not set.
+
 ## 2026-11-25
 
 ### Promoter workspaces
