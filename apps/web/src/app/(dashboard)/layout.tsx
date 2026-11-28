@@ -44,7 +44,7 @@ export default function DashboardLayout({ children }: { children: import("react"
   if (loading || (authenticated && !me)) {
     return (
       <main className="min-h-screen grid place-items-center">
-        <p className="text-neutral-500 text-sm tracking-widest">LOADING…</p>
+        <p className="text-muted text-sm tracking-widest">LOADING…</p>
       </main>
     );
   }

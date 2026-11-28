@@ -521,7 +521,7 @@ export default function Users() {
       <>
         <TopNav />
         <main className="max-w-4xl mx-auto px-6 py-10">
-          <p className="text-neutral-400 text-sm">Only admins can manage accounts.</p>
+          <p className="text-muted text-sm">Only admins can manage accounts.</p>
         </main>
       </>
     );
@@ -534,12 +534,12 @@ export default function Users() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black tracking-wide">REGISTERED USERS</h1>
-            <p className="text-neutral-500 text-xs mt-1">
+            <p className="text-muted text-xs mt-1">
               {users.length} account{users.length === 1 ? "" : "s"} · make someone a DJ, venue or
               promoter
             </p>
             {users.length === PAGE_SIZE && (
-              <p className="text-amber-300/90 text-xs mt-1">
+              <p className="text-warn text-xs mt-1">
                 Showing the {PAGE_SIZE} newest accounts. Search by name or email to find anyone older.
               </p>
             )}
@@ -557,7 +557,7 @@ export default function Users() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
-            <button className="border border-line rounded-lg px-3 py-2 text-xs font-bold tracking-widest text-neutral-300 hover:text-neon">
+            <button className="border border-line rounded-lg px-3 py-2 text-xs font-bold tracking-widest text-fg hover:text-neon">
               SEARCH
             </button>
           </form>
@@ -566,7 +566,7 @@ export default function Users() {
         <section className="border border-line rounded-xl p-4 space-y-3">
           <div>
             <h2 className="text-sm font-bold text-neon uppercase tracking-wider">Create an account</h2>
-            <p className="text-neutral-500 text-xs mt-1">
+            <p className="text-muted text-xs mt-1">
               Sets up the login with a temporary password. The person must choose their own before
               the dashboard opens.
             </p>
@@ -609,7 +609,7 @@ export default function Users() {
           {provisioned && (
             <div className="border border-neon/40 rounded-lg p-3">
               <p className="text-neon text-sm">Account ready for {provisioned.email}.</p>
-              <p className="text-neutral-400 text-xs mt-1">
+              <p className="text-muted text-xs mt-1">
                 Temporary password — shown once, passed on by you, changed by them at first sign-in:
               </p>
               <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -617,7 +617,7 @@ export default function Users() {
                 <button
                   type="button"
                   onClick={() => navigator.clipboard.writeText(provisioned.password)}
-                  className="text-[11px] tracking-widest text-neutral-400 hover:text-neon"
+                  className="text-[11px] tracking-widest text-muted hover:text-neon"
                 >
                   COPY
                 </button>
@@ -631,7 +631,7 @@ export default function Users() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-sm font-bold text-neon uppercase tracking-wider">Mailbox</h2>
-                <p className="text-neutral-500 text-xs mt-1">
+                <p className="text-muted text-xs mt-1">
                   {mailboxFor.email} · the mailbox is an address on the mail server, separate from
                   the sign-in email.
                 </p>
@@ -639,19 +639,19 @@ export default function Users() {
               <button
                 type="button"
                 onClick={closeMailbox}
-                className="text-neutral-500 text-xs tracking-widest hover:text-neutral-300"
+                className="text-muted text-xs tracking-widest hover:text-muted"
               >
                 CLOSE
               </button>
             </div>
 
-            {mailboxError && <p className="text-red-400 text-sm">{mailboxError}</p>}
+            {mailboxError && <p className="text-alert text-sm">{mailboxError}</p>}
             {!mailboxState && !mailboxError && (
-              <p className="text-neutral-500 text-xs">Loading…</p>
+              <p className="text-muted text-xs">Loading…</p>
             )}
 
             {mailboxState && !mailboxState.enabled && (
-              <p className="text-yellow-300 text-sm">
+              <p className="text-warn text-sm">
                 Mailbox provisioning is not enabled on this server (MAILBOX_PROVISIONING).
               </p>
             )}
@@ -665,7 +665,7 @@ export default function Users() {
                   onChange={(e) => setMailboxLocalpart(e.target.value)}
                   required
                 />
-                <span className="text-neutral-500 text-sm">@{mailboxState.domain}</span>
+                <span className="text-muted text-sm">@{mailboxState.domain}</span>
                 <button
                   disabled={busyId === mailboxFor.id || !mailboxLocalpart.trim()}
                   className="bg-neon text-bg font-black rounded-lg px-3 py-2 text-xs tracking-widest disabled:opacity-50"
@@ -676,7 +676,7 @@ export default function Users() {
                   type="button"
                   disabled={busyId === mailboxFor.id || !mailboxLocalpart.trim()}
                   onClick={adoptMailbox}
-                  className="rounded-lg px-3 py-2 text-xs font-bold tracking-widest border border-line text-neutral-300 hover:border-neon hover:text-neon disabled:opacity-40"
+                  className="rounded-lg px-3 py-2 text-xs font-bold tracking-widest border border-line text-muted hover:border-neon hover:text-neon disabled:opacity-40"
                 >
                   LINK EXISTING
                 </button>
@@ -693,17 +693,17 @@ export default function Users() {
                     className={
                       mailboxState.mailbox.status === "active"
                         ? "text-neon text-xs uppercase tracking-widest"
-                        : "text-yellow-400 text-xs uppercase tracking-widest"
+                        : "text-warn text-xs uppercase tracking-widest"
                     }
                   >
                     {mailboxState.mailbox.status}
                   </span>
-                  <span className="text-neutral-500 text-xs">
+                  <span className="text-muted text-xs">
                     {formatBytes(mailboxState.mailbox.usedBytes)} stored
                   </span>
                 </div>
                 <div className="border-t border-line pt-3 space-y-2">
-                  <p className="text-[11px] uppercase tracking-widest text-neutral-500">Aliases</p>
+                  <p className="text-[11px] uppercase tracking-widest text-muted">Aliases</p>
                   <div className="flex flex-wrap items-center gap-2">
                     <input
                       className={`${field} flex-1 min-w-[220px]`}
@@ -714,12 +714,12 @@ export default function Users() {
                     <button
                       disabled={busyId === mailboxFor.id}
                       onClick={saveAliases}
-                      className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-line text-neutral-300 hover:border-neon hover:text-neon disabled:opacity-40"
+                      className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-line text-muted hover:border-neon hover:text-neon disabled:opacity-40"
                     >
                       SAVE ALIASES
                     </button>
                   </div>
-                  <p className="text-neutral-600 text-[11px]">
+                  <p className="text-faint text-[11px]">
                     Extra @{mailboxState.domain} addresses that deliver to this mailbox.
                     {" "}
                     A sign-in address on this domain reaches the mailbox automatically.
@@ -727,7 +727,7 @@ export default function Users() {
                 </div>
 
                 <div className="border-t border-line pt-3 space-y-2">
-                  <p className="text-[11px] uppercase tracking-widest text-neutral-500">
+                  <p className="text-[11px] uppercase tracking-widest text-muted">
                     Domain catch-all
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
@@ -740,7 +740,7 @@ export default function Users() {
                     <button
                       disabled={busyId === mailboxFor.id || !catchAllDraft.trim()}
                       onClick={() => void saveCatchAll(catchAllDraft.trim())}
-                      className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-line text-neutral-300 hover:border-neon hover:text-neon disabled:opacity-40"
+                      className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-line text-muted hover:border-neon hover:text-neon disabled:opacity-40"
                     >
                       SAVE
                     </button>
@@ -748,13 +748,13 @@ export default function Users() {
                       <button
                         disabled={busyId === mailboxFor.id}
                         onClick={() => void saveCatchAll(null)}
-                        className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-red-500/60 text-red-400 hover:bg-red-500/10 disabled:opacity-40"
+                        className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-red-500/60 text-alert hover:bg-red-500/10 disabled:opacity-40"
                       >
                         OFF
                       </button>
                     )}
                   </div>
-                  <p className="text-neutral-600 text-[11px]">
+                  <p className="text-faint text-[11px]">
                     {catchAll
                       ? `Unknown @${mailboxState.domain} addresses currently go to ${catchAll}.`
                       : "Off — unknown addresses are rejected, as before."}
@@ -765,28 +765,28 @@ export default function Users() {
                   <button
                     disabled={busyId === mailboxFor.id}
                     onClick={resetMailboxPassword}
-                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 disabled:opacity-40"
+                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-yellow-500/50 text-warn hover:bg-yellow-500/10 disabled:opacity-40"
                   >
                     RESET PASSWORD
                   </button>
                   <button
                     disabled={busyId === mailboxFor.id}
                     onClick={emailMailboxSettings}
-                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-line text-neutral-300 hover:border-neon hover:text-neon disabled:opacity-40"
+                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-line text-muted hover:border-neon hover:text-neon disabled:opacity-40"
                   >
                     EMAIL SETTINGS
                   </button>
                   <button
                     disabled={busyId === mailboxFor.id}
                     onClick={toggleMailbox}
-                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-line text-neutral-300 hover:border-neon hover:text-neon disabled:opacity-40"
+                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-line text-muted hover:border-neon hover:text-neon disabled:opacity-40"
                   >
                     {mailboxState.mailbox.status === "active" ? "DISABLE" : "ENABLE"}
                   </button>
                   <button
                     disabled={busyId === mailboxFor.id}
                     onClick={deleteMailbox}
-                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-red-500/60 text-red-400 hover:bg-red-500/10 disabled:opacity-40"
+                    className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-red-500/60 text-alert hover:bg-red-500/10 disabled:opacity-40"
                   >
                     DELETE
                   </button>
@@ -799,7 +799,7 @@ export default function Users() {
                 <p className="text-neon text-sm">
                   Mailbox ready for {mailboxCredentials.address}.
                 </p>
-                <p className="text-neutral-400 text-xs mt-1">
+                <p className="text-muted text-xs mt-1">
                   Password — shown once, stored nowhere. Pass it on out of band; reset it here if
                   it is lost.
                 </p>
@@ -810,12 +810,12 @@ export default function Users() {
                   <button
                     type="button"
                     onClick={() => navigator.clipboard.writeText(mailboxCredentials.password)}
-                    className="text-[11px] tracking-widest text-neutral-400 hover:text-neon"
+                    className="text-[11px] tracking-widest text-muted hover:text-neon"
                   >
                     COPY
                   </button>
                 </div>
-                <p className="text-neutral-500 text-xs mt-2">
+                <p className="text-muted text-xs mt-2">
                   Mail client: IMAP mail.essentialsedm.com, port 993, SSL.
                 </p>
               </div>
@@ -825,15 +825,15 @@ export default function Users() {
 
         {notice && <p className="text-neon text-sm">{notice}</p>}
         {(error ?? usersSource.error) && (
-          <p role="alert" className="text-red-400 text-sm">
+          <p role="alert" className="text-alert text-sm">
             {error ?? usersSource.error}
           </p>
         )}
 
         {resetResult && (
           <div className="border border-yellow-500/40 rounded-xl p-4">
-            <p className="text-yellow-300 text-sm">Sign-in reset for {resetResult.email}.</p>
-            <p className="text-neutral-400 text-xs mt-1">
+            <p className="text-warn text-sm">Sign-in reset for {resetResult.email}.</p>
+            <p className="text-muted text-xs mt-1">
               {resetResult.factorsRemoved} authenticator
               {resetResult.factorsRemoved === 1 ? "" : "s"} removed and every device signed out.
               Temporary password — shown once, changed by them at first sign-in:
@@ -845,12 +845,12 @@ export default function Users() {
               <button
                 type="button"
                 onClick={() => navigator.clipboard.writeText(resetResult.password)}
-                className="text-[11px] tracking-widest text-neutral-400 hover:text-neon"
+                className="text-[11px] tracking-widest text-muted hover:text-neon"
               >
                 COPY
               </button>
             </div>
-            <p className="text-neutral-500 text-xs mt-2">
+            <p className="text-muted text-xs mt-2">
               They sign in with this password, choose a new one, then set up a new authenticator.
             </p>
           </div>
@@ -859,7 +859,7 @@ export default function Users() {
         <div className="border border-line rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-widest text-neutral-500 border-b border-line">
+              <tr className="text-left text-[11px] uppercase tracking-widest text-muted border-b border-line">
                 <th className="px-4 py-3">User</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">Make them</th>
@@ -873,22 +873,22 @@ export default function Users() {
                   <tr key={u.id} className="border-t border-line align-top">
                     <td className="px-4 py-3">
                       <p className="font-bold">{u.name ?? u.email.split("@")[0]}</p>
-                      <p className="text-neutral-500 text-xs">{u.email}</p>
+                      <p className="text-muted text-xs">{u.email}</p>
                       {u.mailbox && (
-                        <p className="text-neutral-500 text-[11px] mt-0.5">
+                        <p className="text-muted text-[11px] mt-0.5">
                           mailbox {u.mailbox.address}
                           {u.mailbox.status === "disabled" && (
-                            <span className="text-yellow-400"> · disabled</span>
+                            <span className="text-warn"> · disabled</span>
                           )}
                         </p>
                       )}
-                      <p className="text-neutral-600 text-[11px] mt-0.5">
+                      <p className="text-faint text-[11px] mt-0.5">
                         {u.linked ? "signed in" : "not signed in yet"} · joined{" "}
                         {new Date(u.createdAt).toLocaleDateString()} ·{" "}
-                        <span className={u.telegram ? "text-neon/80" : "text-neutral-600"}>
+                        <span className={u.telegram ? "text-neon/80" : "text-muted"}>
                           {u.telegram ? "telegram linked" : "no telegram"}
                         </span>
-                        {u.mfaDisabled && <span className="text-yellow-400"> · 2FA off</span>}
+                        {u.mfaDisabled && <span className="text-warn"> · 2FA off</span>}
                       </p>
                       {u.stageName && <p className="text-neon/80 text-[11px] mt-1">DJ · {u.stageName}</p>}
                       {u.venue && (
@@ -901,16 +901,16 @@ export default function Users() {
                       <span
                         className={
                           u.role === "admin"
-                            ? "text-red-300"
+                            ? "text-alert"
                             : u.role === "guest"
-                              ? "text-neutral-400"
+                              ? "text-muted"
                               : "text-neon"
                         }
                       >
                         {ROLE_LABEL[u.role] ?? u.role}
                       </span>
                       {u.organisation && (
-                        <p className="text-neutral-500 text-[11px] mt-1">
+                        <p className="text-muted text-[11px] mt-1">
                           {u.organisation.name}
                         </p>
                       )}
@@ -925,7 +925,7 @@ export default function Users() {
                             className={
                               u.role === option
                                 ? "rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest bg-neon text-bg"
-                                : "rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest border border-line text-neutral-300 hover:border-neon hover:text-neon disabled:opacity-40"
+                                : "rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest border border-line text-fg hover:border-neon hover:text-neon disabled:opacity-40"
                             }
                           >
                             {ROLE_LABEL[option].toUpperCase()}
@@ -944,7 +944,7 @@ export default function Users() {
                           className={
                             u.mfaDisabled
                               ? "rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest border border-neon/60 text-neon hover:bg-neon/10 disabled:opacity-40"
-                              : "rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest text-neutral-500 hover:text-neutral-200 disabled:opacity-40"
+                              : "rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest text-muted hover:text-fg disabled:opacity-40"
                           }
                         >
                           {u.mfaDisabled ? "TURN ON 2FA" : "TURN OFF 2FA"}
@@ -957,7 +957,7 @@ export default function Users() {
                               : "They have not signed in yet, so there is nothing to reset"
                           }
                           onClick={() => resetSignIn(u)}
-                          className="rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest border border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 disabled:opacity-40"
+                          className="rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest border border-yellow-500/50 text-warn hover:bg-yellow-500/10 disabled:opacity-40"
                         >
                           RESET SIGN-IN
                         </button>
@@ -965,7 +965,7 @@ export default function Users() {
                           disabled={busyId === u.id}
                           onClick={() => void openMailbox(u)}
                           title="Provision or manage this person's mail server mailbox"
-                          className="rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest border border-line text-neutral-400 hover:border-neon hover:text-neon disabled:opacity-40"
+                          className="rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest border border-line text-muted hover:border-neon hover:text-neon disabled:opacity-40"
                         >
                           {u.mailbox ? "MAILBOX" : "ADD MAILBOX"}
                         </button>
@@ -983,7 +983,7 @@ export default function Users() {
                                 venueAddress: "",
                               })
                             }
-                            className="rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest text-neutral-500 hover:text-neutral-200"
+                            className="rounded-lg px-2.5 py-1 text-[11px] font-bold tracking-widest text-muted hover:text-fg"
                           >
                             EDIT
                           </button>
@@ -1038,7 +1038,7 @@ export default function Users() {
                               onClick={() =>
                                 request(u, `/users/${u.id}/profile`, { clearStageName: true }, "stage name cleared")
                               }
-                              className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-red-500/60 text-red-400 hover:bg-red-500/10"
+                              className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-red-500/60 text-alert hover:bg-red-500/10"
                             >
                               CLEAR STAGE NAME
                             </button>
@@ -1049,14 +1049,14 @@ export default function Users() {
                               onClick={() =>
                                 request(u, `/users/${u.id}/profile`, { clearVenue: true }, "venue unassigned")
                               }
-                              className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-red-500/60 text-red-400 hover:bg-red-500/10"
+                              className="rounded-lg px-3 py-1.5 text-[11px] font-bold tracking-widest border border-red-500/60 text-alert hover:bg-red-500/10"
                             >
                               UNASSIGN VENUE
                             </button>
                           )}
                           <button
                             onClick={() => setForm(null)}
-                            className="text-neutral-500 text-xs tracking-widest hover:text-neutral-300"
+                            className="text-muted text-xs tracking-widest hover:text-fg"
                           >
                             CANCEL
                           </button>
@@ -1068,7 +1068,7 @@ export default function Users() {
               })}
               {!users.length && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-8 text-center text-neutral-500">
+                  <td colSpan={3} className="px-4 py-8 text-center text-muted">
                     No accounts yet. Anyone who signs in gets listed here.
                   </td>
                 </tr>

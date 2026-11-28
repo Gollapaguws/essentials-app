@@ -36,13 +36,13 @@ export default function ArtistRoster() {
         title="ARTISTS"
         description="Every DJ on the roster, with their travel rate and the gigs they are already locked into."
       />
-      {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
-      {loading && <p className="text-neutral-500 text-xs">Loading the roster…</p>}
+      {error && <p role="alert" className="text-alert text-sm">{error}</p>}
+      {loading && <p className="text-muted text-xs">Loading the roster…</p>}
 
       <Panel flush>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-sm">
-            <thead className="bg-surface text-neutral-400 uppercase text-xs">
+            <thead className="bg-surface text-muted uppercase text-xs">
               <tr>
                 <th className="text-left px-4 py-3">DJ</th>
                 <th className="text-left px-4 py-3">Contact</th>
@@ -65,17 +65,17 @@ export default function ArtistRoster() {
                         <Link href={`/artists/${a.id}`} className="font-bold hover:text-neon">
                           {a.stageName}
                         </Link>
-                        {a.bio && <p className="text-neutral-500 text-xs max-w-xs line-clamp-2">{a.bio}</p>}
+                        {a.bio && <p className="text-muted text-xs max-w-xs line-clamp-2">{a.bio}</p>}
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-neutral-400">
+                  <td className="px-4 py-3 text-muted">
                     <p>{a.user.name ?? "—"}</p>
                     <p className="text-xs">{a.user.email}</p>
                   </td>
                   <td className="px-4 py-3">R{a.travelRatePerKm.toLocaleString()}/km</td>
                   <td className="px-4 py-3">{a.confirmedGigs}</td>
-                  <td className="px-4 py-3 text-neutral-400">
+                  <td className="px-4 py-3 text-muted">
                     {a.upcomingGigs.length ? (
                       a.upcomingGigs.map((g) => (
                         <p key={g.id} className="text-xs">
@@ -91,7 +91,7 @@ export default function ArtistRoster() {
               ))}
               {!artists.length && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-neutral-500">
+                  <td colSpan={5} className="px-4 py-6 text-center text-muted">
                     No DJs have created a profile yet.
                   </td>
                 </tr>

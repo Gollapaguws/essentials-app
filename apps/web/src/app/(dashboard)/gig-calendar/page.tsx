@@ -167,7 +167,7 @@ export default function GigCalendar() {
       />
       {msg && <p className="text-neon text-sm">{msg}</p>}
       {(error ?? loadError) && (
-        <p role="alert" className="text-red-400 text-sm">
+        <p role="alert" className="text-alert text-sm">
           {error ?? loadError}
         </p>
       )}
@@ -176,7 +176,7 @@ export default function GigCalendar() {
         <h2 className="console-section-title mb-3">Open events — pick a slot</h2>
           {open.map((g) => (
             <div key={g.id} className="border-t border-line py-3 space-y-2">
-              <p className="font-bold">{g.title} <span className="text-neutral-500 text-sm">@ {g.venue.name} · {new Date(g.date).toDateString()}</span></p>
+              <p className="font-bold">{g.title} <span className="text-muted text-sm">@ {g.venue.name} · {new Date(g.date).toDateString()}</span></p>
               <div className="flex flex-wrap gap-2 items-center">
                 {g.slots.length ? (
                   g.slots.map((s) => {
@@ -187,7 +187,7 @@ export default function GigCalendar() {
                         key={s.id}
                         disabled={s.taken}
                         onClick={() => setPicked({ ...picked, [g.id]: value })}
-                        className={`text-xs rounded-lg px-3 py-2 border ${s.taken ? "border-line text-neutral-600 line-through" : selected ? "border-neon text-neon" : "border-line text-neutral-400"}`}
+                        className={`text-xs rounded-lg px-3 py-2 border ${s.taken ? "border-line text-muted line-through" : selected ? "border-neon text-neon" : "border-line text-muted"}`}
                         title={
                           s.taken
                             ? "Another DJ holds this slot"
@@ -198,7 +198,7 @@ export default function GigCalendar() {
                           {s.label} · R{s.fee.toLocaleString()}
                         </span>
                         {(s.role || s.bpmRange) && (
-                          <span className="block text-[10px] text-neutral-500">
+                          <span className="block text-[10px] text-muted">
                             {[s.role, s.bpmRange ? `${s.bpmRange} BPM` : null].filter(Boolean).join(" · ")}
                           </span>
                         )}
@@ -213,7 +213,7 @@ export default function GigCalendar() {
                       <button
                         key={s.key}
                         onClick={() => setPicked({ ...picked, [g.id]: value })}
-                        className={`text-xs rounded-lg px-3 py-2 border ${picked[g.id] === value ? "border-neon text-neon" : "border-line text-neutral-400"}`}
+                        className={`text-xs rounded-lg px-3 py-2 border ${picked[g.id] === value ? "border-neon text-neon" : "border-line text-muted"}`}
                       >
                         {s.label}
                       </button>
@@ -230,13 +230,13 @@ export default function GigCalendar() {
               </div>
             </div>
           ))}
-          {!open.length && <p className="text-neutral-500 text-sm">No open events right now — you'll get a DJ call when new dates drop.</p>}
+          {!open.length && <p className="text-muted text-sm">No open events right now — you'll get a DJ call when new dates drop.</p>}
         </section>
 
       <section className="console-panel console-panel-body space-y-3">
         <h2 className="console-section-title">Dates I can't play</h2>
           <div className="flex flex-wrap items-end gap-2">
-            <label className="text-xs text-neutral-400 space-y-1">
+            <label className="text-xs text-muted space-y-1">
               <span>Date</span>
               <input
                 type="date"
@@ -245,7 +245,7 @@ export default function GigCalendar() {
                 className="bg-bg border border-line rounded-lg px-2 py-1 text-sm"
               />
             </label>
-            <label className="text-xs text-neutral-400 space-y-1">
+            <label className="text-xs text-muted space-y-1">
               <span>Reason (optional)</span>
               <input
                 value={blackoutReason}
@@ -263,18 +263,18 @@ export default function GigCalendar() {
               BLOCK DAY
             </button>
           </div>
-          {blackoutError && <p className="text-red-400 text-xs">{blackoutError}</p>}
+          {blackoutError && <p className="text-alert text-xs">{blackoutError}</p>}
           {blackouts.map((b) => (
             <div key={b.id} className="flex items-center justify-between border-t border-line pt-2 text-sm">
               <span>
                 {new Date(b.date).toDateString()}
                 {b.reason ? ` · ${b.reason}` : ""}
               </span>
-              <button onClick={() => removeBlackout(b.id)} className="text-red-400 text-xs">REMOVE</button>
+              <button onClick={() => removeBlackout(b.id)} className="text-alert text-xs">REMOVE</button>
             </div>
           ))}
           {!blackouts.length && (
-            <p className="text-neutral-500 text-sm">
+            <p className="text-muted text-sm">
               No blocked days. Applications on a blocked day are refused, so you won't be offered a night you
               can't play.
             </p>
@@ -288,12 +288,12 @@ export default function GigCalendar() {
               <div>
                 <p className="font-bold">
                   {g.event.title}{" "}
-                  <span className="text-neutral-500">
+                  <span className="text-muted">
                     · {g.slot ?? "slot TBA"} · {new Date(g.startAt).toDateString()}
                     {g.event.venue?.name ? ` · ${g.event.venue.name}` : ""}
                   </span>
                 </p>
-                <p className="text-neutral-500">fee R{g.performanceFee.toLocaleString()}</p>
+                <p className="text-muted">fee R{g.performanceFee.toLocaleString()}</p>
               </div>
               <div className="flex items-center gap-3">
                 <Badge tone={bookingTone(g.status)}>{g.status}</Badge>
@@ -301,7 +301,7 @@ export default function GigCalendar() {
                   <button
                     onClick={() => withdraw(g.id)}
                     disabled={cancelling === g.id}
-                    className="border border-red-500 text-red-400 rounded-lg px-3 py-1 text-xs font-bold tracking-widest disabled:opacity-40"
+                    className="border border-red-500 text-alert rounded-lg px-3 py-1 text-xs font-bold tracking-widest disabled:opacity-40"
                     title="Remove this application from the promoter's queue"
                   >
                     {cancelling === g.id ? "CANCELLING…" : "CANCEL APPLICATION"}
@@ -316,11 +316,11 @@ export default function GigCalendar() {
                     INVOICE VENUE
                   </button>
                 )}
-                {g.invoice && <span className="text-neutral-500 text-xs">invoiced {g.invoice.number}</span>}
+                {g.invoice && <span className="text-muted text-xs">invoiced {g.invoice.number}</span>}
               </div>
             </div>
           ))}
-          {!gigs.length && <p className="text-neutral-500 text-sm">No applications yet.</p>}
+          {!gigs.length && <p className="text-muted text-sm">No applications yet.</p>}
       </section>
     </ConsolePage>
   );

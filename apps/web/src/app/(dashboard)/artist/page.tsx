@@ -94,7 +94,7 @@ export default function ArtistPortal() {
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h1 className="text-2xl font-black tracking-wide">ARTIST PORTAL</h1>
-          <Link href="/artist/profile" className="text-xs tracking-widest text-neutral-400 hover:text-neon">
+          <Link href="/artist/profile" className="text-xs tracking-widest text-muted hover:text-neon">
             DETAILED PROFILE →
           </Link>
         </div>
@@ -107,17 +107,17 @@ export default function ArtistPortal() {
                 className="w-20 h-20 rounded-xl object-cover border border-line shrink-0"
               />
             )}
-            <p className="text-sm text-neutral-300 max-w-3xl whitespace-pre-wrap">{profile?.bio}</p>
+            <p className="text-sm text-fg max-w-3xl whitespace-pre-wrap">{profile?.bio}</p>
           </div>
         )}
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-        {!profile && <p className="text-neutral-500 text-sm">Set up your profile below to unlock gigs, routing and invoices.</p>}
+        {error && <p className="text-alert text-sm">{error}</p>}
+        {!profile && <p className="text-muted text-sm">Set up your profile below to unlock gigs, routing and invoices.</p>}
 
         {/* Profile */}
         <form onSubmit={saveProfile} className="grid md:grid-cols-4 gap-3 items-end border border-line bg-surface rounded-xl p-4">
           <input required className="bg-bg border border-line rounded-lg px-3 py-2" placeholder="Stage name" value={form.stageName} onChange={(e) => setForm({ ...form, stageName: e.target.value })} />
-          <label className="text-xs text-neutral-400">Vehicle L/100km<input type="number" step="0.1" min={1} className="w-full bg-bg border border-line rounded-lg px-3 py-2 mt-1" value={form.vehicleConsumptionLPer100km} onChange={(e) => setForm({ ...form, vehicleConsumptionLPer100km: +e.target.value })} /></label>
-          <div className="text-xs text-neutral-400">
+          <label className="text-xs text-muted">Vehicle L/100km<input type="number" step="0.1" min={1} className="w-full bg-bg border border-line rounded-lg px-3 py-2 mt-1" value={form.vehicleConsumptionLPer100km} onChange={(e) => setForm({ ...form, vehicleConsumptionLPer100km: +e.target.value })} /></label>
+          <div className="text-xs text-muted">
             Travel rate /km
             <input
               type="number"
@@ -126,7 +126,7 @@ export default function ArtistPortal() {
               className="w-full bg-bg border border-line rounded-lg px-3 py-2 mt-1 opacity-60"
               value={form.travelRatePerKm}
             />
-            <span className="text-[11px] text-neutral-600">Standard rate set by SONUS</span>
+            <span className="text-[11px] text-muted">Standard rate set by SONUS</span>
           </div>
           <button className="bg-neon text-bg font-black rounded-lg py-2 tracking-widest">SAVE PROFILE</button>
         </form>
@@ -137,31 +137,31 @@ export default function ArtistPortal() {
           {gigs.map((g) => (
             <div key={g.id} className="border-t border-line py-3 flex flex-wrap justify-between gap-2 text-sm">
               <div>
-                <p className="font-bold">{g.event.title} <span className="text-neutral-500">@ {g.event.venue.name}</span></p>
-                <p className="text-neutral-500">{new Date(g.startAt).toLocaleString()} → {new Date(g.endAt).toLocaleTimeString()} · fee R{g.performanceFee.toLocaleString()}</p>
+                <p className="font-bold">{g.event.title} <span className="text-muted">@ {g.event.venue.name}</span></p>
+                <p className="text-muted">{new Date(g.startAt).toLocaleString()} → {new Date(g.endAt).toLocaleTimeString()} · fee R{g.performanceFee.toLocaleString()}</p>
               </div>
-              <span className={g.status === "confirmed" ? "text-neon" : "text-neutral-400"}>{g.status}</span>
+              <span className={g.status === "confirmed" ? "text-neon" : "text-muted"}>{g.status}</span>
             </div>
           ))}
-          {!gigs.length && <p className="text-neutral-500 text-sm">No bookings yet — promoters book you from the event lineup.</p>}
+          {!gigs.length && <p className="text-muted text-sm">No bookings yet — promoters book you from the event lineup.</p>}
         </section>
 
         {/* Telegram onboarding */}
         <section className="border border-line bg-surface rounded-xl p-4">
           <h2 className="font-bold text-neon uppercase text-sm tracking-wider mb-3">Telegram gig alerts</h2>
           {telegram?.linked ? (
-            <p className="text-sm text-neutral-300">
+            <p className="text-sm text-fg">
               Linked — DJ calls, gig confirmations and invoices arrive as Telegram messages.
             </p>
           ) : (
-            <p className="text-sm text-neutral-400">
+            <p className="text-sm text-muted">
               Connect Telegram once and every DJ call, confirmation and invoice reaches your phone as a
               message, instead of waiting in the bell feed.
             </p>
           )}
           <div className="flex flex-wrap gap-2 mt-3">
             {telegram?.linked ? (
-              <button onClick={disconnectTelegram} className="border border-line rounded-lg px-4 py-2 text-xs tracking-widest text-neutral-300">
+              <button onClick={disconnectTelegram} className="border border-line rounded-lg px-4 py-2 text-xs tracking-widest text-fg">
                 DISCONNECT
               </button>
             ) : (
@@ -175,7 +175,7 @@ export default function ArtistPortal() {
             )}
           </div>
           {telegram && !telegram.configured && (
-            <p className="text-neutral-500 text-xs mt-2">
+            <p className="text-muted text-xs mt-2">
               The bot is not configured on this server yet — alerts still arrive in the app.
             </p>
           )}
@@ -185,7 +185,7 @@ export default function ArtistPortal() {
         <section className="border border-line bg-surface rounded-xl p-4">
           <h2 className="font-bold text-neon uppercase text-sm tracking-wider mb-3">Multi-gig routing &amp; collision alerts</h2>
           <div className="flex flex-wrap gap-3 items-end">
-            <label className="text-xs text-neutral-400">Plan date<input type="date" className="block bg-bg border border-line rounded-lg px-3 py-2 mt-1" value={planDate} onChange={(e) => setPlanDate(e.target.value)} /></label>
+            <label className="text-xs text-muted">Plan date<input type="date" className="block bg-bg border border-line rounded-lg px-3 py-2 mt-1" value={planDate} onChange={(e) => setPlanDate(e.target.value)} /></label>
             <button onClick={() => runPlan(false)} className="bg-neon text-bg font-black rounded-lg px-4 py-2 text-sm tracking-widest">CALCULATE</button>
             <button onClick={() => runPlan(true)} className="border border-neon text-neon font-bold rounded-lg px-4 py-2 text-sm">SAVE TO BOOKING</button>
           </div>
@@ -198,12 +198,12 @@ export default function ArtistPortal() {
               </div>
               {plan.legs.map((l, i) => (
                 <div key={i} className={`mt-3 border rounded-lg p-3 text-sm ${l.isConflict ? "border-red-500 bg-red-500/10" : "border-line"}`}>
-                  <p className="font-bold">{l.distanceKm} km · ~{l.durationMinutes} min drive{plan.conflicts > 0 && <span className="text-red-400"> · ⚠ SCHEDULE COLLISION</span>}</p>
-                  {l.conflictReason && <p className="text-red-400 text-xs mt-1">{l.conflictReason}</p>}
+                  <p className="font-bold">{l.distanceKm} km · ~{l.durationMinutes} min drive{plan.conflicts > 0 && <span className="text-alert"> · ⚠ SCHEDULE COLLISION</span>}</p>
+                  {l.conflictReason && <p className="text-alert text-xs mt-1">{l.conflictReason}</p>}
                   <a href={l.mapsUrl} target="_blank" className="text-neon text-xs underline">Open in Google Maps →</a>
                 </div>
               ))}
-              {!plan.legs.length && <p className="text-neutral-500 text-sm mt-3">No back-to-back gigs on this date.</p>}
+              {!plan.legs.length && <p className="text-muted text-sm mt-3">No back-to-back gigs on this date.</p>}
             </>
           )}
         </section>
@@ -222,8 +222,8 @@ export default function ArtistPortal() {
           {invoices.map((inv) => (
             <div key={inv.id} className="border-t border-line py-3 text-sm flex flex-wrap justify-between gap-2">
               <div>
-                <p className="font-bold font-mono">{inv.number} <span className="text-neutral-500">· {inv.status} · R{inv.total.toLocaleString()}</span></p>
-                <p className="text-neutral-500 text-xs">{inv.items.length} items</p>
+                <p className="font-bold font-mono">{inv.number} <span className="text-muted">· {inv.status} · R{inv.total.toLocaleString()}</span></p>
+                <p className="text-muted text-xs">{inv.items.length} items</p>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => payNow(inv.id)} className="bg-neon text-bg font-black rounded-lg px-3 text-xs">PAY NOW</button>
@@ -233,7 +233,7 @@ export default function ArtistPortal() {
               </div>
             </div>
           ))}
-          {!invoices.length && <p className="text-neutral-500 text-sm">No invoices yet.</p>}
+          {!invoices.length && <p className="text-muted text-sm">No invoices yet.</p>}
         </section>
       </main>
     </>

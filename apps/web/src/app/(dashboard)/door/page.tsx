@@ -29,7 +29,7 @@ interface Guest {
   checkedInAt: string | null;
 }
 
-const field = "bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-neon";
+const field = "min-h-11 bg-bg border border-line rounded-lg px-3 text-sm outline-none focus:border-neon";
 
 /**
  * Door mode: search the list by name or email and check people in without a QR
@@ -125,7 +125,7 @@ export default function Door() {
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-5">
         <div>
           <h1 className="text-2xl font-black tracking-wide">DOOR</h1>
-          <p className="text-neutral-500 text-xs mt-1">
+          <p className="text-muted text-sm mt-1">
             Search the list by name or email and check guests in. QR scanning still works and logs to the same
             door log.
           </p>
@@ -133,14 +133,24 @@ export default function Door() {
 
         {isDoorHost && <DoorGigs />}
 
-        {notice && <p className="text-neon text-sm">{notice}</p>}
+        {notice && (
+          <p role="status" className="border-l-2 border-neon bg-surface px-3 py-2 text-sm text-fg">
+            <span aria-hidden="true" className="mr-1.5 font-black text-neon">
+              ✓
+            </span>
+            {notice}
+          </p>
+        )}
         {(error ?? guestsSource.error ?? eventsSource.error) && (
-          <p role="alert" className="text-red-400 text-sm">
+          <p role="alert" className="border-l-2 border-alert bg-alert/5 px-3 py-2 text-sm text-alert">
+            <span aria-hidden="true" className="mr-1.5 font-black">
+              ⚠
+            </span>
             {error ?? guestsSource.error ?? eventsSource.error}
           </p>
         )}
 
-        <label className="block text-xs text-neutral-400 space-y-1">
+        <label className="block text-sm text-muted space-y-1">
           <span>Night</span>
           <select
             className={`${field} w-full`}
@@ -170,15 +180,15 @@ export default function Door() {
 
         {recent.length > 0 && (
           <div className="border border-line rounded-xl px-4 py-3">
-            <p className="text-[11px] font-bold tracking-widest text-neutral-400">RECENT ENTRIES</p>
+            <p className="text-xs font-bold tracking-widest text-muted">RECENT ENTRIES</p>
             <ul className="mt-2 space-y-1 text-sm">
               {recent.map((g) => (
                 <li key={g.id} className="flex items-baseline justify-between gap-3">
                   <span className="truncate">
                     {g.name ?? g.email}
-                    <span className="text-neutral-500 font-normal"> · {g.headcount}</span>
+                    <span className="text-muted font-normal"> · {g.headcount}</span>
                   </span>
-                  <span className="text-neutral-500 text-xs whitespace-nowrap">
+                  <span className="text-muted text-sm whitespace-nowrap">
                     {new Date(g.checkedInAt!).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -198,7 +208,10 @@ export default function Door() {
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Search the guest list"
           />
-          <button onClick={search} className="bg-neon text-bg font-black rounded-lg px-4 py-2 text-xs tracking-widest">
+          <button
+            onClick={search}
+            className="min-h-11 shrink-0 rounded-lg bg-neon px-4 text-sm font-black tracking-widest text-bg"
+          >
             SEARCH
           </button>
         </div>
@@ -209,29 +222,32 @@ export default function Door() {
               <div className="min-w-48">
                 <p className="font-bold">
                   {g.name ?? g.email}
-                  <span className="text-neutral-500 font-normal"> · {g.headcount}</span>
+                  <span className="text-muted font-normal"> · {g.headcount}</span>
                 </p>
-                <p className="text-neutral-500 text-xs">{g.email}</p>
-                <p className="text-xs text-neutral-600">
+                <p className="text-muted text-sm">{g.email}</p>
+                <p className="text-sm text-muted">
                   {g.status === "checked_in" && g.checkedInAt
                     ? `in since ${new Date(g.checkedInAt).toLocaleTimeString()}`
                     : g.status}
                 </p>
               </div>
               {g.status === "checked_in" ? (
-                <span className="text-neon text-xs font-bold tracking-widest">INSIDE</span>
+                <span className="flex items-center gap-1.5 text-sm font-bold tracking-widest text-neon">
+                  <span aria-hidden="true" className="h-2 w-2 rounded-full bg-neon" />
+                  INSIDE
+                </span>
               ) : (
                 <button
                   onClick={() => checkIn(g)}
                   disabled={busyId === g.id}
-                  className="bg-neon text-bg font-black rounded-lg px-4 py-2 text-xs tracking-widest disabled:opacity-40"
+                  className="min-h-11 rounded-lg bg-neon px-4 text-sm font-black tracking-widest text-bg disabled:opacity-40"
                 >
                   {busyId === g.id ? "CHECKING…" : "CHECK IN"}
                 </button>
               )}
             </div>
           ))}
-          {!guests.length && <p className="px-4 py-6 text-center text-neutral-500 text-sm">No guests on this list.</p>}
+          {!guests.length && <p className="px-4 py-6 text-center text-muted text-sm">No guests on this list.</p>}
         </div>
       </main>
     </>

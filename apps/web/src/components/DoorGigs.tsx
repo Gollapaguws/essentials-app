@@ -50,10 +50,10 @@ interface MyShift {
 const field = "bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-neon";
 
 const STATUS: Record<string, string> = {
-  pending: "text-yellow-400",
+  pending: "text-warn",
   confirmed: "text-neon",
   completed: "text-neon",
-  cancelled: "text-neutral-500",
+  cancelled: "text-muted",
 };
 
 /**
@@ -253,7 +253,7 @@ export function DoorGigs() {
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 className="text-lg font-black tracking-widest">DOOR GIGS</h2>
-          <p className="text-neutral-500 text-xs mt-1">
+          <p className="text-muted text-xs mt-1">
             Apply for nights with a door fee. After the promoter confirms the shift was worked, invoice
             the venue for the fee plus travel.
           </p>
@@ -265,7 +265,7 @@ export function DoorGigs() {
 
       {notice && <p className="text-neon text-sm">{notice}</p>}
       {(error ?? openSource.error ?? mineSource.error) && (
-        <p role="alert" className="text-red-400 text-sm">
+        <p role="alert" className="text-alert text-sm">
           {error ?? openSource.error ?? mineSource.error}
         </p>
       )}
@@ -273,13 +273,13 @@ export function DoorGigs() {
       <section className="border border-line rounded-xl p-4 space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="text-sm font-bold uppercase tracking-wider">Door profile</h3>
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500">
+          <span className="text-[10px] uppercase tracking-widest text-muted">
             {hasHomeBase && bankComplete ? "ready to invoice" : "needed before you can invoice"}
           </span>
         </div>
         <form onSubmit={saveProfile} className="space-y-3">
           <div className="space-y-1">
-            <span className="text-xs text-neutral-400">Home address (travel is calculated from here)</span>
+            <span className="text-xs text-muted">Home address (travel is calculated from here)</span>
             <div className="flex flex-wrap gap-2">
               <input
                 className={`${field} flex-1 min-w-48`}
@@ -293,7 +293,7 @@ export function DoorGigs() {
                 type="button"
                 onClick={useMyLocation}
                 disabled={locating}
-                className="border border-line rounded-lg px-3 py-2 text-[10px] font-bold tracking-widest text-neutral-300 disabled:opacity-40"
+                className="border border-line rounded-lg px-3 py-2 text-[10px] font-bold tracking-widest text-muted disabled:opacity-40"
               >
                 {locating ? "LOCATING…" : "USE MY LOCATION"}
               </button>
@@ -303,11 +303,11 @@ export function DoorGigs() {
                 Location captured — travel from this point is used on the invoice.
               </p>
             )}
-            {geoError && <p className="text-[10px] text-yellow-400">{geoError}</p>}
+            {geoError && <p className="text-[10px] text-warn">{geoError}</p>}
           </div>
 
           <div className="grid gap-2 md:grid-cols-2">
-            <label className="text-xs text-neutral-400 space-y-1">
+            <label className="text-xs text-muted space-y-1">
               <span>Account holder</span>
               <input
                 className={`${field} w-full`}
@@ -315,7 +315,7 @@ export function DoorGigs() {
                 onChange={(e) => setForm({ ...form, bankAccountHolder: e.target.value })}
               />
             </label>
-            <label className="text-xs text-neutral-400 space-y-1">
+            <label className="text-xs text-muted space-y-1">
               <span>Bank</span>
               <input
                 className={`${field} w-full`}
@@ -323,7 +323,7 @@ export function DoorGigs() {
                 onChange={(e) => setForm({ ...form, bankName: e.target.value })}
               />
             </label>
-            <label className="text-xs text-neutral-400 space-y-1">
+            <label className="text-xs text-muted space-y-1">
               <span>Account number</span>
               <input
                 className={`${field} w-full`}
@@ -331,7 +331,7 @@ export function DoorGigs() {
                 onChange={(e) => setForm({ ...form, bankAccountNumber: e.target.value })}
               />
             </label>
-            <label className="text-xs text-neutral-400 space-y-1">
+            <label className="text-xs text-muted space-y-1">
               <span>Branch code</span>
               <input
                 className={`${field} w-full`}
@@ -339,7 +339,7 @@ export function DoorGigs() {
                 onChange={(e) => setForm({ ...form, bankBranchCode: e.target.value })}
               />
             </label>
-            <label className="text-xs text-neutral-400 space-y-1 md:col-span-2">
+            <label className="text-xs text-muted space-y-1 md:col-span-2">
               <span>Account type (optional)</span>
               <input
                 className={`${field} w-full`}
@@ -349,7 +349,7 @@ export function DoorGigs() {
             </label>
           </div>
 
-          <p className="text-[11px] text-neutral-600">
+          <p className="text-[11px] text-faint">
             Travel is paid at R{(profileSource.data?.travelRatePerKm ?? 4.95).toFixed(2)}/km, return
             from this address to the venue. Bank details only appear on your invoices.
           </p>
@@ -365,7 +365,7 @@ export function DoorGigs() {
       <section className="space-y-2">
         <h3 className="text-sm font-bold uppercase tracking-wider">Open door shifts</h3>
         {!open.length && (
-          <p className="text-neutral-500 text-sm">
+          <p className="text-muted text-sm">
             No open shifts right now. Approved nights with a door fee appear here.
           </p>
         )}
@@ -376,7 +376,7 @@ export function DoorGigs() {
           >
             <div>
               <p className="font-bold">{event.title}</p>
-              <p className="text-neutral-500 text-xs">
+              <p className="text-muted text-xs">
                 {event.venue.name} · {new Date(event.date).toLocaleDateString()} · R
                 {event.doorFee.toLocaleString()} door fee
               </p>
@@ -395,7 +395,7 @@ export function DoorGigs() {
       <section className="space-y-2">
         <h3 className="text-sm font-bold uppercase tracking-wider">My door shifts</h3>
         {!shifts.length && (
-          <p className="text-neutral-500 text-sm">
+          <p className="text-muted text-sm">
             No door shifts yet. Apply for one above; it appears here once you have.
           </p>
         )}
@@ -404,15 +404,15 @@ export function DoorGigs() {
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="font-bold">{shift.event.title}</p>
-                <p className="text-neutral-500 text-xs">
+                <p className="text-muted text-xs">
                   {shift.event.venue.name} · {new Date(shift.event.date).toLocaleDateString()}
                 </p>
               </div>
               <div className="text-right">
-                <span className={`text-xs font-bold uppercase tracking-widest ${STATUS[shift.status] ?? "text-neutral-400"}`}>
+                <span className={`text-xs font-bold uppercase tracking-widest ${STATUS[shift.status] ?? "text-muted"}`}>
                   {shift.status}
                 </span>
-                <p className="text-xs text-neutral-400">
+                <p className="text-xs text-muted">
                   R{shift.fee.toLocaleString()} fee
                   {shift.travelFee > 0 ? ` + R${shift.travelFee.toLocaleString()} travel` : ""}
                 </p>
@@ -420,7 +420,7 @@ export function DoorGigs() {
             </div>
 
             {shift.declineReason && (
-              <p className="text-xs text-neutral-500">Declined: {shift.declineReason}</p>
+              <p className="text-xs text-muted">Declined: {shift.declineReason}</p>
             )}
 
             <div className="flex flex-wrap items-center gap-2">
@@ -428,13 +428,13 @@ export function DoorGigs() {
                 <button
                   onClick={() => withdraw(shift.id)}
                   disabled={busy === shift.id}
-                  className="border border-red-500/60 text-red-400 rounded-lg px-3 py-1 text-[10px] font-bold tracking-widest disabled:opacity-40"
+                  className="border border-red-500/60 text-alert rounded-lg px-3 py-1 text-[10px] font-bold tracking-widest disabled:opacity-40"
                 >
                   {busy === shift.id ? "CANCELLING…" : "WITHDRAW"}
                 </button>
               )}
               {shift.status === "confirmed" && (
-                <span className="text-[10px] uppercase tracking-wider text-neutral-600">
+                <span className="text-[10px] uppercase tracking-wider text-faint">
                   the promoter confirms after the night
                 </span>
               )}
@@ -449,7 +449,7 @@ export function DoorGigs() {
               )}
               {shift.invoice && (
                 <>
-                  <span className="text-xs text-neutral-400">
+                  <span className="text-xs text-muted">
                     {shift.invoice.number} · {shift.invoice.status} · R
                     {shift.invoice.total.toLocaleString()}
                   </span>

@@ -65,10 +65,10 @@ interface BudgetOverview {
 }
 
 const APP_STATUS: Record<string, string> = {
-  pending: "text-yellow-400",
+  pending: "text-warn",
   confirmed: "text-neon",
   completed: "text-neon",
-  cancelled: "text-neutral-500",
+  cancelled: "text-muted",
 };
 
 interface VenueOption {
@@ -389,12 +389,12 @@ export default function EventManager() {
         actions={<Badge tone="info">{events.length} nights</Badge>}
       />
       {events.length === PAGE_SIZE && (
-        <p className="text-amber-300/90 text-xs">
+        <p className="text-warn text-xs">
           Showing the {PAGE_SIZE} most recent nights — older nights stay in the database and export.
         </p>
       )}
       {(error ?? eventsSource.error ?? venuesSource.error) && (
-        <p role="alert" className="text-red-400 text-sm">
+        <p role="alert" className="text-alert text-sm">
           {error ?? eventsSource.error ?? venuesSource.error}
         </p>
       )}
@@ -404,10 +404,10 @@ export default function EventManager() {
         <section className="console-panel console-panel-body space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-sm font-bold text-neon uppercase tracking-wider">Remaining budget · upcoming nights</h2>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-muted">
               {budgetOverview.totals.nights} night{budgetOverview.totals.nights === 1 ? "" : "s"} ·{" "}
               R{budgetOverview.totals.committed.toLocaleString()} committed ·{" "}
-              <span className={budgetOverview.totals.remaining < 0 ? "text-yellow-400" : "text-neon"}>
+              <span className={budgetOverview.totals.remaining < 0 ? "text-warn" : "text-neon"}>
                 R{budgetOverview.totals.remaining.toLocaleString()} {budgetOverview.totals.remaining < 0 ? "over" : "left"}
               </span>
               {budgetOverview.totals.budget > 0 ? ` of R${budgetOverview.totals.budget.toLocaleString()}` : ""}
@@ -415,7 +415,7 @@ export default function EventManager() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm">
-              <thead className="text-neutral-500 uppercase text-[10px] tracking-widest">
+              <thead className="text-muted uppercase text-[10px] tracking-widest">
                 <tr>
                   <th className="text-left py-2">Night</th>
                   <th className="text-left py-2">Date</th>
@@ -429,12 +429,12 @@ export default function EventManager() {
                   <tr key={n.id} className="border-t border-line">
                     <td className="py-2">
                       <span className="font-bold">{n.title}</span>
-                      <span className="text-neutral-500 text-xs"> · {n.venue}</span>
+                      <span className="text-muted text-xs"> · {n.venue}</span>
                     </td>
-                    <td className="py-2 text-neutral-400">{new Date(n.date).toLocaleDateString()}</td>
-                    <td className="py-2 text-right tabular-nums text-neutral-400">{n.confirmedSlots}/{n.slots}</td>
+                    <td className="py-2 text-muted">{new Date(n.date).toLocaleDateString()}</td>
+                    <td className="py-2 text-right tabular-nums text-muted">{n.confirmedSlots}/{n.slots}</td>
                     <td className="py-2 text-right tabular-nums">R{n.committed.toLocaleString()}</td>
-                    <td className={`py-2 text-right tabular-nums ${n.overBudget ? "text-yellow-400" : n.remaining == null ? "text-neutral-500" : "text-neon"}`}>
+                    <td className={`py-2 text-right tabular-nums ${n.overBudget ? "text-warn" : n.remaining == null ? "text-muted" : "text-neon"}`}>
                       {n.remaining == null ? "no ceiling" : n.overBudget ? `R${Math.abs(n.remaining).toLocaleString()} over` : `R${n.remaining.toLocaleString()}`}
                     </td>
                   </tr>
@@ -443,13 +443,13 @@ export default function EventManager() {
             </table>
           </div>
           {budgetOverview.totals.overBudgetNights > 0 && (
-            <p className="text-yellow-400 text-xs">
+            <p className="text-warn text-xs">
               {budgetOverview.totals.overBudgetNights} night{budgetOverview.totals.overBudgetNights === 1 ? " is" : "s are"} over
               the ceiling — raise the budget on that night or decline a DJ before confirming anyone else.
             </p>
           )}
           {budgetOverview.totals.unbudgetedNights > 0 && (
-            <p className="text-neutral-500 text-xs">
+            <p className="text-muted text-xs">
               {budgetOverview.totals.unbudgetedNights} night{budgetOverview.totals.unbudgetedNights === 1 ? " has" : "s have"} no
               budget ceiling, so confirmations there are not capped.
             </p>
@@ -461,12 +461,12 @@ export default function EventManager() {
         <section className="console-panel console-panel-body space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-sm font-bold text-neon uppercase tracking-wider">Night arc</h2>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-muted">
               Each slot is tagged by where it starts. Changes apply to plans you make from now on;
               nights already planned keep their tags.
             </p>
           </div>
-          <div className="hidden md:grid md:grid-cols-[5rem_1fr_7rem_1.5fr] gap-2 text-[10px] uppercase tracking-widest text-neutral-500">
+          <div className="hidden md:grid md:grid-cols-[5rem_1fr_7rem_1.5fr] gap-2 text-[10px] uppercase tracking-widest text-muted">
             <span>Minutes</span>
             <span>Role</span>
             <span>BPM</span>
@@ -529,10 +529,10 @@ export default function EventManager() {
 
       <form onSubmit={create} className="console-panel console-panel-body space-y-3">
           <div className="grid md:grid-cols-4 gap-3 items-end">
-            <label className="text-xs text-neutral-400 space-y-1">
+            <label className="text-xs text-muted space-y-1">
               <span className="flex items-center justify-between gap-2">
                 <span>Event title</span>
-                <span className={`tabular-nums ${form.title.length >= 50 ? "text-yellow-400" : "text-neutral-500"}`}>
+                <span className={`tabular-nums ${form.title.length >= 50 ? "text-warn" : "text-muted"}`}>
                   {form.title.length}/50
                 </span>
               </span>
@@ -552,7 +552,7 @@ export default function EventManager() {
           </div>
 
           <div className="grid md:grid-cols-5 gap-3 items-end">
-            <div className="text-xs text-neutral-400 space-y-1">
+            <div className="text-xs text-muted space-y-1">
               <span>DJ fee / hour (R)</span>
               <div className="flex items-center gap-2">
                 <input
@@ -565,7 +565,7 @@ export default function EventManager() {
                   value={form.djFeePerHour}
                   onChange={(e) => setForm({ ...form, djFeePerHour: +e.target.value })}
                 />
-                <label className="flex items-center gap-1 whitespace-nowrap text-[10px] uppercase tracking-widest text-neutral-400">
+                <label className="flex items-center gap-1 whitespace-nowrap text-[10px] uppercase tracking-widest text-muted">
                   <input
                     type="checkbox"
                     checked={form.djFeePerHour === 0}
@@ -575,26 +575,26 @@ export default function EventManager() {
                 </label>
               </div>
             </div>
-            <label className="text-xs text-neutral-400 space-y-1">
+            <label className="text-xs text-muted space-y-1">
               <span>Timeslots</span>
               <input required type="number" min={1} max={12} className={`${field} w-full`} value={form.slotCount} onChange={(e) => setForm({ ...form, slotCount: +e.target.value })} />
             </label>
-            <label className="text-xs text-neutral-400 space-y-1">
+            <label className="text-xs text-muted space-y-1">
               <span>Slot length (min)</span>
               <input required type="number" min={30} max={480} step={15} className={`${field} w-full`} value={form.slotMinutes} onChange={(e) => setForm({ ...form, slotMinutes: +e.target.value })} />
             </label>
-            <label className="text-xs text-neutral-400 space-y-1">
+            <label className="text-xs text-muted space-y-1">
               <span>First slot starts</span>
               <input required type="time" className={`${field} w-full`} value={form.slotStart} onChange={(e) => setForm({ ...form, slotStart: e.target.value })} />
             </label>
-            <label className="text-xs text-neutral-400 space-y-1">
+            <label className="text-xs text-muted space-y-1">
               <span>Budget ceiling (R)</span>
               <input type="number" min={0} className={`${field} w-full`} value={form.budget} onChange={(e) => setForm({ ...form, budget: +e.target.value })} />
             </label>
           </div>
 
           <div className="flex flex-wrap items-end gap-4">
-            <label className="flex items-center gap-2 text-xs text-neutral-300">
+            <label className="flex items-center gap-2 text-xs text-muted">
               <input
                 type="checkbox"
                 checked={form.doorEnabled}
@@ -605,7 +605,7 @@ export default function EventManager() {
               Door staff needed for this night
             </label>
             {form.doorEnabled && (
-              <label className="text-xs text-neutral-400 space-y-1">
+              <label className="text-xs text-muted space-y-1">
                 <span>Door fee (R) — comes out of the budget</span>
                 <input
                   type="number"
@@ -618,42 +618,42 @@ export default function EventManager() {
               </label>
             )}
             {form.doorEnabled && (
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-muted">
                 The event goes to every door host once it is approved; they apply, you confirm.
               </p>
             )}
           </div>
 
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-muted">
             {form.slotCount} × {form.slotMinutes} min from {form.slotStart} ·{" "}
             {form.djFeePerHour === 0 ? (
               <span className="text-neon">free gig — every slot pays R0 and DJs play unpaid</span>
             ) : (
               <>
-                <span className="text-neutral-300">R{planFee.toLocaleString()} per slot</span> · R{planTotal.toLocaleString()} DJs
+                <span className="text-fg">R{planFee.toLocaleString()} per slot</span> · R{planTotal.toLocaleString()} DJs
                 {planDoor > 0 && <> + R{planDoor.toLocaleString()} door</>} · R{planGrandTotal.toLocaleString()} total
                 {form.budget > 0 && (planGrandTotal > form.budget
-                  ? <span className="text-yellow-400"> — plan is R{(planGrandTotal - form.budget).toLocaleString()} above the R{form.budget.toLocaleString()} budget; you can only confirm DJs and door hosts up to the budget</span>
+                  ? <span className="text-warn"> — plan is R{(planGrandTotal - form.budget).toLocaleString()} above the R{form.budget.toLocaleString()} budget; you can only confirm DJs and door hosts up to the budget</span>
                   : <span> of R{form.budget.toLocaleString()} budget</span>)}
               </>
             )}
           </p>
 
           {selectedVenue && (
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-muted">
               {selectedVenue.name}
               {selectedVenue.address ? ` | ${selectedVenue.address}` : ""}
               {` | capacity ${selectedVenue.capacity}`}
             </p>
           )}
           {selectedVenue && !selectedVenue.hasLocation && (
-            <p className="text-yellow-400 text-xs">
+            <p className="text-warn text-xs">
               {selectedVenue.name} has no coordinates yet. The event can still be created, but DJ route
               planning between gigs will be wrong until its manager sets the location in the venue portal.
             </p>
           )}
           {!venues.length && (
-            <p className="text-yellow-400 text-xs">
+            <p className="text-warn text-xs">
               No venues exist yet. Add one in the Venue Portal first, then pick it here.
             </p>
           )}
@@ -673,7 +673,7 @@ export default function EventManager() {
       <Panel flush>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-sm">
-            <thead className="bg-surface text-neutral-400 uppercase text-xs">
+            <thead className="bg-surface text-muted uppercase text-xs">
               <tr>
                 <th className="text-left px-4 py-3">Event</th>
                 <th className="text-left px-4 py-3">Venue</th>
@@ -696,10 +696,10 @@ export default function EventManager() {
                       <td className="px-4 py-3">
                         <p className="font-bold">{e.title}</p>
                         {e.slotCount ? (
-                          <p className="text-neutral-500 text-xs">
+                          <p className="text-muted text-xs">
                             {e.slotCount} × {e.slotMinutes} min ·{" "}
                             {e.djFeePerHour > 0 ? `R${e.djFeePerHour.toLocaleString()}/h` : "Free gig"} ·{" "}
-                            <span className="text-neutral-300">{e.djFeePerHour > 0 ? `R${fee.toLocaleString()}/slot` : "R0/slot"}</span> · R{e.committed.toLocaleString()} committed
+                            <span className="text-fg">{e.djFeePerHour > 0 ? `R${fee.toLocaleString()}/slot` : "R0/slot"}</span> · R{e.committed.toLocaleString()} committed
                             {e.budget > 0 ? ` of R${e.budget.toLocaleString()}` : ""}
                             {e.doorEnabled && (
                               <>
@@ -707,54 +707,54 @@ export default function EventManager() {
                               </>
                             )}
                             {e.budget > 0 && allocated + (e.doorEnabled ? e.doorFee : 0) > e.budget && (
-                              <span className="text-yellow-400"> · plan R{(allocated + (e.doorEnabled ? e.doorFee : 0) - e.budget).toLocaleString()} over budget · confirmations stop at R{e.budget.toLocaleString()}</span>
+                              <span className="text-warn"> · plan R{(allocated + (e.doorEnabled ? e.doorFee : 0) - e.budget).toLocaleString()} over budget · confirmations stop at R{e.budget.toLocaleString()}</span>
                             )}
                           </p>
                         ) : (
-                          <p className="text-neutral-500 text-xs">No slots planned — DJs see the old day/evening/late-night call.</p>
+                          <p className="text-muted text-xs">No slots planned — DJs see the old day/evening/late-night call.</p>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-neutral-400">{e.venue.name}</td>
+                      <td className="px-4 py-3 text-muted">{e.venue.name}</td>
                       <td className="px-4 py-3">{new Date(e.date).toLocaleDateString()}</td>
-                      <td className="px-4 py-3"><span className={e.status === "approved" || e.status === "live" ? "text-neon" : "text-neutral-400"}>{e.status}</span></td>
+                      <td className="px-4 py-3"><span className={e.status === "approved" || e.status === "live" ? "text-neon" : "text-muted"}>{e.status}</span></td>
                       <td className="px-4 py-3">{e._count.guestLists}/{e.capacity}</td>
                       <td className="px-4 py-3 space-x-2">
-                        <button onClick={() => (slots.eventId === e.id ? setSlots(EMPTY_SLOTS) : openSlots(e))} className="text-neutral-300 underline text-xs">
+                        <button onClick={() => (slots.eventId === e.id ? setSlots(EMPTY_SLOTS) : openSlots(e))} className="text-fg underline text-xs">
                           {slots.eventId === e.id ? "Close" : "Slots & budget"}
                         </button>
-                        <button onClick={() => toggleApplications(e)} className="text-neutral-300 underline text-xs">
+                        <button onClick={() => toggleApplications(e)} className="text-fg underline text-xs">
                           {appsFor === e.id ? "Hide applications" : `Applications (${e._count.artistBookings})`}
                         </button>
                         {isAdmin && (e.status === "approved" || e.status === "live") && (
                           <button onClick={() => resendDjCall(e)} className="text-neon underline text-xs">Resend DJ call</button>
                         )}
                         <button onClick={async () => { await api.post(`/events/${e.id}/clone`); load(); }} className="text-neon underline text-xs">Clone</button>
-                        <button onClick={() => repeatWeekly(e)} className="text-neutral-300 underline text-xs">Repeat weekly</button>
+                        <button onClick={() => repeatWeekly(e)} className="text-fg underline text-xs">Repeat weekly</button>
                         <DownloadButton path={`/events/${e.id}/guest-list.csv`} filename={`guestlist-${e.id}.csv`} label="Guest CSV" />
                         <DownloadButton path={`/events/${e.id}/spend.csv`} filename={`dj-spend-${e.id}.csv`} label="Spend CSV" />
                         {e.status === "cancelled" ? (
-                          <button onClick={() => reopen(e)} className="text-neutral-300 underline text-xs">Reopen</button>
+                          <button onClick={() => reopen(e)} className="text-fg underline text-xs">Reopen</button>
                         ) : (
-                          <button onClick={() => cancel(e)} className="text-yellow-400 underline text-xs">Cancel</button>
+                          <button onClick={() => cancel(e)} className="text-warn underline text-xs">Cancel</button>
                         )}
-                        <button onClick={() => remove(e)} className="text-red-400 underline text-xs">Delete</button>
+                        <button onClick={() => remove(e)} className="text-alert underline text-xs">Delete</button>
                       </td>
                     </tr>
                     {appsFor === e.id && (
                       <tr className="border-t border-line bg-surface/60">
                         <td colSpan={6} className="px-4 py-3 space-y-2">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-[10px] uppercase tracking-widest text-neutral-500">
+                            <p className="text-[10px] uppercase tracking-widest text-muted">
                               DJ applications — {e.title}
                             </p>
                             <Link href="/applications" className="text-neon underline text-xs">
                               Review in Applications
                             </Link>
                           </div>
-                          {appsLoading && <p className="text-neutral-500 text-xs">Loading applications…</p>}
-                          {appsError && <p className="text-red-400 text-xs">{appsError}</p>}
+                          {appsLoading && <p className="text-muted text-xs">Loading applications…</p>}
+                          {appsError && <p className="text-alert text-xs">{appsError}</p>}
                           {!appsLoading && !appsError && !apps.length && (
-                            <p className="text-neutral-500 text-xs">No DJ has applied for this night yet.</p>
+                            <p className="text-muted text-xs">No DJ has applied for this night yet.</p>
                           )}
                           {apps.map((a) => {
                             // Confirming promises money: the budget is a ceiling, not a warning.
@@ -763,11 +763,11 @@ export default function EventManager() {
                             return (
                               <div key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                                 <span className="font-bold">{a.artist.stageName}</span>
-                                <span className="text-neutral-400">{a.artist.user.name ?? a.artist.user.email}</span>
-                                <span className="text-neutral-300">{a.slot ?? "day / evening / late-night"}</span>
-                                <span className="text-neutral-300">R{a.performanceFee.toLocaleString()}</span>
-                                <span className={APP_STATUS[a.status] ?? "text-neutral-400"}>{a.status}</span>
-                                <span className="text-neutral-500">
+                                <span className="text-muted">{a.artist.user.name ?? a.artist.user.email}</span>
+                                <span className="text-fg">{a.slot ?? "day / evening / late-night"}</span>
+                                <span className="text-fg">R{a.performanceFee.toLocaleString()}</span>
+                                <span className={APP_STATUS[a.status] ?? "text-muted"}>{a.status}</span>
+                                <span className="text-muted">
                                   {a.appliedAt ? new Date(a.appliedAt).toLocaleDateString() : ""}
                                   {a.declineReason ? ` · ${a.declineReason}` : ""}
                                 </span>
@@ -796,7 +796,7 @@ export default function EventManager() {
                                     <button
                                       onClick={() => decideApplication(e.id, a.id, false)}
                                       disabled={deciding === a.id}
-                                      className="border border-red-500 text-red-400 rounded-lg px-2 py-0.5 font-bold disabled:opacity-40"
+                                      className="border border-red-500 text-alert rounded-lg px-2 py-0.5 font-bold disabled:opacity-40"
                                     >
                                       DECLINE
                                     </button>
@@ -812,7 +812,7 @@ export default function EventManager() {
                       <tr className="border-t border-line bg-surface/60">
                         <td colSpan={6} className="px-4 py-3 space-y-2">
                           <div className="grid md:grid-cols-5 gap-2 items-end">
-                            <div className="text-xs text-neutral-400 space-y-1">
+                            <div className="text-xs text-muted space-y-1">
                               <span>DJ fee / hour (R)</span>
                               <div className="flex items-center gap-2">
                                 <input
@@ -824,7 +824,7 @@ export default function EventManager() {
                                   value={slots.djFeePerHour}
                                   onChange={(ev) => setSlots({ ...slots, djFeePerHour: +ev.target.value })}
                                 />
-                                <label className="flex items-center gap-1 whitespace-nowrap text-[10px] uppercase tracking-widest text-neutral-400">
+                                <label className="flex items-center gap-1 whitespace-nowrap text-[10px] uppercase tracking-widest text-muted">
                                   <input
                                     type="checkbox"
                                     checked={slots.djFeePerHour === 0}
@@ -834,47 +834,47 @@ export default function EventManager() {
                                 </label>
                               </div>
                             </div>
-                            <label className="text-xs text-neutral-400 space-y-1">
+                            <label className="text-xs text-muted space-y-1">
                               <span>Timeslots</span>
                               <input type="number" min={1} max={12} className={`${field} w-full`} value={slots.slotCount} onChange={(ev) => setSlots({ ...slots, slotCount: +ev.target.value })} />
                             </label>
-                            <label className="text-xs text-neutral-400 space-y-1">
+                            <label className="text-xs text-muted space-y-1">
                               <span>Slot length (min)</span>
                               <input type="number" min={30} max={480} step={15} className={`${field} w-full`} value={slots.slotMinutes} onChange={(ev) => setSlots({ ...slots, slotMinutes: +ev.target.value })} />
                             </label>
-                            <label className="text-xs text-neutral-400 space-y-1">
+                            <label className="text-xs text-muted space-y-1">
                               <span>First slot starts</span>
                               <input type="time" className={`${field} w-full`} value={slots.slotStart} onChange={(ev) => setSlots({ ...slots, slotStart: ev.target.value })} />
                             </label>
-                            <label className="text-xs text-neutral-400 space-y-1">
+                            <label className="text-xs text-muted space-y-1">
                               <span>Budget ceiling (R)</span>
                               <input type="number" min={0} className={`${field} w-full`} value={slots.budget} onChange={(ev) => setSlots({ ...slots, budget: +ev.target.value })} />
                             </label>
                           </div>
-                          <p className="text-xs text-neutral-500">
+                          <p className="text-xs text-muted">
                             {slots.slotCount} × {slots.slotMinutes} min from {slots.slotStart} ·{" "}
                             {slots.djFeePerHour === 0 ? (
                               <span className="text-neon">free gig — every slot pays R0 and DJs play unpaid</span>
                             ) : (
                               <>
-                                <span className="text-neutral-300">R{editFee.toLocaleString()} per slot</span> · R{editTotal.toLocaleString()} total
+                                <span className="text-fg">R{editFee.toLocaleString()} per slot</span> · R{editTotal.toLocaleString()} total
                                 {slots.budget > 0 && editTotal > slots.budget && (
-                                  <span className="text-yellow-400"> — plan over budget · you can only confirm DJs up to R{slots.budget.toLocaleString()}</span>
+                                  <span className="text-warn"> — plan over budget · you can only confirm DJs up to R{slots.budget.toLocaleString()}</span>
                                 )}
                               </>
                             )}
                           </p>
                           <div className="space-y-1">
-                            <p className="text-[10px] uppercase tracking-widest text-neutral-500">Slot fees — a headline set can pay differently</p>
+                            <p className="text-[10px] uppercase tracking-widest text-muted">Slot fees — a headline set can pay differently</p>
                             {e.slots.map((s) => {
                               const draft = slotDrafts[s.id] ?? s.fee;
                               return (
                                 <div key={s.id} className="flex flex-wrap items-center gap-2 text-xs">
-                                  <span className="text-neutral-400 w-40">
+                                  <span className="text-muted w-40">
                                     {s.label}
                                     {s.role && (
                                       <span
-                                        className="block text-[10px] text-neutral-500"
+                                        className="block text-[10px] text-faint"
                                         title={s.genres ?? undefined}
                                       >
                                         {s.role}
@@ -890,21 +890,21 @@ export default function EventManager() {
                                     value={draft}
                                     onChange={(ev) => setSlotDrafts({ ...slotDrafts, [s.id]: +ev.target.value })}
                                   />
-                                  <span className="text-neutral-500">R{s.fee.toLocaleString()} now</span>
+                                  <span className="text-muted">R{s.fee.toLocaleString()} now</span>
                                   {s.confirmed ? (
-                                    <span className="text-neutral-600">confirmed — fee locked</span>
+                                    <span className="text-muted">confirmed — fee locked</span>
                                   ) : (
                                     <button onClick={() => saveSlotFee(s.id, s.fee)} className="text-neon underline">SET FEE</button>
                                   )}
                                 </div>
                               );
                             })}
-                            {!e.slots.length && <p className="text-neutral-600 text-xs">No slots yet — save a plan above.</p>}
+                            {!e.slots.length && <p className="text-muted text-xs">No slots yet — save a plan above.</p>}
                           </div>
                           <div className="flex items-center gap-3 text-xs">
                             <button onClick={saveSlots} className="bg-neon text-bg font-black rounded-lg px-3 py-1 tracking-widest">SAVE PLAN</button>
-                            <button onClick={() => setSlots(EMPTY_SLOTS)} className="text-neutral-500 hover:text-neon">CANCEL</button>
-                            <span className="text-neutral-500">
+                            <button onClick={() => setSlots(EMPTY_SLOTS)} className="text-muted hover:text-neon">CANCEL</button>
+                            <span className="text-muted">
                               Re-planning replaces all slots and is refused once DJs have applied — the budget
                               alone can still be changed then.
                             </span>
@@ -916,7 +916,7 @@ export default function EventManager() {
                 );
               })}
               {!events.length && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-neutral-500">No events yet. Seed the demo data to see one.</td></tr>
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-muted">No events yet. Seed the demo data to see one.</td></tr>
               )}
             </tbody>
           </table>

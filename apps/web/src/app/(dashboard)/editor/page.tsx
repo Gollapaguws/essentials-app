@@ -34,7 +34,7 @@ function SiteMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="border border-line rounded-lg px-4 py-3">
       <div className="text-2xl font-black tabular-nums">{value.toLocaleString()}</div>
-      <div className="text-[10px] uppercase tracking-widest text-neutral-500">{label}</div>
+      <div className="text-[10px] uppercase tracking-widest text-muted">{label}</div>
     </div>
   );
 }
@@ -94,7 +94,7 @@ export default function FrontPageEditor() {
   };
 
   const input = "w-full bg-bg border border-line rounded-lg px-3 py-2";
-  const label = "text-xs text-neutral-400 uppercase tracking-wider";
+  const label = "text-xs text-muted uppercase tracking-wider";
   const pageViews = stats?.days.reduce((total, day) => total + day.views, 0) ?? 0;
   const uniqueVisitors = stats?.days.reduce((total, day) => total + day.uniqueVisitors, 0) ?? 0;
   // The API returns newest first; the chart reads left to right in time.
@@ -110,13 +110,13 @@ export default function FrontPageEditor() {
           <button onClick={save} className="bg-neon text-bg font-black rounded-lg px-6 py-2 tracking-widest">SAVE</button>
         </div>
         {msg && <p className="text-neon text-sm">{msg}</p>}
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="text-alert text-sm">{error}</p>}
 
         {stats && (
           <section className="border border-line bg-surface rounded-xl p-4 space-y-4">
             <div>
               <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Front page analytics</h2>
-              <p className="text-xs text-neutral-500 mt-1">
+              <p className="text-xs text-muted mt-1">
                 Last 30 days · anonymous daily counts, no cookies. Visitors are counted per day.
                 Android/Chrome installs report automatically; iOS installs cannot be measured.
               </p>
@@ -130,7 +130,7 @@ export default function FrontPageEditor() {
             </div>
             <div className="grid md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
-                <h3 className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">Views per day</h3>
+                <h3 className="text-[10px] uppercase tracking-widest text-muted mb-2">Views per day</h3>
                 {dailyViews.length ? (
                   <div className="flex h-28 items-end gap-1" role="img" aria-label={`Daily page views for the last ${dailyViews.length} days with traffic`}>
                     {dailyViews.map((day) => (
@@ -143,22 +143,22 @@ export default function FrontPageEditor() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-neutral-500">No traffic recorded yet.</p>
+                  <p className="text-xs text-muted">No traffic recorded yet.</p>
                 )}
               </div>
               <div>
-                <h3 className="text-[10px] uppercase tracking-widest text-neutral-500 mb-2">Top pages</h3>
+                <h3 className="text-[10px] uppercase tracking-widest text-muted mb-2">Top pages</h3>
                 {stats.paths.length ? (
                   <ul className="space-y-1.5">
                     {stats.paths.map((page) => (
                       <li key={page.path} className="flex items-baseline justify-between gap-3 text-xs">
-                        <span className="truncate font-mono text-neutral-300" title={page.path}>{page.path}</span>
-                        <span className="tabular-nums text-neutral-500">{page.views.toLocaleString()}</span>
+                        <span className="truncate font-mono text-muted" title={page.path}>{page.path}</span>
+                        <span className="tabular-nums text-muted">{page.views.toLocaleString()}</span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-neutral-500">No pages recorded yet.</p>
+                  <p className="text-xs text-muted">No pages recorded yet.</p>
                 )}
               </div>
             </div>
@@ -208,11 +208,11 @@ export default function FrontPageEditor() {
                   {["ANNOUNCED", "SELLING FAST", "SOLD OUT", "FREE"].map((s) => <option key={s}>{s}</option>)}
                 </select>
                 <button onClick={() => set({ events: (c.events ?? []).filter((_, j) => j !== i) })}
-                  className="text-red-400 font-bold px-2">Ã—</button>
+                  className="text-alert font-bold px-2">Ã—</button>
               </div>
             </div>
           ))}
-          {!(c.events ?? []).length && <p className="text-neutral-500 text-sm">No events â€” the front page shows "DATES TBA".</p>}
+          {!(c.events ?? []).length && <p className="text-muted text-sm">No events â€” the front page shows "DATES TBA".</p>}
         </section>
 
         <section className="border border-line bg-surface rounded-xl p-4 space-y-4">
@@ -221,7 +221,7 @@ export default function FrontPageEditor() {
             <div key={i} className="flex items-center gap-2">
               <img src={src} alt="" className="w-16 h-10 object-cover rounded" />
               <input className={`${input} flex-1`} value={src} onChange={(ev) => set({ heroSlides: (c.heroSlides ?? []).map((s, j) => (j === i ? ev.target.value : s)) })} />
-              <button onClick={() => set({ heroSlides: (c.heroSlides ?? []).filter((_, j) => j !== i) })} className="text-red-400 font-bold px-2">×</button>
+              <button onClick={() => set({ heroSlides: (c.heroSlides ?? []).filter((_, j) => j !== i) })} className="text-alert font-bold px-2">×</button>
             </div>
           ))}
           <div className="flex gap-2">
@@ -233,7 +233,7 @@ export default function FrontPageEditor() {
               <img src={v.src} alt="" className="w-16 h-10 object-cover rounded" />
               <input className={`${input} flex-1`} placeholder="URL" value={v.src} onChange={(ev) => set({ visuals: (c.visuals ?? []).map((x, j) => (j === i ? { ...x, src: ev.target.value } : x)) })} />
               <input className={`${input} w-48`} placeholder="Label" value={v.label} onChange={(ev) => set({ visuals: (c.visuals ?? []).map((x, j) => (j === i ? { ...x, label: ev.target.value } : x)) })} />
-              <button onClick={() => set({ visuals: (c.visuals ?? []).filter((_, j) => j !== i) })} className="text-red-400 font-bold px-2">×</button>
+              <button onClick={() => set({ visuals: (c.visuals ?? []).filter((_, j) => j !== i) })} className="text-alert font-bold px-2">×</button>
             </div>
           ))}
           <div className="flex gap-2 items-center">
@@ -245,7 +245,7 @@ export default function FrontPageEditor() {
 
         <section className="border border-line bg-surface rounded-xl p-4 space-y-3">
           <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Room loop</h2>
-          <p className="text-neutral-500 text-xs">
+          <p className="text-muted text-xs">
             Video looped in the front-page room box while nothing is live. MP4 or WebM,
             up to 120 MB. Leave it empty to show the standby slate.
           </p>
@@ -254,10 +254,10 @@ export default function FrontPageEditor() {
               <video src={c.idleLoop} muted loop autoPlay playsInline className="w-32 aspect-video object-cover rounded" />
               <input className={`${input} flex-1 font-mono text-xs`} value={c.idleLoop}
                 onChange={(ev) => set({ idleLoop: ev.target.value })} />
-              <button onClick={() => set({ idleLoop: "" })} className="text-red-400 font-bold px-2">×</button>
+              <button onClick={() => set({ idleLoop: "" })} className="text-alert font-bold px-2">×</button>
             </div>
           ) : (
-            <p className="text-neutral-500 text-sm">No loop — the standby slate shows instead.</p>
+            <p className="text-muted text-sm">No loop — the standby slate shows instead.</p>
           )}
           <input type="file" accept="video/mp4,video/webm,video/quicktime" className="text-xs"
             onChange={(ev) => { const f = ev.target.files?.[0]; if (f) uploadMedia(f, (url) => set({ idleLoop: url })); }} />

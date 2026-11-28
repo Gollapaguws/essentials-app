@@ -61,13 +61,13 @@ function CallbackInner() {
         <h1 className="text-neon text-2xl font-black tracking-widest">SONUS</h1>
         {error ? (
           <>
-            <p className="text-neutral-400">{error}</p>
+            <p className="text-muted">{error}</p>
             <Link href="/" className="text-neon underline text-sm">
               Send a new link
             </Link>
           </>
         ) : (
-          <p className="text-neutral-400">Signing you in…</p>
+          <p className="text-muted">Signing you in…</p>
         )}
       </div>
     </main>

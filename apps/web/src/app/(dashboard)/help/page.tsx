@@ -31,7 +31,7 @@ export default function Help() {
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
         <div>
           <h1 className="text-2xl font-black tracking-wide">HELP</h1>
-          <p className="text-neutral-500 text-xs mt-1 max-w-2xl">
+          <p className="text-muted text-xs mt-1 max-w-2xl">
             The manual for your role: what each screen is for, how the money works, and the answer
             to most &ldquo;it will not work&rdquo; moments. It is written from the app, not from a
             template &mdash; when a screen changes, this changes with it.
@@ -49,7 +49,7 @@ export default function Help() {
                 className={`text-[11px] font-bold tracking-widest rounded-full border px-3 py-1.5 ${
                   shown === r
                     ? "border-neon text-neon"
-                    : "border-line text-neutral-500 hover:text-white"
+                    : "border-line text-muted hover:text-fg"
                 }`}
               >
                 {HELP_LABELS[r].toUpperCase()}
@@ -63,7 +63,7 @@ export default function Help() {
         ) : (
           <div className="border border-line rounded-xl p-6 space-y-2">
             <h2 className="text-lg font-bold">No manual for this account</h2>
-            <p className="text-sm text-neutral-400 max-w-xl">
+            <p className="text-sm text-muted max-w-xl">
               The dashboard is for DJs, promoters, venue managers and admins. A guest account has no
               dashboard screens to document &mdash; an admin sets the role on the Users page, and the
               manual appears here on the next sign-in.
@@ -80,8 +80,8 @@ function Manual({ manual }: { manual: HelpManual }) {
     <article className="space-y-8">
       <div className="border border-line rounded-xl px-6 py-5">
         <h2 className="text-lg font-black tracking-wide">{manual.title}</h2>
-        <p className="text-sm text-neutral-400 mt-2">{manual.summary}</p>
-        <p className="text-[11px] uppercase tracking-widest text-neutral-600 mt-4">
+        <p className="text-sm text-muted mt-2">{manual.summary}</p>
+        <p className="text-[11px] uppercase tracking-widest text-muted mt-4">
           {manual.screens}
         </p>
       </div>
@@ -91,11 +91,11 @@ function Manual({ manual }: { manual: HelpManual }) {
           <h3 className="text-sm font-bold tracking-widest text-neon">
             {String(i + 1).padStart(2, "0")} · {topic.title.toUpperCase()}
           </h3>
-          {topic.intro && <p className="text-sm text-neutral-400 max-w-2xl">{topic.intro}</p>}
+          {topic.intro && <p className="text-sm text-muted max-w-2xl">{topic.intro}</p>}
           {topic.steps && (
             <ol className="space-y-2 max-w-2xl">
               {topic.steps.map((step, stepIndex) => (
-                <li key={step} className="flex gap-3 text-sm text-neutral-300 leading-relaxed">
+                <li key={step} className="flex gap-3 text-sm text-fg leading-relaxed">
                   <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border border-neon/40 text-[10px] font-black text-neon">
                     {stepIndex + 1}
                   </span>
@@ -106,8 +106,8 @@ function Manual({ manual }: { manual: HelpManual }) {
           )}
           <ul className="space-y-2 max-w-2xl">
             {topic.points.map((point) => (
-              <li key={point} className="text-sm text-neutral-300 leading-relaxed pl-4 relative">
-                <span className="absolute left-0 text-neutral-600">–</span>
+              <li key={point} className="text-sm text-fg leading-relaxed pl-4 relative">
+                <span className="absolute left-0 text-muted">–</span>
                 {point}
               </li>
             ))}

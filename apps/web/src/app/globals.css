@@ -1,22 +1,32 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0b0b0d;
-  --color-surface: #141216;
-  --color-line: #2a2419;
-  --color-neon: #d4af37;
+  /* Light console: paper desk, ink type, brass accent. Contrast for every pair
+     used here is measured by `npm run check:contrast`. */
+  --color-bg: #f4ede2;
+  --color-surface: #fffdf8;
+  --color-line: #ddd2bd;
+  /* Brass, darkened from #8a6a12: that measured 4.36:1 on the paper ground,
+     just under the 4.5:1 floor for the small text that uses it. */
+  --color-neon: #7d5f10;
+  --color-fg: #191512;
+  --color-muted: #6b6152;
+  --color-faint: #8b8172;
+  --color-alert: #8f2b1f;
+  --color-warn: #7a5606;
+  --color-info: #1f5f7a;
   --font-sans: var(--font-montserrat), Montserrat, Inter, Helvetica, sans-serif;
   --font-display: var(--font-cinzel), Cinzel, Georgia, serif;
 }
 
-/* Tailwind v4 defaults bare borders to currentColor; keep the v3 gray so
-   existing `border` utilities look the same. */
+/* Tailwind v4 defaults bare borders to currentColor; keep a paper hairline so
+   `border` utilities read as rules rather than ink outlines. */
 @layer base {
   *,
   ::before,
   ::after,
   ::backdrop {
-    border-color: #e5e7eb;
+    border-color: #ddd2bd;
   }
 }
 
@@ -26,31 +36,33 @@
   }
 
   .console-kicker {
-    @apply text-[10px] font-black uppercase tracking-[0.3em] text-neon/70;
+    @apply text-[10px] font-black uppercase tracking-[0.3em] text-neon;
   }
 
   .console-title {
-    @apply font-display text-2xl tracking-[0.06em] text-white sm:text-3xl;
+    @apply font-display text-2xl tracking-[0.06em] text-fg sm:text-3xl;
   }
 
   .console-lede {
-    @apply text-sm leading-6 text-neutral-500;
+    @apply text-sm leading-6 text-muted;
   }
 
   .console-section-title {
-    @apply text-[11px] font-black uppercase tracking-[0.18em] text-neutral-300;
+    @apply text-[11px] font-black uppercase tracking-[0.18em] text-fg;
   }
 
+  /* A panel is a rule and some space, not a box: one hairline across the top,
+     then the content on the page. */
   .console-panel {
-    @apply overflow-hidden rounded-2xl border border-line/80 bg-surface/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)];
+    @apply border-t border-line bg-surface;
   }
 
   .console-panel-head {
-    @apply flex flex-wrap items-end justify-between gap-3 border-b border-line/70 px-4 py-3.5 sm:px-5;
+    @apply flex flex-wrap items-end justify-between gap-3 px-4 pb-3 pt-3.5 sm:px-5;
   }
 
   .console-panel-body {
-    @apply p-4 sm:p-5;
+    @apply px-4 pb-5 pt-1 sm:px-5;
   }
 
   .console-btn {
@@ -62,19 +74,19 @@
   }
 
   .console-btn-secondary {
-    @apply border-line bg-white/[0.02] text-neutral-300 hover:border-neon/40 hover:text-neon;
+    @apply border-line bg-surface text-fg hover:border-neon hover:text-neon;
   }
 
   .console-btn-danger {
-    @apply border-red-500/40 bg-red-500/5 text-red-400 hover:border-red-400 hover:bg-red-500/10;
+    @apply border-alert/40 bg-alert/5 text-alert hover:border-alert hover:bg-alert/10;
   }
 
   .console-btn-ghost {
-    @apply border-transparent text-neutral-500 hover:text-neon;
+    @apply border-transparent text-muted hover:text-neon;
   }
 
   .console-input {
-    @apply rounded-lg border border-line bg-bg px-3 py-2 text-sm text-white placeholder:text-neutral-600 focus:border-neon/50;
+    @apply rounded-lg border border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted/70 focus:border-neon;
   }
 
   .console-badge {
@@ -82,23 +94,23 @@
   }
 
   .console-empty {
-    @apply px-4 py-10 text-center;
+    @apply px-4 py-10 text-center text-muted;
   }
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   scroll-behavior: smooth;
 }
 
 body {
   min-height: 100vh;
-  color: #f5efe0;
-  background-color: #0b0b0d;
+  color: #191512;
+  background-color: #f4ede2;
   background-image:
-    radial-gradient(ellipse 70rem 34rem at 12% -8%, rgba(212, 175, 55, 0.08), transparent),
-    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+    radial-gradient(ellipse 70rem 34rem at 12% -8%, rgba(138, 106, 18, 0.09), transparent),
+    linear-gradient(rgba(25, 21, 18, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(25, 21, 18, 0.022) 1px, transparent 1px);
   background-size: auto, 72px 72px, 72px 72px;
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
@@ -106,18 +118,18 @@ body {
 }
 
 ::selection {
-  background: rgba(212, 175, 55, 0.3);
-  color: #ffffff;
+  background: rgba(138, 106, 18, 0.22);
+  color: #191512;
 }
 
 :focus-visible {
-  outline: 2px solid rgba(212, 175, 55, 0.85);
+  outline: 2px solid #7d5f10;
   outline-offset: 2px;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2a2419 #0b0b0d;
+  scrollbar-color: #d8cdb8 #f4ede2;
 }
 
 .nav-scroll {
@@ -151,12 +163,13 @@ body {
   line-height: 1.1;
 }
 
+/* Tables: a tinted head, one hairline between rows, no zebra, no outer shadow. */
 .console-shell main thead {
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(25, 21, 18, 0.035);
 }
 
 .console-shell main th {
-  color: #737373;
+  color: #6b6152;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -166,8 +179,12 @@ body {
   transition: background-color 150ms ease;
 }
 
+.console-shell main tbody tr + tr {
+  border-top: 1px solid #ddd2bd;
+}
+
 .console-shell main tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(25, 21, 18, 0.03);
 }
 
 @media (prefers-reduced-motion: reduce) {

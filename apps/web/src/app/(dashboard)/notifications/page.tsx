@@ -126,7 +126,7 @@ export default function Notifications() {
                 </span>
               )}
             </h1>
-            <p className="text-neutral-500 text-xs mt-1">
+            <p className="text-muted text-xs mt-1">
               {rows.length} total · DJ calls, gig confirmations and invoices. Telegram carries the
               same messages where linked.
             </p>
@@ -135,7 +135,7 @@ export default function Notifications() {
             <button
               onClick={() => setOnlyUnread((v) => !v)}
               className={`border rounded-lg px-3 py-2 text-xs font-bold tracking-widest ${
-                onlyUnread ? "border-neon text-neon" : "border-line text-neutral-300"
+                onlyUnread ? "border-neon text-neon" : "border-line text-fg"
               }`}
             >
               {onlyUnread ? "SHOWING UNREAD" : "ONLY UNREAD"}
@@ -156,7 +156,7 @@ export default function Notifications() {
               <h2 className="text-sm font-bold uppercase tracking-wider text-neon">
                 Send a test notification
               </h2>
-              <p className="text-neutral-500 text-xs mt-1">
+              <p className="text-muted text-xs mt-1">
                 Sends the same notice a DJ call sends: the bell feed, plus Telegram where the DJ
                 has linked it.
               </p>
@@ -189,26 +189,26 @@ export default function Notifications() {
         )}
 
         {(error ?? loadError) && (
-          <p role="alert" className="text-red-400 text-sm">
+          <p role="alert" className="text-alert text-sm">
             {error ?? loadError}
           </p>
         )}
-        {rowsSource.loading && <p className="text-neutral-500 text-xs">Loading…</p>}
+        {rowsSource.loading && <p className="text-muted text-xs">Loading…</p>}
 
         <div className="border border-line rounded-xl divide-y divide-line">
           {visible.map((row) => (
             <div key={row.id} className={`px-4 py-3 flex flex-wrap items-start gap-3 ${row.read ? "opacity-60" : ""}`}>
               <span
                 aria-label={row.read ? "read" : "unread"}
-                className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${row.read ? "bg-neutral-700" : "bg-neon"}`}
+                className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${row.read ? "bg-fg/10" : "bg-neon"}`}
               />
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] uppercase tracking-widest text-neutral-500">
+                <p className="text-[11px] uppercase tracking-widest text-muted">
                   {KIND_LABEL[row.kind] ?? row.kind} ·{" "}
                   {new Date(row.createdAt).toLocaleString()}
                 </p>
                 <p className="font-bold text-sm mt-0.5">{row.title}</p>
-                <p className="text-neutral-400 text-sm mt-0.5">{row.body}</p>
+                <p className="text-muted text-sm mt-0.5">{row.body}</p>
                 {row.link && (
                   <Link href={row.link.replace(/^https?:\/\/[^/]+/, "")} className="text-neon text-xs underline mt-1 inline-block">
                     Open →
@@ -216,14 +216,14 @@ export default function Notifications() {
                 )}
               </div>
               {!row.read && (
-                <button onClick={() => markOne(row.id)} className="text-neutral-500 text-[11px] tracking-widest hover:text-neon">
+                <button onClick={() => markOne(row.id)} className="text-muted text-[11px] tracking-widest hover:text-neon">
                   MARK READ
                 </button>
               )}
             </div>
           ))}
           {!visible.length && (
-            <p className="px-4 py-8 text-center text-neutral-500 text-sm">
+            <p className="px-4 py-8 text-center text-muted text-sm">
               {onlyUnread ? "Nothing unread — you're all caught up." : "No notifications yet."}
             </p>
           )}

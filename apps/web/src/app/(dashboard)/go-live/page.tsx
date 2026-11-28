@@ -117,7 +117,7 @@ function AudioMeter({
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-[10px] tracking-widest text-neutral-500 shrink-0">
+      <span className="text-[10px] tracking-widest text-muted shrink-0">
         {live ? "AUDIO · LIVE" : "AUDIO"}
       </span>
       <div
@@ -135,13 +135,13 @@ function AudioMeter({
           return (
             <span
               key={i}
-              className={`flex-1 rounded-sm ${level >= position ? colour : "bg-neutral-800 h-1/3"}`}
+              className={`flex-1 rounded-sm ${level >= position ? colour : "bg-fg/10 h-1/3"}`}
             />
           );
         })}
       </div>
       <span
-        className={`font-mono text-[11px] w-16 text-right ${clipping ? "text-red-400" : "text-neutral-500"}`}
+        className={`font-mono text-[11px] w-16 text-right ${clipping ? "text-alert" : "text-muted"}`}
       >
         {!stream ? "NO AUDIO" : clipping ? "CLIP" : db > -60 ? `${Math.round(db)} dB` : "—"}
       </span>
@@ -470,7 +470,7 @@ export default function GoLive() {
       <>
         <TopNav />
         <main className="max-w-4xl mx-auto px-6 py-8">
-          <p className="text-neutral-500 text-sm tracking-widest">LOADING…</p>
+          <p className="text-muted text-sm tracking-widest">LOADING…</p>
         </main>
       </>
     );
@@ -482,7 +482,7 @@ export default function GoLive() {
         <TopNav />
         <main className="max-w-4xl mx-auto px-6 py-8 space-y-4">
           <h1 className="text-2xl font-black tracking-wide">GO LIVE</h1>
-          <p className="border border-line bg-surface rounded-xl p-4 text-neutral-400 text-sm">
+          <p className="border border-line bg-surface rounded-xl p-4 text-muted text-sm">
             Broadcasting is for DJ accounts. An admin can set your role on the Users page.
           </p>
         </main>
@@ -556,7 +556,7 @@ export default function GoLive() {
     ok: "bg-neon",
     warn: "bg-yellow-400",
     fail: "bg-red-500",
-    wait: "bg-neutral-700",
+    wait: "bg-fg/10",
   } as const;
 
   return (
@@ -565,26 +565,26 @@ export default function GoLive() {
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <div>
           <h1 className="text-2xl font-black tracking-wide">GO LIVE</h1>
-          <p className="text-neutral-500 text-xs mt-1">
+          <p className="text-muted text-xs mt-1">
             Broadcast from this browser — no OBS, no stream key. Use your camera or share your
             screen, and pick the input your mixer is plugged into.
           </p>
         </div>
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-        {notice && <p className="text-yellow-400 text-sm">{notice}</p>}
+        {error && <p className="text-alert text-sm">{error}</p>}
+        {notice && <p className="text-warn text-sm">{notice}</p>}
 
         {role === "artist" &&
           (gate?.booking ? (
             <div className="border border-neon/40 bg-neon/5 rounded-xl p-4 text-sm">
               <span className="text-neon font-bold text-xs tracking-widest">BOOKED SESSION</span>
-              <p className="text-neutral-300 mt-1">
+              <p className="text-fg mt-1">
                 {gate.booking.title || "Live session"} · {timeLabel(gate.booking.startsAt)}–
                 {timeLabel(gate.booking.endsAt)}
               </p>
             </div>
           ) : (
-            <p className="border border-yellow-500/40 bg-yellow-500/5 rounded-xl p-4 text-sm text-neutral-300">
+            <p className="border border-yellow-500/40 bg-yellow-500/5 rounded-xl p-4 text-sm text-fg">
               {gate ? "No live session is booked right now." : "Checking your booked sessions…"}{" "}
               {gate && (
                 <>
@@ -597,7 +597,7 @@ export default function GoLive() {
             </p>
           ))}
         {role === "admin" && (
-          <p className="text-neutral-600 text-xs">
+          <p className="text-muted text-xs">
             Admin account — no live-session booking is required to broadcast.
           </p>
         )}
@@ -606,7 +606,7 @@ export default function GoLive() {
           <div className="border border-neon/40 bg-neon/5 rounded-xl p-4 flex flex-wrap items-center gap-3">
             <span className="text-neon font-black tracking-widest">● LIVE</span>
             <span className="font-mono text-sm">{clock(elapsed)}</span>
-            <span className="text-neutral-400 text-xs">
+            <span className="text-muted text-xs">
               {audioReady ? "video + audio" : "video only"}
               {restreamCount > 0 ? ` · restreaming to ${restreamCount} platform(s)` : ""}
             </span>
@@ -614,7 +614,7 @@ export default function GoLive() {
         )}
 
         {!live && status?.live && (
-          <p className="border border-line bg-surface rounded-xl p-4 text-neutral-400 text-sm">
+          <p className="border border-line bg-surface rounded-xl p-4 text-muted text-sm">
             A broadcast is already live. Only one can run at a time — going live will be refused
             until it ends.
           </p>
@@ -628,10 +628,10 @@ export default function GoLive() {
             }`}
           >
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-black tracking-widest text-neutral-300">PRE-FLIGHT</span>
+              <span className="text-xs font-black tracking-widest text-fg">PRE-FLIGHT</span>
               <span
                 className={`text-xs font-mono ${
-                  readyCount === checks.length ? "text-neon" : "text-neutral-500"
+                  readyCount === checks.length ? "text-neon" : "text-muted"
                 }`}
               >
                 {readyCount}/{checks.length} READY
@@ -645,8 +645,8 @@ export default function GoLive() {
                     aria-hidden
                   />
                   <div className="min-w-0">
-                    <span className="text-neutral-300 text-xs font-bold">{check.label}</span>
-                    <span className="block text-neutral-600 text-[11px] leading-snug">
+                    <span className="text-fg text-xs font-bold">{check.label}</span>
+                    <span className="block text-muted text-[11px] leading-snug">
                       {check.detail}
                     </span>
                   </div>
@@ -654,7 +654,7 @@ export default function GoLive() {
               ))}
             </ul>
             {phase === "preview" && !signalSeen && (
-              <p className="mt-3 text-[11px] text-yellow-400/90">
+              <p className="mt-3 text-[11px] text-warn">
                 Audio level has not moved yet — play a track, or check the selected input before
                 going live.
               </p>
@@ -665,7 +665,7 @@ export default function GoLive() {
         <section className="border border-line bg-surface rounded-xl p-4 space-y-4">
           <div className="grid md:grid-cols-2 gap-3">
             <div>
-              <span className="text-xs text-neutral-400 uppercase tracking-wider">Video source</span>
+              <span className="text-xs text-muted uppercase tracking-wider">Video source</span>
               <div className="mt-2 flex gap-2">
                 <button
                   type="button"
@@ -676,7 +676,7 @@ export default function GoLive() {
                     setSource("camera");
                   }}
                   className={`flex-1 rounded-lg py-2 text-xs font-black tracking-widest border ${
-                    source === "camera" ? "border-neon text-neon" : "border-line text-neutral-400"
+                    source === "camera" ? "border-neon text-neon" : "border-line text-muted"
                   } disabled:opacity-40`}
                 >
                   CAMERA
@@ -690,7 +690,7 @@ export default function GoLive() {
                     setSource("screen");
                   }}
                   className={`flex-1 rounded-lg py-2 text-xs font-black tracking-widest border ${
-                    source === "screen" ? "border-neon text-neon" : "border-line text-neutral-400"
+                    source === "screen" ? "border-neon text-neon" : "border-line text-muted"
                   } disabled:opacity-40`}
                 >
                   SCREEN
@@ -699,7 +699,7 @@ export default function GoLive() {
             </div>
 
             <div>
-              <span className="text-xs text-neutral-400 uppercase tracking-wider">Camera</span>
+              <span className="text-xs text-muted uppercase tracking-wider">Camera</span>
               <select
                 className={`${input} mt-2`}
                 value={cameraId}
@@ -716,7 +716,7 @@ export default function GoLive() {
             </div>
 
             <div className="md:col-span-2">
-              <span className="text-xs text-neutral-400 uppercase tracking-wider">
+              <span className="text-xs text-muted uppercase tracking-wider">
                 Microphone / mixer input
               </span>
               <select
@@ -735,14 +735,14 @@ export default function GoLive() {
                   </option>
                 ))}
               </select>
-              <p className="text-neutral-500 text-[11px] mt-1">
+              <p className="text-muted text-[11px] mt-1">
                 Browsers list devices only after you allow access, so press Preview once if the list
                 is empty.
               </p>
             </div>
           </div>
 
-          <div className="relative rounded-xl overflow-hidden border border-line bg-black aspect-video">
+          <div className="relative rounded-xl overflow-hidden border border-line bg-fg aspect-video">
             <video
               ref={videoRef}
               muted
@@ -750,7 +750,7 @@ export default function GoLive() {
               className="w-full h-full object-contain"
             />
             {phase === "idle" && (
-              <p className="absolute inset-0 grid place-items-center text-neutral-600 text-xs tracking-widest">
+              <p className="absolute inset-0 grid place-items-center text-muted text-xs tracking-widest">
                 NO PREVIEW YET
               </p>
             )}
@@ -765,7 +765,7 @@ export default function GoLive() {
               <button
                 type="button"
                 onClick={() => void startPreview()}
-                className="border border-line text-neutral-300 rounded-lg px-4 py-2 text-xs font-black tracking-widest"
+                className="border border-line text-fg rounded-lg px-4 py-2 text-xs font-black tracking-widest"
               >
                 {phase === "preview" ? "PREVIEW AGAIN" : "START PREVIEW"}
               </button>
@@ -787,12 +787,12 @@ export default function GoLive() {
                 GO LIVE
               </button>
             )}
-            {busy && <span className="text-neutral-500 text-xs tracking-widest self-center">CONNECTING…</span>}
+            {busy && <span className="text-muted text-xs tracking-widest self-center">CONNECTING…</span>}
             {(phase === "preview" || phase === "connecting" || live) && (
               <button
                 type="button"
                 onClick={teardown}
-                className="border border-red-500/50 text-red-400 rounded-lg px-4 py-2 text-xs font-black tracking-widest ml-auto"
+                className="border border-red-500/50 text-alert rounded-lg px-4 py-2 text-xs font-black tracking-widest ml-auto"
               >
                 {live ? "END BROADCAST" : "STOP PREVIEW"}
               </button>
@@ -800,7 +800,7 @@ export default function GoLive() {
           </div>
         </section>
 
-        <section className="text-neutral-500 text-xs space-y-2">
+        <section className="text-muted text-xs space-y-2">
           <p>
             The stream is pushed to every enabled platform on the admin{" "}
             <Link href="/simulcast" className="text-neon hover:underline">

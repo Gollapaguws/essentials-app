@@ -213,7 +213,7 @@ export default function VenuePortal() {
           {selected && !creating && (
             <button
               onClick={() => { setCreating(true); setError(null); setNotice(null); }}
-              className="border border-line rounded-lg px-4 py-2 text-sm font-bold text-neutral-300 hover:border-neon hover:text-neon"
+              className="border border-line rounded-lg px-4 py-2 text-sm font-bold text-fg hover:border-neon hover:text-neon"
             >
               ADD VENUE
             </button>
@@ -221,7 +221,7 @@ export default function VenuePortal() {
         </div>
         {notice && <p className="text-neon text-sm">{notice}</p>}
         {(error ?? venuesSource.error ?? pendingSource.error) && (
-          <p role="alert" className="text-red-400 text-sm">
+          <p role="alert" className="text-alert text-sm">
             {error ?? venuesSource.error ?? pendingSource.error}
           </p>
         )}
@@ -231,7 +231,7 @@ export default function VenuePortal() {
           <section className="border border-line bg-surface rounded-xl p-4">
             <h2 className="font-bold text-neon uppercase text-sm tracking-wider mb-3">Add a venue</h2>
             <form onSubmit={createVenue} className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
-              <label className="text-xs text-neutral-500 col-span-2 md:col-span-1">
+              <label className="text-xs text-muted col-span-2 md:col-span-1">
                 Venue name
                 <input
                   required
@@ -241,7 +241,7 @@ export default function VenuePortal() {
                   onChange={(e) => setNewVenue({ ...newVenue, name: e.target.value })}
                 />
               </label>
-              <label className="text-xs text-neutral-500 col-span-2">
+              <label className="text-xs text-muted col-span-2">
                 Address
                 <input
                   className={`${field} w-full mt-1`}
@@ -250,7 +250,7 @@ export default function VenuePortal() {
                   onChange={(e) => setNewVenue({ ...newVenue, address: e.target.value })}
                 />
               </label>
-              <label className="text-xs text-neutral-500 col-span-2 md:col-span-1">
+              <label className="text-xs text-muted col-span-2 md:col-span-1">
                 Capacity
                 <input
                   required
@@ -261,7 +261,7 @@ export default function VenuePortal() {
                   onChange={(e) => setNewVenue({ ...newVenue, capacity: e.target.value })}
                 />
               </label>
-              <label className="text-xs text-neutral-500">
+              <label className="text-xs text-muted">
                 Latitude
                 <input
                   className={`${field} w-full mt-1`}
@@ -271,7 +271,7 @@ export default function VenuePortal() {
                   onChange={(e) => setNewVenue({ ...newVenue, lat: e.target.value })}
                 />
               </label>
-              <label className="text-xs text-neutral-500">
+              <label className="text-xs text-muted">
                 Longitude
                 <input
                   className={`${field} w-full mt-1`}
@@ -292,12 +292,12 @@ export default function VenuePortal() {
                   <button
                     type="button"
                     onClick={() => { setCreating(false); setError(null); }}
-                    className="text-xs text-neutral-500 underline hover:text-neon"
+                    className="text-xs text-muted underline hover:text-neon"
                   >
                     Cancel
                   </button>
                 )}
-                <span className="text-xs text-neutral-500">
+                <span className="text-xs text-muted">
                   Add coordinates now if you have them — DJ route planning measures between venues.
                 </span>
               </div>
@@ -315,17 +315,17 @@ export default function VenuePortal() {
         <section className="border border-line bg-surface rounded-xl p-4">
           <h2 className="font-bold text-neon uppercase text-sm tracking-wider mb-3">Venue details &amp; location</h2>
           {!selected ? (
-            <p className="text-neutral-500 text-sm">You have no venues yet. Add the first one above and you can run events there.</p>
+            <p className="text-muted text-sm">You have no venues yet. Add the first one above and you can run events there.</p>
           ) : (
             <>
               {!hasLocation && (
-                <p className="text-yellow-400 text-sm mb-3">
+                <p className="text-warn text-sm mb-3">
                   This venue has no location yet, so DJ route planning between gigs is wrong. Set the
                   coordinates below.
                 </p>
               )}
               <form onSubmit={saveDetails} className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
-                <label className="text-xs text-neutral-500 col-span-2 md:col-span-1">
+                <label className="text-xs text-muted col-span-2 md:col-span-1">
                   Venue name
                   <input
                     className={`${field} w-full mt-1`}
@@ -333,7 +333,7 @@ export default function VenuePortal() {
                     onChange={(e) => setDetails({ ...details, name: e.target.value })}
                   />
                 </label>
-                <label className="text-xs text-neutral-500 col-span-2">
+                <label className="text-xs text-muted col-span-2">
                   Address
                   <input
                     className={`${field} w-full mt-1`}
@@ -342,7 +342,7 @@ export default function VenuePortal() {
                     onChange={(e) => setDetails({ ...details, address: e.target.value })}
                   />
                 </label>
-                <label className="text-xs text-neutral-500">
+                <label className="text-xs text-muted">
                   Latitude
                   <input
                     className={`${field} w-full mt-1`}
@@ -352,7 +352,7 @@ export default function VenuePortal() {
                     onChange={(e) => setDetails({ ...details, lat: e.target.value })}
                   />
                 </label>
-                <label className="text-xs text-neutral-500">
+                <label className="text-xs text-muted">
                   Longitude
                   <input
                     className={`${field} w-full mt-1`}
@@ -372,7 +372,7 @@ export default function VenuePortal() {
                   <button
                     type="button"
                     onClick={useMyLocation}
-                    className="border border-line rounded-lg px-4 py-2 text-sm font-bold text-neutral-300 hover:border-neon hover:text-neon"
+                    className="border border-line rounded-lg px-4 py-2 text-sm font-bold text-fg hover:border-neon hover:text-neon"
                   >
                     USE MY LOCATION
                   </button>
@@ -381,7 +381,7 @@ export default function VenuePortal() {
                       href={`https://www.google.com/maps/search/?api=1&query=${selected.lat},${selected.lng}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs text-neutral-500 underline hover:text-neon"
+                      className="text-xs text-muted underline hover:text-neon"
                     >
                       Check on the map
                     </a>
@@ -398,16 +398,16 @@ export default function VenuePortal() {
           {pending.map((e) => (
             <div key={e.id} className="flex flex-wrap items-center justify-between border-t border-line py-3 gap-2">
               <div>
-                <p className="font-bold">{e.title} <span className="text-neutral-500 text-sm">by {e.promoter.name}</span></p>
-                <p className="text-neutral-500 text-sm">{e.venue.name} · {new Date(e.date).toLocaleDateString()} · cap {e.capacity}</p>
+                <p className="font-bold">{e.title} <span className="text-muted text-sm">by {e.promoter.name}</span></p>
+                <p className="text-muted text-sm">{e.venue.name} · {new Date(e.date).toLocaleDateString()} · cap {e.capacity}</p>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => decide(e.id, true)} className="bg-neon text-bg font-black px-4 py-2 rounded-lg text-sm">APPROVE</button>
-                <button onClick={() => decide(e.id, false)} className="border border-red-500 text-red-400 px-4 py-2 rounded-lg text-sm font-bold">REJECT</button>
+                <button onClick={() => decide(e.id, false)} className="border border-red-500 text-alert px-4 py-2 rounded-lg text-sm font-bold">REJECT</button>
               </div>
             </div>
           ))}
-          {!pending.length && <p className="text-neutral-500 text-sm">Nothing pending.</p>}
+          {!pending.length && <p className="text-muted text-sm">Nothing pending.</p>}
         </section>
 
         {/* Analytics */}
@@ -420,7 +420,7 @@ export default function VenuePortal() {
             </div>
             <div className="border border-line rounded-xl overflow-x-auto">
               <table className="w-full text-sm min-w-[640px]">
-                <thead className="bg-surface text-neutral-400 uppercase text-xs">
+                <thead className="bg-surface text-muted uppercase text-xs">
                   <tr>
                     <th className="text-left px-4 py-3">Event</th><th className="text-left px-4 py-3">Status</th>
                     <th className="text-left px-4 py-3">RSVPs</th><th className="text-left px-4 py-3">Door</th>
@@ -446,9 +446,9 @@ export default function VenuePortal() {
           <section className="border border-line bg-surface rounded-xl p-4 space-y-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="font-bold text-neon uppercase text-sm tracking-wider">DJ fees &amp; invoices</h2>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-muted">
                 R{revenue.totals.paid.toLocaleString()} paid ·{" "}
-                <span className={revenue.totals.owed > 0 ? "text-yellow-400" : "text-neon"}>
+                <span className={revenue.totals.owed > 0 ? "text-warn" : "text-neon"}>
                   R{revenue.totals.owed.toLocaleString()} owed
                 </span>
                 {revenue.totals.unbilledGigs > 0 && ` · ${revenue.totals.unbilledGigs} played gig${revenue.totals.unbilledGigs === 1 ? "" : "s"} not invoiced yet`}
@@ -456,7 +456,7 @@ export default function VenuePortal() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[720px]">
-                <thead className="text-neutral-400 uppercase text-[10px] tracking-widest">
+                <thead className="text-muted uppercase text-[10px] tracking-widest">
                   <tr>
                     <th className="text-left py-2">Night</th>
                     <th className="text-right py-2">Split</th>
@@ -471,15 +471,15 @@ export default function VenuePortal() {
                     <tr key={n.id} className="border-t border-line">
                       <td className="py-2">
                         <span className="font-bold">{n.title}</span>
-                        <span className="text-neutral-500 text-xs"> · {new Date(n.date).toLocaleDateString()}</span>
+                        <span className="text-muted text-xs"> · {new Date(n.date).toLocaleDateString()}</span>
                       </td>
-                      <td className="py-2 text-right text-neutral-400 text-xs tabular-nums">
+                      <td className="py-2 text-right text-muted text-xs tabular-nums">
                         {n.venuePct}% venue / {n.promoterPct}% promoter
                       </td>
                       <td className="py-2 text-right tabular-nums">R{n.djFees.toLocaleString()}</td>
-                      <td className="py-2 text-right tabular-nums text-neutral-400">R{n.invoiced.toLocaleString()}</td>
+                      <td className="py-2 text-right tabular-nums text-muted">R{n.invoiced.toLocaleString()}</td>
                       <td className="py-2 text-right tabular-nums text-neon">R{n.paid.toLocaleString()}</td>
-                      <td className={`py-2 text-right tabular-nums ${n.owed > 0 ? "text-yellow-400" : "text-neutral-500"}`}>
+                      <td className={`py-2 text-right tabular-nums ${n.owed > 0 ? "text-warn" : "text-muted"}`}>
                         R{n.owed.toLocaleString()}
                       </td>
                     </tr>
@@ -488,7 +488,7 @@ export default function VenuePortal() {
               </table>
             </div>
             {revenue.totals.unbilledGigs > 0 && (
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-muted">
                 A played gig only turns into a bill once its DJ invoices it. The split above is the one the night was
                 booked on; the venue&apos;s share of door and table takings is settled separately.
               </p>
@@ -503,12 +503,12 @@ export default function VenuePortal() {
           <div className="max-h-64 overflow-y-auto">
             {logs.map((l) => (
               <div key={l.id} className="flex justify-between border-t border-line py-2 text-sm">
-                <span className="font-mono text-xs text-neutral-400 truncate max-w-[60%]">{l.qrToken}</span>
-                <span className={l.result === "ok" ? "text-neon" : "text-red-400"}>{l.result}</span>
-                <span className="text-neutral-500">{new Date(l.createdAt).toLocaleTimeString()}</span>
+                <span className="font-mono text-xs text-muted truncate max-w-[60%]">{l.qrToken}</span>
+                <span className={l.result === "ok" ? "text-neon" : "text-alert"}>{l.result}</span>
+                <span className="text-muted">{new Date(l.createdAt).toLocaleTimeString()}</span>
               </div>
             ))}
-            {!logs.length && <p className="text-neutral-500 text-sm">No scans yet.</p>}
+            {!logs.length && <p className="text-muted text-sm">No scans yet.</p>}
           </div>
         </section>
         )}

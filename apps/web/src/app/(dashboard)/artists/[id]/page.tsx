@@ -39,7 +39,7 @@ interface ArtistDetail {
 }
 
 const statusClass = (status: string) =>
-  status === "confirmed" ? "text-neon" : status === "pending" ? "text-yellow-400" : "text-neutral-500";
+  status === "confirmed" ? "text-neon" : status === "pending" ? "text-warn" : "text-muted";
 
 /** A note is a judgement made at a moment: its age is part of the information. */
 function noteAge(iso: string) {
@@ -97,10 +97,10 @@ export default function ArtistDetailPage() {
     <>
       <TopNav />
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        <Link href="/applications" className="text-xs text-neutral-500 hover:text-neon">
+        <Link href="/applications" className="text-xs text-muted hover:text-neon">
           ← Back to applications
         </Link>
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="text-alert text-sm">{error}</p>}
 
         {artist && (
           <>
@@ -112,7 +112,7 @@ export default function ArtistDetailPage() {
               </div>
               <div className="flex-1 min-w-56 space-y-1">
                 <h1 className="text-2xl font-black tracking-wide">{artist.stageName}</h1>
-                <p className="text-neutral-400 text-sm">
+                <p className="text-muted text-sm">
                   {artist.user.name ?? "—"} · {artist.user.email}
                 </p>
                 <p className="text-sm">
@@ -124,18 +124,18 @@ export default function ArtistDetailPage() {
                   <span className="text-neon">{artist.confirmedGigs} confirmed</span>
                 </p>
               </div>
-              {artist.bio && <p className="text-neutral-400 text-sm w-full whitespace-pre-line">{artist.bio}</p>}
+              {artist.bio && <p className="text-muted text-sm w-full whitespace-pre-line">{artist.bio}</p>}
             </section>
 
             <section className="border border-line bg-surface rounded-xl p-5 space-y-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Private note</h2>
-                <span className="text-neutral-500 text-xs">
+                <span className="text-muted text-xs">
                   Only you can see this — it appears when this DJ applies again.
                 </span>
               </div>
               {noteUpdatedAt && (
-                <p className={isStale(noteUpdatedAt) ? "text-yellow-400 text-xs" : "text-neutral-500 text-xs"}>
+                <p className={isStale(noteUpdatedAt) ? "text-warn text-xs" : "text-muted text-xs"}>
                   {noteAge(noteUpdatedAt)}
                   {isStale(noteUpdatedAt) ? " — this judgement may be out of date." : ""}
                 </p>
@@ -160,8 +160,8 @@ export default function ArtistDetailPage() {
                   {noteState === "saving" ? "SAVING…" : "SAVE NOTE"}
                 </button>
                 {noteState === "saved" && <span className="text-neon">Saved</span>}
-                {!note.trim() && <span className="text-neutral-500">Saving an empty note clears it.</span>}
-                {noteError && <span className="text-red-400">{noteError}</span>}
+                {!note.trim() && <span className="text-muted">Saving an empty note clears it.</span>}
+                {noteError && <span className="text-alert">{noteError}</span>}
               </div>
             </section>
 
@@ -169,7 +169,7 @@ export default function ArtistDetailPage() {
               <h2 className="font-bold text-neon uppercase text-sm tracking-wider">Booking history</h2>
               <div className="border border-line rounded-xl overflow-x-auto">
                 <table className="w-full text-sm min-w-[640px]">
-                  <thead className="bg-surface text-neutral-400 uppercase text-xs">
+                  <thead className="bg-surface text-muted uppercase text-xs">
                     <tr>
                       <th className="text-left px-4 py-3">Date</th>
                       <th className="text-left px-4 py-3">Event</th>
@@ -185,14 +185,14 @@ export default function ArtistDetailPage() {
                         <td className="px-4 py-3">{new Date(b.startAt).toLocaleDateString()}</td>
                         <td className="px-4 py-3">
                           <p className="font-bold">{b.event.title}</p>
-                          <p className="text-neutral-500 text-xs">{b.event.status}</p>
+                          <p className="text-muted text-xs">{b.event.status}</p>
                         </td>
                         <td className="px-4 py-3">{b.event.venue.name}</td>
                         <td className="px-4 py-3">{b.slot ?? "TBA"}</td>
                         <td className="px-4 py-3">
                           R{(b.performanceFee + b.travelFee).toLocaleString()}
                           {b.travelFee > 0 && (
-                            <span className="text-neutral-500 text-xs"> (travel R{b.travelFee.toLocaleString()})</span>
+                            <span className="text-muted text-xs"> (travel R{b.travelFee.toLocaleString()})</span>
                           )}
                         </td>
                         <td className={`px-4 py-3 ${statusClass(b.status)}`}>{b.status}</td>
@@ -200,7 +200,7 @@ export default function ArtistDetailPage() {
                     ))}
                     {!artist.bookings.length && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center text-neutral-500">
+                        <td colSpan={6} className="px-4 py-6 text-center text-muted">
                           No bookings yet.
                         </td>
                       </tr>

@@ -64,7 +64,7 @@ export default function Settings() {
       <>
         <TopNav />
         <main className="max-w-4xl mx-auto px-6 py-10">
-          <p className="text-neutral-400 text-sm">Only admins can change platform settings.</p>
+          <p className="text-muted text-sm">Only admins can change platform settings.</p>
         </main>
       </>
     );
@@ -76,14 +76,14 @@ export default function Settings() {
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <div>
           <h1 className="text-2xl font-black tracking-wide">PLATFORM SETTINGS</h1>
-          <p className="text-neutral-500 text-xs mt-1">
+          <p className="text-muted text-xs mt-1">
             Rates that apply to every DJ on the platform — nobody else can change them.
           </p>
         </div>
 
         {notice && <p className="text-neon text-sm">{notice}</p>}
         {loadError && (
-          <p role="alert" className="text-red-400 text-sm">
+          <p role="alert" className="text-alert text-sm">
             {loadError}
           </p>
         )}
@@ -92,7 +92,7 @@ export default function Settings() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-bold text-neon uppercase tracking-wider">Standard travel rate</h2>
-              <p className="text-neutral-500 text-xs mt-1 max-w-xl">
+              <p className="text-muted text-xs mt-1 max-w-xl">
                 Charged per kilometre of travel on a DJ&apos;s route plan and on invoices for billable
                 travel. It is not editable by a DJ or a promoter — this is the only place it changes.
               </p>
@@ -100,22 +100,22 @@ export default function Settings() {
             <div className="text-right">
               <p className="text-2xl font-black tracking-wide">
                 R{(rate?.travelRatePerKm ?? (Number.isFinite(value) ? value : 4.95)).toFixed(2)}
-                <span className="text-neutral-500 text-sm font-normal"> /km</span>
+                <span className="text-muted text-sm font-normal"> /km</span>
               </p>
-              <p className="text-neutral-600 text-[11px] mt-0.5">
+              <p className="text-muted text-[11px] mt-0.5">
                 {rate ? `${rate.artists} DJ profile${rate.artists === 1 ? "" : "s"} on this rate` : "loading…"}
               </p>
             </div>
           </div>
 
           {rate?.mixed && (
-            <p className="text-yellow-400/90 text-xs border border-yellow-500/40 rounded-lg px-3 py-2">
+            <p className="text-warn text-xs border border-yellow-500/40 rounded-lg px-3 py-2">
               Some DJs are still on a different rate. Saving a new rate here sets it on every profile.
             </p>
           )}
 
           <form onSubmit={save} className="flex flex-wrap items-end gap-3">
-            <label className="text-xs text-neutral-400">
+            <label className="text-xs text-muted">
               Rand per kilometre
               <input
                 type="number"
@@ -133,7 +133,7 @@ export default function Settings() {
             >
               {saving ? "SAVING…" : "SAVE RATE"}
             </button>
-            <p className="text-neutral-600 text-[11px] pb-2">
+            <p className="text-muted text-[11px] pb-2">
               Changing it reprices future travel on every DJ&apos;s route plan. Invoices already sent
               keep the amount they were billed at.
             </p>

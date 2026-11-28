@@ -114,7 +114,7 @@ const slug = (value: string) =>
     .replace(/^-|-$/g, "");
 
 const moneyTone = (status: string) =>
-  status === "paid" ? "text-neon" : status === "overdue" ? "text-red-400" : "text-neutral-400";
+  status === "paid" ? "text-neon" : status === "overdue" ? "text-alert" : "text-muted";
 
 /**
  * Statements for both sides of a gig: a DJ sees their own months, a promoter
@@ -174,13 +174,13 @@ export default function Statements() {
           description="Every gig you have been confirmed for, grouped by month: the fee, the travel added on the invoice, what the venue has paid, and what is still owed."
           actions={
             <div className="flex flex-wrap items-center gap-3">
-              <label className="text-[10px] uppercase tracking-widest text-neutral-500">
+              <label className="text-[10px] uppercase tracking-widest text-muted">
                 Month
                 <input
                   type="month"
                   value={month}
                   onChange={(e) => setMonth(e.target.value || month)}
-                  className="ml-2 bg-bg border border-line rounded-lg px-2 py-1 text-xs text-neutral-200"
+                  className="ml-2 bg-bg border border-line rounded-lg px-2 py-1 text-xs text-muted"
                 />
               </label>
               <DownloadButton
@@ -193,12 +193,12 @@ export default function Statements() {
         />
 
         {(error ?? loadError) && (
-          <p role="alert" className="text-red-400 text-sm">
+          <p role="alert" className="text-alert text-sm">
             {error ?? loadError}
           </p>
         )}
         {noProfile && (
-          <p className="border border-line bg-surface rounded-xl p-4 text-neutral-400 text-sm">
+          <p className="border border-line bg-surface rounded-xl p-4 text-muted text-sm">
             Statements belong to a DJ profile. Create one on{" "}
             <a href="/artist/profile" className="text-neon hover:underline">
               My Profile
@@ -214,12 +214,12 @@ export default function Statements() {
           <Stat label="Still owed" value={rand(totals?.outstanding ?? 0)} />
         </div>
 
-        <p className="text-neutral-500 text-xs">
+        <p className="text-muted text-xs">
           {totals
             ? `${totals.gigs} gig${totals.gigs === 1 ? "" : "s"} across ${totals.months} month${totals.months === 1 ? "" : "s"}`
             : "Loading…"}
         </p>
-        <p className="text-neutral-600 text-[11px]">
+        <p className="text-faint text-[11px]">
           Travel on uninvoiced gigs is estimated from your home base at the platform rate; invoiced
           gigs show the amount that was billed. Add or fix your home base in My Profile to make the
           estimate accurate.
@@ -230,7 +230,7 @@ export default function Statements() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
               <div>
                 <h2 className="text-sm font-bold uppercase tracking-wider">{monthLabel(row.key)}</h2>
-                <p className="text-neutral-500 text-xs mt-1">
+                <p className="text-muted text-xs mt-1">
                   {row.gigCount} gig{row.gigCount === 1 ? "" : "s"} · {rand(row.agreed)} agreed ·{" "}
                   <span className="text-neon">{rand(row.paid)} paid</span> · {rand(row.outstanding)} owed
                 </p>
@@ -244,7 +244,7 @@ export default function Statements() {
             <div className="overflow-x-auto -mx-1">
               <table className="w-full min-w-[640px] text-sm">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-widest text-neutral-500">
+                  <tr className="text-left text-[11px] uppercase tracking-widest text-muted">
                     <th className="px-1 py-2">Gig</th>
                     <th className="px-1 py-2 text-right">Fee</th>
                     <th className="px-1 py-2 text-right">Travel</th>
@@ -258,16 +258,16 @@ export default function Statements() {
                     <tr key={gig.id} className="border-t border-line align-top">
                       <td className="px-1 py-2">
                         <p className="font-bold">{gig.night}</p>
-                        <p className="text-neutral-500 text-xs">
+                        <p className="text-muted text-xs">
                           {gig.venue} · {new Date(gig.startAt).toLocaleDateString()}
                           {gig.slot ? ` · ${gig.slot}` : ""}
                         </p>
                       </td>
                       <td className="px-1 py-2 text-right">{rand(gig.fee)}</td>
-                      <td className="px-1 py-2 text-right text-neutral-400">
+                      <td className="px-1 py-2 text-right text-muted">
                         {rand(gig.travel)}
                         {gig.travelEstimated && (
-                          <span className="block text-[10px] text-neutral-600">estimated</span>
+                          <span className="block text-[10px] text-faint">estimated</span>
                         )}
                       </td>
                       <td className="px-1 py-2 text-right">{rand(gig.invoiced)}</td>
@@ -278,7 +278,7 @@ export default function Statements() {
                             {gig.invoice.number} · {gig.invoice.status}
                           </span>
                         ) : (
-                          <span className="text-yellow-400">not invoiced</span>
+                          <span className="text-warn">not invoiced</span>
                         )}
                       </td>
                     </tr>
@@ -291,7 +291,7 @@ export default function Statements() {
 
         {artist && !artist.months.length && (
           <Panel>
-            <p className="text-neutral-500 text-sm">
+            <p className="text-muted text-sm">
               No statements yet. A gig lands here once a promoter confirms you for it.
               Travel on uninvoiced gigs is estimated from your home base.
             </p>
@@ -311,13 +311,13 @@ export default function Statements() {
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <Badge tone="info">{totals?.djs ?? 0} DJs</Badge>
-            <label className="text-[10px] uppercase tracking-widest text-neutral-500">
+            <label className="text-[10px] uppercase tracking-widest text-muted">
               Statement month
               <input
                 type="month"
                 value={month}
                 onChange={(e) => setMonth(e.target.value || month)}
-                className="ml-2 bg-bg border border-line rounded-lg px-2 py-1 text-xs text-neutral-200"
+                className="ml-2 bg-bg border border-line rounded-lg px-2 py-1 text-xs text-muted"
               />
             </label>
           </div>
@@ -325,13 +325,13 @@ export default function Statements() {
       />
 
       {(error ?? loadError) && (
-        <p role="alert" className="text-red-400 text-sm">
+        <p role="alert" className="text-alert text-sm">
           {error ?? loadError}
         </p>
       )}
       {notice && <p className="text-neon text-sm">{notice}</p>}
       {promoter?.page?.hasMore && (
-        <p className="text-amber-300/90 text-xs">
+        <p className="text-warn text-xs">
           Showing {promoter.page.shown} of {promoter.page.total} DJs. The totals above cover all of them.
         </p>
       )}
@@ -349,7 +349,7 @@ export default function Statements() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-sm font-bold uppercase tracking-wider">{dj.stageName}</h2>
-                <p className="text-neutral-500 text-xs mt-1">
+                <p className="text-muted text-xs mt-1">
                   {dj.gigs.length} gig{dj.gigs.length === 1 ? "" : "s"} · {rand(dj.agreed)} agreed ·{" "}
                   <span className="text-neon">{rand(dj.paid)} paid</span> · {rand(dj.outstanding)} outstanding
                 </p>
@@ -375,7 +375,7 @@ export default function Statements() {
             <div className="overflow-x-auto mt-3">
               <table className="w-full min-w-[560px] text-sm">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-widest text-neutral-500">
+                  <tr className="text-left text-[11px] uppercase tracking-widest text-muted">
                     <th className="px-1 py-2">Month</th>
                     <th className="px-1 py-2 text-right">Gigs</th>
                     <th className="px-1 py-2 text-right">Agreed</th>
@@ -393,7 +393,7 @@ export default function Statements() {
                           path={`/artists/statements.csv?month=${row.key}&artistId=${dj.id}`}
                           filename={`statement-${slug(dj.stageName)}-${row.key}.csv`}
                           label="CSV"
-                          className="ml-2 text-neutral-400 underline text-[11px]"
+                          className="ml-2 text-muted underline text-[11px]"
                         />
                       </td>
                       <td className="px-1 py-2 text-right">{row.gigCount}</td>
@@ -412,7 +412,7 @@ export default function Statements() {
 
       {promoter && !promoter.djs.length && (
         <Panel>
-          <p className="text-neutral-500 text-sm">
+          <p className="text-muted text-sm">
             No DJ statements yet. Once you confirm a DJ for a night, their fees appear here.
           </p>
         </Panel>

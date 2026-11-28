@@ -81,7 +81,7 @@ export function PromoterOnboarding() {
     >
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.18em] text-neutral-600">
+          <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.18em] text-faint">
             <span>Setup progress</span>
             <span className="tabular-nums">{percent}%</span>
           </div>
@@ -91,7 +91,7 @@ export function PromoterOnboarding() {
             aria-valuemin={0}
             aria-valuemax={STEPS.length}
             aria-valuenow={done}
-            className="h-1.5 overflow-hidden rounded-full bg-white/[0.05]"
+            className="h-1.5 overflow-hidden rounded-full bg-surface"
           >
             <div
               className="h-full rounded-full bg-neon transition-[width] duration-300"
@@ -113,7 +113,7 @@ export function PromoterOnboarding() {
                   className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10px] font-black ${
                     complete
                       ? "border-neon/40 bg-neon/10 text-neon"
-                      : "border-line bg-white/[0.02] text-neutral-500"
+                      : "border-line bg-surface text-muted"
                   }`}
                 >
                   {complete ? "✓" : index + 1}
@@ -121,7 +121,7 @@ export function PromoterOnboarding() {
                 <div className="min-w-0 flex-1">
                   <p
                     className={`text-sm font-bold ${
-                      complete ? "text-neutral-500" : "text-neutral-200"
+                      complete ? "text-muted" : "text-muted"
                     }`}
                   >
                     {step.title}
@@ -131,7 +131,7 @@ export function PromoterOnboarding() {
                       </span>
                     )}
                   </p>
-                  <p className="mt-0.5 text-xs leading-5 text-neutral-500">{step.body}</p>
+                  <p className="mt-0.5 text-xs leading-5 text-muted">{step.body}</p>
                 </div>
                 {!complete && (
                   <Link href={step.href} className="console-btn console-btn-secondary">
@@ -143,9 +143,9 @@ export function PromoterOnboarding() {
           })}
         </ol>
 
-        <p className="text-[11px] text-neutral-600">
+        <p className="text-[11px] text-faint">
           Want the longer version?{" "}
-          <Link href="/help" className="text-neutral-400 underline hover:text-neon">
+          <Link href="/help" className="text-muted underline hover:text-neon">
             Read the first-night walkthrough
           </Link>
           .

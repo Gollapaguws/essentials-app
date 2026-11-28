@@ -131,7 +131,7 @@ export function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm px-4 pt-24"
+      className="fixed inset-0 z-50 bg-fg/55 backdrop-blur-sm px-4 pt-24"
       onClick={close}
       role="dialog"
       aria-modal="true"
@@ -159,13 +159,13 @@ export function CommandPalette() {
           }}
           placeholder="Search events, DJs or guests…"
           aria-label="Search events, DJs or guests"
-          className="w-full bg-transparent px-5 py-4 text-sm outline-none placeholder:text-neutral-600"
+          className="w-full bg-transparent px-5 py-4 text-sm outline-none placeholder:text-muted"
         />
 
         <div className="border-t border-line max-h-80 overflow-y-auto">
           {grouped.map(({ group, rows }) => (
             <div key={group}>
-              <p className="px-5 pt-3 pb-1 text-[10px] tracking-[0.2em] text-neutral-600">{group.toUpperCase()}</p>
+              <p className="px-5 pt-3 pb-1 text-[10px] tracking-[0.2em] text-muted">{group.toUpperCase()}</p>
               {rows.map((item) => {
                 const index = items.indexOf(item);
                 return (
@@ -174,11 +174,11 @@ export function CommandPalette() {
                     onClick={() => go(item)}
                     onMouseEnter={() => setActive(index)}
                     className={`w-full text-left px-5 py-2 flex items-baseline gap-3 ${
-                      index === active ? "bg-neon/10 text-neon" : "text-neutral-300"
+                      index === active ? "bg-neon/10 text-neon" : "text-fg"
                     }`}
                   >
                     <span className="text-sm truncate">{item.label}</span>
-                    <span className="ml-auto text-[11px] text-neutral-600 truncate max-w-[55%] text-right">
+                    <span className="ml-auto text-[11px] text-muted truncate max-w-[55%] text-right">
                       {item.detail}
                     </span>
                   </button>
@@ -188,7 +188,7 @@ export function CommandPalette() {
           ))}
 
           {!grouped.length && (
-            <p className="px-5 py-6 text-xs tracking-widest text-neutral-600">
+            <p className="px-5 py-6 text-xs tracking-widest text-muted">
               {query.trim().length < 2
                 ? "TYPE AT LEAST TWO LETTERS"
                 : busy
@@ -198,7 +198,7 @@ export function CommandPalette() {
           )}
         </div>
 
-        <div className="border-t border-line px-5 py-2 flex items-center gap-4 text-[10px] tracking-widest text-neutral-600">
+        <div className="border-t border-line px-5 py-2 flex items-center gap-4 text-[10px] tracking-widest text-muted">
           <span>↑↓ MOVE</span>
           <span>↵ OPEN</span>
           <span>ESC CLOSE</span>

@@ -68,7 +68,7 @@ export function BuildGuard() {
       role="alert"
       className="fixed bottom-4 left-1/2 z-[60] flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 items-center justify-between gap-3 rounded-xl border border-neon/60 bg-surface px-4 py-3 shadow-lg"
     >
-      <p className="text-xs text-neutral-300">
+      <p className="text-xs text-muted">
         A new version of the dashboard was deployed. Reload to pick it up.
       </p>
       <button

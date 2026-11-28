@@ -294,7 +294,7 @@ export function TopNav() {
         if (!items.length) return null;
         return (
           <div key={group} className="mt-5 first:mt-2">
-            <p className="px-3 pb-1.5 text-[9px] font-black tracking-[0.26em] text-neutral-700">{group}</p>
+            <p className="px-3 pb-1.5 text-[9px] font-black tracking-[0.26em] text-muted">{group}</p>
             <div className="space-y-0.5">
               {items.map((link) => {
                 const active = isActive(link.href);
@@ -306,17 +306,12 @@ export function TopNav() {
                     onClick={onNavigate}
                     title={link.hint}
                     aria-current={active ? "page" : undefined}
-                    className={`group relative flex items-center rounded-lg px-3 py-2 text-[12px] font-semibold transition ${
+                    className={`flex items-center rounded-lg border px-3 py-2 text-[10.5px] font-black uppercase tracking-[0.1em] transition ${
                       active
-                        ? "bg-white/[0.065] text-white"
-                        : "text-neutral-500 hover:bg-white/[0.035] hover:text-neutral-200"
+                        ? "border-neon bg-neon text-bg"
+                        : "border-line bg-surface text-muted hover:border-neon hover:text-neon"
                     }`}
                   >
-                    <span
-                      className={`absolute left-0 h-4 w-0.5 rounded-r-full transition ${
-                        active ? "bg-neon" : "bg-transparent group-hover:bg-line"
-                      }`}
-                    />
                     <span className="truncate">{link.label}</span>
                     {(active || badge > 0) && (
                       <span className="ml-auto flex items-center gap-1.5">
@@ -343,21 +338,21 @@ export function TopNav() {
 
   const account = (
     <div className="space-y-2 border-t border-line/70 p-3">
-      <div className="rounded-xl border border-line/70 bg-white/[0.02] px-3 py-2.5">
+      <div className="rounded-xl border border-line/70 bg-fg/[0.02] px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[9px] font-black tracking-[0.2em] text-neutral-600">SIGNED IN</span>
-          <span className="rounded-full border border-neon/25 bg-neon/5 px-1.5 py-0.5 text-[8px] font-black tracking-[0.14em] text-neon/80">
+          <span className="text-[9px] font-black tracking-[0.2em] text-muted">SIGNED IN</span>
+          <span className="rounded-full border border-neon/40 bg-neon/5 px-1.5 py-0.5 text-[8px] font-black tracking-[0.14em] text-neon">
             {roleLabel}
           </span>
         </div>
-        <p className="mt-1.5 truncate text-[11px] text-neutral-400" title={user?.email ?? undefined}>
+        <p className="mt-1.5 truncate text-[11px] text-muted" title={user?.email ?? undefined}>
           {user?.email ?? "—"}
         </p>
       </div>
       <button
         onClick={signOut}
         title="Ends the Supabase session in this browser and returns to the sign-in screen."
-        className="w-full rounded-lg border border-line/70 px-3 py-2 text-[9px] font-black tracking-[0.2em] text-neutral-500 transition hover:border-red-500/30 hover:text-red-400"
+        className="w-full rounded-lg border border-line/70 px-3 py-2 text-[9px] font-black tracking-[0.2em] text-muted transition hover:border-alert/40 hover:text-alert"
       >
         SIGN OUT
       </button>
@@ -366,13 +361,13 @@ export function TopNav() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-line/80 bg-[#0b0b0b]/95 backdrop-blur-xl lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-line bg-surface lg:flex">
         <div className="border-b border-line/70 px-4 pb-4 pt-5">
           <Link href="/" className="group flex items-baseline gap-2">
             <span className="text-[15px] font-black tracking-[0.2em] text-neon transition group-hover:opacity-80">SONUS</span>
-            <span className="text-[8px] font-black tracking-[0.22em] text-neutral-700">/ EDM</span>
+            <span className="text-[8px] font-black tracking-[0.22em] text-faint">/ EDM</span>
           </Link>
-          <p className="mt-1 text-[9px] font-bold tracking-[0.3em] text-neutral-600">CONTROL ROOM</p>
+          <p className="mt-1 text-[9px] font-bold tracking-[0.3em] text-faint">CONTROL ROOM</p>
           <a
             href="https://essentialsedm.com"
             title="Open the public essentialsedm.com site in a new tab."
@@ -384,11 +379,11 @@ export function TopNav() {
           <button
             onClick={search}
             title="Find an event, a DJ or a guest without leaving this page. ⌘K (Ctrl-K) opens it anywhere."
-            className="mt-2 flex w-full items-center gap-2 rounded-lg border border-line/80 bg-white/[0.02] px-3 py-2 text-left text-[10px] font-bold tracking-[0.12em] text-neutral-500 transition hover:border-neon/35 hover:text-neon"
+            className="mt-2 flex w-full items-center gap-2 rounded-lg border border-line/80 bg-bg px-3 py-2 text-left text-[10px] font-bold tracking-[0.12em] text-muted transition hover:border-neon/35 hover:text-neon"
           >
             <span className="text-sm leading-none">⌕</span>
             <span>SEARCH EVERYTHING</span>
-            <span className="ml-auto text-[9px] text-neutral-700">⌘K</span>
+            <span className="ml-auto text-[9px] text-muted">⌘K</span>
           </button>
         </div>
         {navigation()}
@@ -401,17 +396,17 @@ export function TopNav() {
             onClick={() => setOpen(true)}
             aria-label="Open console menu"
             aria-expanded={open}
-            className="flex h-9 w-9 flex-col items-center justify-center gap-1 rounded-lg border border-line/80 text-neutral-400"
+            className="flex h-9 w-9 flex-col items-center justify-center gap-1 rounded-lg border border-line/80 text-muted"
           >
             <span className="h-px w-4 bg-current" />
             <span className="h-px w-4 bg-current" />
           </button>
           <Link href="/" className="text-sm font-black tracking-[0.18em] text-neon">SONUS</Link>
-          <span className="rounded-full border border-line px-2 py-0.5 text-[8px] font-black tracking-[0.18em] text-neutral-600">CONSOLE</span>
+          <span className="rounded-full border border-line px-2 py-0.5 text-[8px] font-black tracking-[0.18em] text-faint">CONSOLE</span>
           <button
             onClick={search}
             aria-label="Search events, DJs and guests"
-            className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg border border-line/80 text-sm text-neutral-400"
+            className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg border border-line/80 text-sm text-muted"
           >
             ⌕
           </button>
@@ -420,17 +415,17 @@ export function TopNav() {
 
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Console menu">
-          <button className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setOpen(false)} aria-label="Close console menu" />
-          <aside className="relative flex h-full w-[min(19rem,88vw)] flex-col border-r border-line bg-[#0b0b0b] shadow-2xl">
+          <button className="absolute inset-0 bg-fg/55 backdrop-blur-sm" onClick={() => setOpen(false)} aria-label="Close console menu" />
+          <aside className="relative flex h-full w-[min(19rem,88vw)] flex-col border-r border-line bg-surface">
             <div className="flex items-center justify-between border-b border-line/70 px-4 py-4">
               <div>
                 <Link href="/" onClick={() => setOpen(false)} className="text-sm font-black tracking-[0.18em] text-neon">SONUS</Link>
-                <p className="mt-0.5 text-[8px] font-bold tracking-[0.28em] text-neutral-600">CONTROL ROOM</p>
+                <p className="mt-0.5 text-[8px] font-bold tracking-[0.28em] text-faint">CONTROL ROOM</p>
               </div>
               <button
                 onClick={() => setOpen(false)}
                 aria-label="Close console menu"
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-line/80 text-lg text-neutral-500"
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-line/80 text-lg text-muted"
               >
                 ×
               </button>

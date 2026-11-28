@@ -15,13 +15,13 @@ interface AuditRow {
 }
 
 const KIND_CLASS: Record<string, string> = {
-  sign_in: "text-neutral-400",
-  lazy_link: "text-neutral-400",
-  role_change: "text-yellow-400",
+  sign_in: "text-muted",
+  lazy_link: "text-muted",
+  role_change: "text-warn",
   mfa_enrolled: "text-neon",
-  mfa_escalated: "text-red-400",
-  mfa_reset: "text-yellow-300",
-  mfa_disabled: "text-yellow-300",
+  mfa_escalated: "text-alert",
+  mfa_reset: "text-warn",
+  mfa_disabled: "text-warn",
   mfa_reenabled: "text-neon",
 };
 
@@ -69,23 +69,23 @@ export default function Audit() {
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
         <div>
           <h1 className="text-2xl font-black tracking-wide">AUDIT TRAIL</h1>
-          <p className="text-neutral-500 text-xs mt-1">
+          <p className="text-muted text-xs mt-1">
             Security-relevant events from the last 200 records: sign-ins, linked accounts, role changes and
             MFA activity.
           </p>
         </div>
 
-        {!isAdmin && me && <p className="text-neutral-400 text-sm">Admins only.</p>}
+        {!isAdmin && me && <p className="text-muted text-sm">Admins only.</p>}
         {error && (
-          <p role="alert" className="text-red-400 text-sm">
+          <p role="alert" className="text-alert text-sm">
             {error}
           </p>
         )}
-        {loading && <p className="text-neutral-500 text-xs">Loading the trail…</p>}
+        {loading && <p className="text-muted text-xs">Loading the trail…</p>}
 
         <div className="border border-line rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-surface text-neutral-400 uppercase text-xs">
+            <thead className="bg-surface text-muted uppercase text-xs">
               <tr>
                 <th className="text-left px-4 py-3">When</th>
                 <th className="text-left px-4 py-3">Event</th>
@@ -97,18 +97,18 @@ export default function Audit() {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="border-t border-line align-top">
-                  <td className="px-4 py-3 text-neutral-400 text-xs whitespace-nowrap">
+                  <td className="px-4 py-3 text-muted text-xs whitespace-nowrap">
                     {new Date(r.createdAt).toLocaleString()}
                   </td>
-                  <td className={`px-4 py-3 font-bold text-xs ${KIND_CLASS[r.kind] ?? "text-neutral-300"}`}>
+                  <td className={`px-4 py-3 font-bold text-xs ${KIND_CLASS[r.kind] ?? "text-fg"}`}>
                     {KIND_LABEL[r.kind] ?? r.kind.replace(/_/g, " ")}
                   </td>
                   <td className="px-4 py-3 text-xs">
                     {r.email ?? "—"}
-                    {r.userId && <span className="block text-neutral-600">{r.userId}</span>}
+                    {r.userId && <span className="block text-muted">{r.userId}</span>}
                   </td>
-                  <td className="px-4 py-3 text-neutral-500 text-xs">{r.ip ?? "—"}</td>
-                  <td className="px-4 py-3 text-neutral-500 text-xs break-all">
+                  <td className="px-4 py-3 text-muted text-xs">{r.ip ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted text-xs break-all">
                     {r.kind === "mfa_reset"
                       ? describeReset(r.meta ?? {})
                       : r.kind === "mfa_disabled"
@@ -123,7 +123,7 @@ export default function Audit() {
               ))}
               {!rows.length && !error && !loading && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-neutral-500">
+                  <td colSpan={5} className="px-4 py-6 text-center text-muted">
                     No audit events yet.
                   </td>
                 </tr>

@@ -43,7 +43,7 @@ interface Invoice { id: string; status: string; total: number }
 
 const BIO_MAX = 2000;
 const field = "w-full bg-bg border border-line rounded-lg px-3 py-2 text-sm outline-none focus:border-neon";
-const label = "text-xs font-bold tracking-widest text-neutral-400 uppercase";
+const label = "text-xs font-bold tracking-widest text-muted uppercase";
 
 /** DJ profile, detailed: the public-facing card plus the travel costs routing invoices use. */
 export default function ArtistProfilePage() {
@@ -245,16 +245,16 @@ export default function ArtistProfilePage() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-2xl font-black tracking-wide">MY PROFILE</h1>
-            <p className="text-neutral-500 text-xs mt-1">
+            <p className="text-muted text-xs mt-1">
               What promoters and venues see, plus the travel costs and bank account your invoices use.
             </p>
           </div>
-          <Link href="/artist" className="text-xs tracking-widest text-neutral-400 hover:text-neon">
+          <Link href="/artist" className="text-xs tracking-widest text-muted hover:text-neon">
             ← ARTIST PORTAL
           </Link>
         </div>
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="text-alert text-sm">{error}</p>}
         {saved && <p className="text-neon text-sm">{saved}</p>}
 
         <div className="grid md:grid-cols-3 gap-6 items-start">
@@ -279,7 +279,7 @@ export default function ArtistProfilePage() {
                   {form.imageUrl ? (
                     <img src={form.imageUrl} alt={form.stageName || "DJ"} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-[10px] text-neutral-600 text-center leading-tight">NO IMAGE</span>
+                    <span className="text-[10px] text-muted text-center leading-tight">NO IMAGE</span>
                   )}
                 </div>
                 <div className="flex flex-col items-start gap-1.5">
@@ -301,14 +301,14 @@ export default function ArtistProfilePage() {
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, imageUrl: "" })}
-                      className="text-[11px] text-neutral-500 hover:text-red-400"
+                      className="text-[11px] text-muted hover:text-alert"
                     >
                       Remove photo
                     </button>
                   )}
                 </div>
               </div>
-              <p className="text-[11px] text-neutral-600 mt-1">
+              <p className="text-[11px] text-muted mt-1">
                 Square photo, up to 5 MB. Saved with the rest of your profile.
               </p>
             </div>
@@ -316,7 +316,7 @@ export default function ArtistProfilePage() {
             <div>
               <div className="flex items-end justify-between">
                 <label className={label} htmlFor="bio">Bio</label>
-                <span className={`text-[11px] ${bio.length > BIO_MAX ? "text-red-400" : "text-neutral-600"}`}>
+                <span className={`text-[11px] ${bio.length > BIO_MAX ? "text-alert" : "text-muted"}`}>
                   {bio.length}/{BIO_MAX}
                 </span>
               </div>
@@ -329,15 +329,15 @@ export default function ArtistProfilePage() {
                 value={bio}
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
               />
-              <p className="text-[11px] text-neutral-600 mt-1">
+              <p className="text-[11px] text-muted mt-1">
                 Plain text. Leave it empty to hide the bio from your profile.
               </p>
             </div>
 
             <div className="border-t border-line pt-4 space-y-3">
               <div>
-                <p className="text-xs font-bold tracking-widest text-neutral-400 uppercase">Bank account</p>
-                <p className="text-[11px] text-neutral-600 mt-1">
+                <p className="text-xs font-bold tracking-widest text-muted uppercase">Bank account</p>
+                <p className="text-[11px] text-muted mt-1">
                   Printed automatically on every invoice so the venue can pay you. Promoters never see these details.
                 </p>
               </div>
@@ -402,7 +402,7 @@ export default function ArtistProfilePage() {
                   />
                 </div>
               </div>
-              <p className={`text-[11px] ${bankComplete ? "text-neutral-600" : "text-yellow-400"}`}>
+              <p className={`text-[11px] ${bankComplete ? "text-muted" : "text-warn"}`}>
                 {bankComplete
                   ? "Your bank account is ready for invoices."
                   : "Account holder, bank, account number and branch code are needed before you can invoice a venue."}
@@ -411,8 +411,8 @@ export default function ArtistProfilePage() {
 
             <div className="border-t border-line pt-4 space-y-3">
               <div>
-                <p className="text-xs font-bold tracking-widest text-neutral-400 uppercase">Home base</p>
-                <p className="text-[11px] text-neutral-600 mt-1">
+                <p className="text-xs font-bold tracking-widest text-muted uppercase">Home base</p>
+                <p className="text-[11px] text-muted mt-1">
                   The address invoices calculate return travel from. It is private and never shown to promoters.
                 </p>
               </div>
@@ -439,8 +439,8 @@ export default function ArtistProfilePage() {
                     {locating ? "LOCATING…" : "USE MY LOCATION"}
                   </button>
                 </div>
-                {geoError && <p className="text-[11px] text-red-400 mt-1">{geoError}</p>}
-                <p className="text-[11px] text-neutral-600 mt-1">
+                {geoError && <p className="text-[11px] text-alert mt-1">{geoError}</p>}
+                <p className="text-[11px] text-muted mt-1">
                   {form.homeAddress.trim()
                     ? form.homeLat != null && form.homeLng != null
                       ? "Location set. Invoice travel is calculated from here."
@@ -450,7 +450,7 @@ export default function ArtistProfilePage() {
                     href="https://www.openstreetmap.org/copyright"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline underline-offset-2 hover:text-neutral-400"
+                    className="underline underline-offset-2 hover:text-muted"
                   >
                     Address search © OpenStreetMap contributors
                   </a>
@@ -481,7 +481,7 @@ export default function ArtistProfilePage() {
                   value={profile?.travelRatePerKm ?? form.travelRatePerKm}
                   readOnly
                 />
-                <p className="text-[11px] text-neutral-500 mt-1">Standard rate set by SONUS — not editable.</p>
+                <p className="text-[11px] text-muted mt-1">Standard rate set by SONUS — not editable.</p>
               </div>
             </div>
 
@@ -492,7 +492,7 @@ export default function ArtistProfilePage() {
 
           <div className="space-y-4">
             <section className="bg-surface border border-line rounded-xl p-5">
-              <p className="text-[11px] font-bold tracking-widest text-neutral-500 uppercase mb-3">Preview</p>
+              <p className="text-[11px] font-bold tracking-widest text-muted uppercase mb-3">Preview</p>
               {form.imageUrl ? (
                 <img
                   src={form.imageUrl}
@@ -500,31 +500,31 @@ export default function ArtistProfilePage() {
                   className="w-full aspect-square object-cover rounded-lg border border-line mb-3"
                 />
               ) : (
-                <div className="w-full aspect-square rounded-lg border border-dashed border-line grid place-items-center text-neutral-600 text-xs mb-3">
+                <div className="w-full aspect-square rounded-lg border border-dashed border-line grid place-items-center text-muted text-xs mb-3">
                   No image yet
                 </div>
               )}
               <p className="text-lg font-black text-neon">{form.stageName.trim() || "Your stage name"}</p>
-              <p className="text-sm text-neutral-300 mt-2 whitespace-pre-wrap">
+              <p className="text-sm text-fg mt-2 whitespace-pre-wrap">
                 {bio.trim() || "No bio yet — promoters only see your stage name."}
               </p>
             </section>
 
             <section className="bg-surface border border-line rounded-xl p-5 space-y-2 text-sm">
-              <p className="text-[11px] font-bold tracking-widest text-neutral-500 uppercase">Activity</p>
-              <p className="flex justify-between"><span className="text-neutral-500">Gigs</span><span>{gigs.length}</span></p>
-              <p className="flex justify-between"><span className="text-neutral-500">Confirmed</span><span className="text-neon">{confirmed}</span></p>
-              <p className="flex justify-between"><span className="text-neutral-500">Invoiced</span><span>R{owed.toLocaleString()}</span></p>
+              <p className="text-[11px] font-bold tracking-widest text-muted uppercase">Activity</p>
+              <p className="flex justify-between"><span className="text-muted">Gigs</span><span>{gigs.length}</span></p>
+              <p className="flex justify-between"><span className="text-muted">Confirmed</span><span className="text-neon">{confirmed}</span></p>
+              <p className="flex justify-between"><span className="text-muted">Invoiced</span><span>R{owed.toLocaleString()}</span></p>
               <p className="flex justify-between">
-                <span className="text-neutral-500">Bank details</span>
-                <span className={bankComplete ? "text-neon" : "text-yellow-400"}>
+                <span className="text-muted">Bank details</span>
+                <span className={bankComplete ? "text-neon" : "text-warn"}>
                   {bankComplete ? "ready" : "missing"}
                 </span>
               </p>
               {profile && (
                 <p className="flex justify-between">
-                  <span className="text-neutral-500">Profile</span>
-                  <span className={profile.bio && profile.imageUrl ? "text-neon" : "text-yellow-400"}>
+                  <span className="text-muted">Profile</span>
+                  <span className={profile.bio && profile.imageUrl ? "text-neon" : "text-warn"}>
                     {!profile.bio ? "bio missing" : !profile.imageUrl ? "image missing" : "complete"}
                   </span>
                 </p>

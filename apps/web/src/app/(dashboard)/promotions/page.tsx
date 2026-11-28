@@ -42,7 +42,7 @@ export default function Promotions() {
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
         <h1 className="text-2xl font-black tracking-wide">PROMOTIONS</h1>
         {loadError && (
-          <p role="alert" className="text-red-400 text-sm">
+          <p role="alert" className="text-alert text-sm">
             {loadError}
           </p>
         )}
@@ -62,7 +62,7 @@ export default function Promotions() {
         </form>
         <div className="border border-line rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-surface text-neutral-400 uppercase text-xs">
+            <thead className="bg-surface text-muted uppercase text-xs">
               <tr><th className="text-left px-4 py-3">Code</th><th className="text-left px-4 py-3">Kind</th><th className="text-left px-4 py-3">% off</th><th className="text-left px-4 py-3">Used</th></tr>
             </thead>
             <tbody>
@@ -74,7 +74,7 @@ export default function Promotions() {
                   <td className="px-4 py-3">{p.uses}/{p.maxUses}</td>
                 </tr>
               ))}
-              {!promos.length && <tr><td colSpan={4} className="px-4 py-6 text-center text-neutral-500">No promo codes for this event.</td></tr>}
+              {!promos.length && <tr><td colSpan={4} className="px-4 py-6 text-center text-muted">No promo codes for this event.</td></tr>}
             </tbody>
           </table>
         </div>

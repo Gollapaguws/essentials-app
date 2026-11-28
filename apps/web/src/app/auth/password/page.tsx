@@ -69,18 +69,18 @@ export default function SetPasswordPage() {
     <main className="min-h-screen grid place-items-center px-6">
       <div className="w-full max-w-md border border-line bg-surface rounded-2xl p-8 space-y-4">
         <h1 className="text-neon text-2xl font-black tracking-widest">CHOOSE A NEW PASSWORD</h1>
-        <p className="text-neutral-400 text-sm">
+        <p className="text-muted text-sm">
           {recovery
             ? "You opened a recovery link. Choose a new password — the old one stops working straight away."
             : "This is the first sign-in for this address. Set your own password — the one it was created with stops working for you here."}
         </p>
 
         {checking ? (
-          <p className="text-neutral-500 text-sm tracking-widest">LOADING…</p>
+          <p className="text-muted text-sm tracking-widest">LOADING…</p>
         ) : (
           <form className="space-y-4" onSubmit={submit}>
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-muted">
                 <label htmlFor="password">New password</label>
                 <InfoTip label="At least 12 characters. Use a phrase you have not used on another service." />
               </div>
@@ -97,7 +97,7 @@ export default function SetPasswordPage() {
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-muted">
                 <label htmlFor="confirm">Repeat password</label>
                 <InfoTip label="Typed twice so a slip of the finger cannot lock you out of the account." />
               </div>
@@ -122,7 +122,7 @@ export default function SetPasswordPage() {
           </form>
         )}
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="text-alert text-sm">{error}</p>}
       </div>
     </main>
   );

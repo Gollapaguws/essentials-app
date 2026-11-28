@@ -133,7 +133,7 @@ export default function LoginPage() {
     <main className="min-h-screen grid place-items-center px-6">
       <div className="w-full max-w-md border border-line bg-surface rounded-2xl p-8">
         <h1 className="font-display text-neon text-3xl tracking-[0.18em]">SONUS</h1>
-        <p className="text-neutral-500 mt-2 text-sm">Dashboard — sign in to continue.</p>
+        <p className="text-muted mt-2 text-sm">Dashboard — sign in to continue.</p>
         <a
           href="https://essentialsedm.com"
           className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-neon/40 bg-neon/10 px-4 py-3 text-[11px] font-black tracking-[0.18em] text-neon transition hover:border-neon hover:bg-neon/15"
@@ -142,7 +142,7 @@ export default function LoginPage() {
           <span aria-hidden="true">↗</span>
         </a>
         {checking && (
-          <p className="mt-6 text-xs uppercase tracking-widest text-neutral-500">Checking your session…</p>
+          <p className="mt-6 text-xs uppercase tracking-widest text-muted">Checking your session…</p>
         )}
 
         {!checking && (
@@ -155,10 +155,10 @@ export default function LoginPage() {
             >
               {googleBusy ? "OPENING GOOGLE…" : "Continue with Google"}
             </button>
-            <p className="mt-2 text-xs text-neutral-500">
+            <p className="mt-2 text-xs text-muted">
               Uses the Google account already in this browser. After it returns, the dashboard signs itself in.
             </p>
-            <div className="mt-5 flex items-center gap-3 text-[10px] uppercase tracking-widest text-neutral-600">
+            <div className="mt-5 flex items-center gap-3 text-[10px] uppercase tracking-widest text-muted">
               <span className="h-px flex-1 bg-line" />
               or use your email
               <span className="h-px flex-1 bg-line" />
@@ -168,7 +168,7 @@ export default function LoginPage() {
 
         <form className="mt-6 space-y-4" onSubmit={submit}>
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-muted">
               <label htmlFor="email">Email</label>
               <InfoTip label="The address on your SONUS account. Staff accounts are created by an admin; guests can sign up on the public site." />
             </div>
@@ -184,13 +184,13 @@ export default function LoginPage() {
             />
           </div>
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-muted">
               <label htmlFor="password">Password</label>
               <InfoTip label="At least 12 characters, chosen when the account was created." />
               <button
                 type="button"
                 onClick={sendReset}
-                className="ml-auto text-[11px] normal-case tracking-normal text-neutral-500 underline hover:text-neon"
+                className="ml-auto text-[11px] normal-case tracking-normal text-muted underline hover:text-neon"
               >
                 Forgot password?
               </button>
@@ -220,12 +220,12 @@ export default function LoginPage() {
         </form>
 
         {resetSent && (
-          <p className="text-neutral-400 text-xs mt-4">
+          <p className="text-muted text-xs mt-4">
             Recovery email sent to {email}. Open it to choose a new password, then sign in here.
           </p>
         )}
 
-        {error && <p className="text-red-400 text-sm mt-4">{error}</p>}
+        {error && <p className="text-alert text-sm mt-4">{error}</p>}
       </div>
     </main>
   );

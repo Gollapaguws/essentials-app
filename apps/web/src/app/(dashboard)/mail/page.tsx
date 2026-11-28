@@ -126,7 +126,7 @@ const field =
 const button =
   "px-3 py-2 rounded-lg border border-line text-xs tracking-wide hover:border-neon hover:text-neon transition disabled:opacity-40 disabled:hover:border-line disabled:hover:text-inherit";
 const quiet =
-  "text-xs text-neutral-500 hover:text-neon transition disabled:opacity-40 disabled:hover:text-neutral-500";
+  "text-xs text-muted hover:text-neon transition disabled:opacity-40 disabled:hover:text-muted";
 
 function when(iso: string | null): string {
   if (!iso) return "";
@@ -806,7 +806,7 @@ export default function Mail() {
               >
                 Cancel
               </button>
-              <span className="ml-auto text-[11px] text-neutral-500">
+              <span className="ml-auto text-[11px] text-muted">
                 {signatureDraft.length}/2000
               </span>
             </div>
@@ -821,18 +821,18 @@ export default function Mail() {
         >
           <div className="space-y-3">
             {rules === null ? (
-              <p className="text-xs text-neutral-500">Loading…</p>
+              <p className="text-xs text-muted">Loading…</p>
             ) : rules.length === 0 ? (
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-muted">
                 No rules yet. A rule files mail that matches it into a folder for you.
               </p>
             ) : (
               <ul className="divide-y divide-line">
                 {rules.map((rule) => (
                   <li key={rule.id} className="flex items-center gap-2 py-2 text-sm">
-                    <span className="min-w-0 flex-1 truncate text-neutral-300">
+                    <span className="min-w-0 flex-1 truncate text-muted">
                       {rule.field === "from" ? "From" : rule.field === "to" ? "To" : "Subject"} contains{" "}
-                      <span className="text-neutral-100">“{rule.contains}”</span> → {rule.folder}
+                      <span className="text-muted">“{rule.contains}”</span> → {rule.folder}
                     </span>
                     <button
                       type="button"
@@ -849,7 +849,7 @@ export default function Mail() {
 
             <div className="flex flex-wrap items-end gap-2 border-t border-line pt-3">
               <label className="space-y-1">
-                <span className="block text-[10px] uppercase tracking-wider text-neutral-500">Matches</span>
+                <span className="block text-[10px] uppercase tracking-wider text-muted">Matches</span>
                 <select
                   className={field}
                   value={newRule.field}
@@ -864,7 +864,7 @@ export default function Mail() {
                 </select>
               </label>
               <label className="min-w-[160px] flex-1 space-y-1">
-                <span className="block text-[10px] uppercase tracking-wider text-neutral-500">Contains</span>
+                <span className="block text-[10px] uppercase tracking-wider text-muted">Contains</span>
                 <input
                   className={field}
                   value={newRule.contains}
@@ -873,7 +873,7 @@ export default function Mail() {
                 />
               </label>
               <label className="space-y-1">
-                <span className="block text-[10px] uppercase tracking-wider text-neutral-500">File into</span>
+                <span className="block text-[10px] uppercase tracking-wider text-muted">File into</span>
                 <select
                   className={field}
                   value={newRule.folder}
@@ -897,10 +897,10 @@ export default function Mail() {
 
       {(loadError || failure || notice) && (
         <div className="space-y-2">
-          {loadError && <p className="text-xs text-red-300">{loadError}</p>}
-          {failure && <p className="text-xs text-red-300">{failure}</p>}
+          {loadError && <p className="text-xs text-alert">{loadError}</p>}
+          {failure && <p className="text-xs text-alert">{failure}</p>}
           {notice && (
-            <p className="text-xs text-neutral-400">
+            <p className="text-xs text-muted">
               {notice}
               {undoOffer && (
                 <button type="button" className="ml-2 text-neon hover:underline" onClick={() => void undoPending()}>
@@ -914,7 +914,7 @@ export default function Mail() {
 
       {!hasMailbox ? (
         <Panel title="No mailbox yet" description="A mailbox is separate from your sign-in address.">
-          <p className="text-sm text-neutral-400">
+          <p className="text-sm text-muted">
             An account on this platform can have an @{summary?.domain ?? "essentialsedm.com"} mailbox, but this one
             does not yet. Ask an admin to create it for you — once it exists, this screen becomes your inbox, and the
             mailbox password works in any mail client over IMAP.
@@ -933,7 +933,7 @@ export default function Mail() {
                     type="button"
                     onClick={() => openFolder(item.name)}
                     className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
-                      active ? "bg-white/[0.06] text-neon" : "text-neutral-400 hover:bg-white/[0.03] hover:text-neutral-200"
+                      active ? "bg-surface text-neon" : "text-muted hover:bg-surface hover:text-muted"
                     }`}
                   >
                     <span className="truncate">{item.name}</span>
@@ -942,7 +942,7 @@ export default function Mail() {
                         {item.unseen}
                       </span>
                     ) : item.messages > 0 ? (
-                      <span className="ml-2 text-[10px] text-neutral-500">{item.messages}</span>
+                      <span className="ml-2 text-[10px] text-muted">{item.messages}</span>
                     ) : null}
                   </button>
                 );
@@ -968,7 +968,7 @@ export default function Mail() {
                 placeholder="Search — from:, subject:, since:, is:unread"
                 aria-label="Search mail"
               />
-              <div className="flex items-center justify-between text-[10px] text-neutral-500">
+              <div className="flex items-center justify-between text-[10px] text-muted">
                 <label className="flex items-center gap-1.5">
                   <input
                     type="checkbox"
@@ -983,9 +983,9 @@ export default function Mail() {
             </form>
 
             {listSource.loading && !list ? (
-              <p className="p-4 text-xs text-neutral-500">Loading…</p>
+              <p className="p-4 text-xs text-muted">Loading…</p>
             ) : !list || (list.threaded ? list.threads.length === 0 : list.messages.length === 0) ? (
-              <p className="p-4 text-xs text-neutral-500">
+              <p className="p-4 text-xs text-muted">
                 {query
                   ? `Nothing matches “${query}”${everywhere ? " in any folder" : ` in ${folder}`}.`
                   : `${folder} is empty.`}
@@ -1015,37 +1015,37 @@ export default function Mail() {
                       type="button"
                       onClick={() => openThread(uids, source)}
                       className={`w-full px-3 py-2.5 text-left transition ${
-                        uids.includes(activeUid ?? -1) ? "bg-white/[0.06]" : "hover:bg-white/[0.03]"
+                        uids.includes(activeUid ?? -1) ? "bg-surface" : "hover:bg-surface"
                       }`}
                     >
                       <div className="flex gap-2">
-                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line text-[9px] text-neutral-400">
+                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line text-[9px] text-muted">
                           {initials(row.from.name)}
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline justify-between gap-2">
                             <span
                               className={`truncate text-[13px] ${
-                                unseen === 0 ? "text-neutral-400" : "font-medium text-neutral-100"
+                                unseen === 0 ? "text-muted" : "font-medium text-muted"
                               }`}
                             >
                               {row.from.name}
-                              {count > 1 && <span className="text-neutral-500"> (+{count - 1})</span>}
+                              {count > 1 && <span className="text-muted"> (+{count - 1})</span>}
                             </span>
-                            <span className="shrink-0 text-[10px] text-neutral-500">{when(row.date)}</span>
+                            <span className="shrink-0 text-[10px] text-muted">{when(row.date)}</span>
                           </div>
                           <div className="mt-0.5 flex items-center gap-1.5">
                             {unseen > 0 && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-neon" />}
-                            <span className={`truncate text-[13px] ${unseen === 0 ? "text-neutral-400" : "text-neutral-200"}`}>
+                            <span className={`truncate text-[13px] ${unseen === 0 ? "text-muted" : "text-muted"}`}>
                               {row.subject}
                             </span>
-                            {row.flagged && <span className="text-[10px] text-amber-300">★</span>}
+                            {row.flagged && <span className="text-[10px] text-warn">★</span>}
                             {count > 1 && (
-                              <span className="shrink-0 text-[10px] text-neutral-500">{count}</span>
+                              <span className="shrink-0 text-[10px] text-muted">{count}</span>
                             )}
                           </div>
                           {!list.threaded && row.folder && row.folder !== folder && (
-                            <p className="mt-0.5 text-[10px] text-neutral-500">{row.folder}</p>
+                            <p className="mt-0.5 text-[10px] text-muted">{row.folder}</p>
                           )}
                         </div>
                       </div>
@@ -1055,7 +1055,7 @@ export default function Mail() {
               </ul>
             )}
 
-            <div className="flex items-center justify-between border-t border-line px-3 py-2 text-[11px] text-neutral-500">
+            <div className="flex items-center justify-between border-t border-line px-3 py-2 text-[11px] text-muted">
               <span>
                 {total ? `${offset + 1}–${pageEnd} of ${total}${list?.threaded ? " conversation" + (total === 1 ? "" : "s") : ""}` : "No messages"}
               </span>
@@ -1092,7 +1092,7 @@ export default function Mail() {
               <Panel title={draft.mode === "reply" ? "Reply" : draft.mode === "forward" ? "Forward" : "New message"}>
                 <div className="space-y-3">
                   <label className="block space-y-1">
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-500">To</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted">To</span>
                     <input
                       className={field}
                       value={draft.to}
@@ -1102,7 +1102,7 @@ export default function Mail() {
                   </label>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="block space-y-1">
-                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Cc</span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted">Cc</span>
                       <input
                         className={field}
                         value={draft.cc}
@@ -1111,7 +1111,7 @@ export default function Mail() {
                       />
                     </label>
                     <label className="block space-y-1">
-                      <span className="text-[10px] uppercase tracking-wider text-neutral-500">Bcc</span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted">Bcc</span>
                       <input
                         className={field}
                         value={draft.bcc}
@@ -1121,7 +1121,7 @@ export default function Mail() {
                     </label>
                   </div>
                   <label className="block space-y-1">
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-500">Subject</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted">Subject</span>
                     <input
                       className={field}
                       value={draft.subject}
@@ -1130,7 +1130,7 @@ export default function Mail() {
                     />
                   </label>
                   <label className="block space-y-1">
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-500">Message</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted">Message</span>
                     <textarea
                       className={`${field} min-h-[240px] font-mono text-[13px] leading-6`}
                       value={draft.body}
@@ -1138,18 +1138,18 @@ export default function Mail() {
                     />
                   </label>
                   <div className="block space-y-1">
-                    <span className="text-[10px] uppercase tracking-wider text-neutral-500">Attachments</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted">Attachments</span>
                     <input
                       type="file"
                       multiple
-                      className="block w-full text-xs text-neutral-400 file:mr-3 file:rounded-md file:border file:border-line file:bg-transparent file:px-2 file:py-1 file:text-xs file:text-neutral-300"
+                      className="block w-full text-xs text-muted file:mr-3 file:rounded-md file:border file:border-line file:bg-transparent file:px-2 file:py-1 file:text-xs file:text-muted"
                       onChange={(event) => {
                         encoded.current.clear();
                         setDraft({ ...draft, files: Array.from(event.target.files ?? []) });
                       }}
                     />
                     {(draft.files.length > 0 || draft.saved.length > 0) && (
-                      <ul className="space-y-0.5 text-[11px] text-neutral-500">
+                      <ul className="space-y-0.5 text-[11px] text-muted">
                         {draft.saved.map((file) => (
                           <li key={`saved-${file.index}`}>
                             {file.filename} · {bytes(file.size)} · kept in the draft
@@ -1188,17 +1188,17 @@ export default function Mail() {
               </Panel>
             ) : !readerPath ? (
               <Panel>
-                <p className="p-1 text-sm text-neutral-500">
+                <p className="p-1 text-sm text-muted">
                   Pick a message to read it. Replies are sent from {address} and kept in Sent.
                 </p>
               </Panel>
             ) : readerSource.loading && !message ? (
               <Panel>
-                <p className="text-sm text-neutral-500">Opening…</p>
+                <p className="text-sm text-muted">Opening…</p>
               </Panel>
             ) : !message ? (
               <Panel>
-                <p className="text-sm text-neutral-500">That message is no longer in {folder}.</p>
+                <p className="text-sm text-muted">That message is no longer in {folder}.</p>
               </Panel>
             ) : (
               <Panel
@@ -1263,18 +1263,18 @@ export default function Mail() {
                     >
                       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-3 text-sm">
                         <div className="min-w-0">
-                          <p className="truncate text-neutral-200">
+                          <p className="truncate text-muted">
                             <span className="font-medium">{entry.from.name}</span>
-                            <span className="text-neutral-500"> &lt;{entry.from.address}&gt;</span>
+                            <span className="text-muted"> &lt;{entry.from.address}&gt;</span>
                           </p>
-                          <p className="truncate text-[11px] text-neutral-500">
+                          <p className="truncate text-[11px] text-muted">
                             to {entry.to.join(", ") || address}
                             {entry.cc.length > 0 && ` · cc ${entry.cc.join(", ")}`}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           {entry.answered && <Badge tone="info">REPLIED</Badge>}
-                          <span className="text-[11px] text-neutral-500">{fullWhen(entry.date)}</span>
+                          <span className="text-[11px] text-muted">{fullWhen(entry.date)}</span>
                         </div>
                       </div>
 
@@ -1283,17 +1283,17 @@ export default function Mail() {
                           title={`Message from ${entry.from.name}`}
                           sandbox="allow-popups allow-popups-to-escape-sandbox"
                           srcDoc={wrapped(entry.html)}
-                          className="h-[60vh] min-h-[320px] w-full rounded-lg border border-line bg-white"
+                          className="h-[60vh] min-h-[320px] w-full rounded-lg border border-line bg-surface"
                         />
                       ) : (
-                        <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-white/[0.02] p-4 text-[13px] leading-6 text-neutral-200">
+                        <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-surface p-4 text-[13px] leading-6 text-muted">
                           {entry.text || "(no text in this message)"}
                         </pre>
                       )}
 
                       {entry.attachments.length > 0 && (
                         <div className="space-y-1 border-t border-line pt-3">
-                          <p className="text-[10px] uppercase tracking-wider text-neutral-500">
+                          <p className="text-[10px] uppercase tracking-wider text-muted">
                             {entry.attachments.length} attachment{entry.attachments.length === 1 ? "" : "s"}
                           </p>
                           <ul className="space-y-1">

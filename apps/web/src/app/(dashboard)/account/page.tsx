@@ -143,18 +143,18 @@ export default function Account() {
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <div>
           <h1 className="text-2xl font-black tracking-wide">SIGNED-IN DEVICES</h1>
-          <p className="text-neutral-500 text-xs mt-1 max-w-xl">
+          <p className="text-muted text-xs mt-1 max-w-xl">
             Each row is a browser session on this account. The sign-in tokens live on the server, so
             revoking a row signs that browser out on its next request — even if you no longer have it.
           </p>
         </div>
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="text-alert text-sm">{error}</p>}
 
-        {devices === null && !error && <p className="text-neutral-500 text-sm">Loading…</p>}
+        {devices === null && !error && <p className="text-muted text-sm">Loading…</p>}
 
         {devices?.length === 0 && (
-          <p className="text-neutral-500 text-sm">No other devices are signed in.</p>
+          <p className="text-muted text-sm">No other devices are signed in.</p>
         )}
 
         {devices && devices.length > 0 && (
@@ -165,7 +165,7 @@ export default function Account() {
                 className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
               >
                 <div className="space-y-1">
-                  <p className="text-sm text-white">
+                  <p className="text-sm text-fg">
                     Session from {when(device.createdAt)}
                     {device.current && (
                       <span className="ml-2 text-[10px] font-bold tracking-widest text-neon border border-neon/40 rounded px-1.5 py-0.5">
@@ -173,19 +173,19 @@ export default function Account() {
                       </span>
                     )}
                     {device.aal === "aal2" && (
-                      <span className="ml-2 text-[10px] font-bold tracking-widest text-neutral-400 border border-line rounded px-1.5 py-0.5">
+                      <span className="ml-2 text-[10px] font-bold tracking-widest text-muted border border-line rounded px-1.5 py-0.5">
                         TWO-STEP
                       </span>
                     )}
                   </p>
-                  <p className="text-neutral-600 text-xs">
+                  <p className="text-muted text-xs">
                     Last active {when(device.lastSeenAt)}
                   </p>
                 </div>
                 <button
                   onClick={() => void revoke(device)}
                   disabled={revoking !== null}
-                  className="text-xs tracking-widest text-neutral-400 hover:text-red-400 disabled:opacity-40"
+                  className="text-xs tracking-widest text-muted hover:text-alert disabled:opacity-40"
                 >
                   {revoking === device.id
                     ? "SIGNING OUT…"
@@ -202,7 +202,7 @@ export default function Account() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-bold uppercase tracking-wider">Recovery codes</h2>
-              <p className="text-neutral-500 text-xs mt-1">
+              <p className="text-muted text-xs mt-1">
                 Single-use codes for when you lose your authenticator. Generating a new set retires
                 the old one. They are shown once.
               </p>
@@ -218,15 +218,15 @@ export default function Account() {
           </div>
 
           {recovery && recovery.total > 0 && (
-            <p className="text-neutral-400 text-xs">
+            <p className="text-muted text-xs">
               {recovery.remaining} of {recovery.total} unused.
             </p>
           )}
-          {recoveryError && <p className="text-red-400 text-sm">{recoveryError}</p>}
+          {recoveryError && <p className="text-alert text-sm">{recoveryError}</p>}
           {codes && (
             <div className="bg-bg border border-line rounded-lg p-3 space-y-2">
-              <p className="text-amber-300 text-xs">Copy these now — they will not be shown again.</p>
-              <div className="grid sm:grid-cols-2 gap-1 font-mono text-sm text-neutral-200">
+              <p className="text-warn text-xs">Copy these now — they will not be shown again.</p>
+              <div className="grid sm:grid-cols-2 gap-1 font-mono text-sm text-fg">
                 {codes.map((code) => (
                   <span key={code}>{code}</span>
                 ))}
@@ -239,12 +239,12 @@ export default function Account() {
           <section className="border border-line bg-surface rounded-xl p-5 space-y-3">
             <div>
               <h2 className="text-sm font-bold uppercase tracking-wider">Mailbox</h2>
-              <p className="text-neutral-500 text-xs mt-1">
+              <p className="text-muted text-xs mt-1">
                 {mailbox.address} — sign in to your mail app with this address. Incoming: mail.
                 {mailbox.address.split("@")[1]} port 993 (SSL). Outgoing: port 587 (STARTTLS).
               </p>
               {mailbox.aliases.length > 0 && (
-                <p className="text-neutral-600 text-xs mt-1">
+                <p className="text-faint text-xs mt-1">
                   Also receives:{" "}
                   {mailbox.aliases
                     .map((alias) => `${alias}@${mailbox.address.split("@")[1]}`)
@@ -256,7 +256,7 @@ export default function Account() {
             {mailbox.status === "active" ? (
               <form onSubmit={changeMailboxPassword} className="flex flex-wrap items-end gap-2">
                 <label className="space-y-1">
-                  <span className="block text-[10px] uppercase tracking-widest text-neutral-500">
+                  <span className="block text-[10px] uppercase tracking-widest text-muted">
                     New password
                   </span>
                   <input
@@ -269,7 +269,7 @@ export default function Account() {
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="block text-[10px] uppercase tracking-widest text-neutral-500">
+                  <span className="block text-[10px] uppercase tracking-widest text-muted">
                     Confirm
                   </span>
                   <input
@@ -290,17 +290,17 @@ export default function Account() {
                 </button>
               </form>
             ) : (
-              <p className="text-amber-300 text-xs">
+              <p className="text-warn text-xs">
                 This mailbox is disabled — ask an administrator to re-enable it.
               </p>
             )}
 
-            <p className="text-neutral-600 text-[11px]">
+            <p className="text-faint text-[11px]">
               Changing this replaces the old password immediately; mail apps still using the old one
               will ask for the new one. The password is never emailed.
             </p>
             {mailNotice && <p className="text-neon text-sm">{mailNotice}</p>}
-            {mailError && <p className="text-red-400 text-sm">{mailError}</p>}
+            {mailError && <p className="text-alert text-sm">{mailError}</p>}
           </section>
         )}
       </main>

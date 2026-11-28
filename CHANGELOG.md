@@ -2,6 +2,34 @@
 
 Notable changes to ESSENTIALS. Dates are UTC.
 
+## Unreleased
+
+### Dashboard
+
+- **A light console.** The dashboard moves from a black ground to paper: warm
+  off-white pages, ink type, hairline rules and a brass accent, in place of the
+  neon-on-black panels. Panels are now a rule and space rather than boxes, and
+  tables keep one hairline between rows instead of zebra striping.
+- The dark-ground utilities (`text-white`, the grey text scale and white
+  overlays) are gone from `apps/web/src`; screens use the `bg`, `surface`,
+  `line`, `fg`, `muted` and `neon` tokens. Status colours carry their own
+  `alert`, `warn` and `info` tokens so they still read on paper.
+- Charts draw with the same tokens, so grids, ticks and tooltips survive the
+  change; the overview and cohort bars use brass for the first series and ink
+  for the rest. A four-digit `#0AFF` fill that never rendered as intended is
+  fixed.
+- The Door screen is sized for one-handed use in a dark room: 44px controls,
+  14px body text, and check-in state marked with a dot and a word rather than
+  colour alone.
+- `npm run check:contrast` measures every token pair the console renders and
+  fails below WCAG AA. The brass accent is darkened to `#7d5f10`, which clears
+  4.5:1 on paper; the previous `#8a6a12` measured 4.36:1.
+
+### Repo
+
+- `AGENTS.md` and a pull request template record the branch, review and
+  verification rules, including the standing ban on new email systems.
+
 ## 2026-11-25
 
 ### Promoter workspaces

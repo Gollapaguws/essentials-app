@@ -88,13 +88,13 @@ export default function SocialHub() {
       <TopNav />
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <h1 className="text-2xl font-black tracking-wide">SOCIAL MEDIA HUB</h1>
-        <p className="text-neutral-500 text-sm">
+        <p className="text-muted text-sm">
           One composer, every platform. Copy is written by the local AI agent; auto-publish runs on
           configured platforms ({accounts?.autoPublish.join(", ") || "none configured yet"}), the rest get a
           copy button + composer link.
         </p>
         {(error ?? accountsSource.error) && (
-          <p role="alert" className="text-red-400 text-sm">
+          <p role="alert" className="text-alert text-sm">
             {error ?? accountsSource.error}
           </p>
         )}
@@ -118,7 +118,7 @@ export default function SocialHub() {
           <div className="flex flex-wrap gap-2">
             {ALL.map((p) => (
               <button key={p.key} onClick={() => togglePlatform(p.key)}
-                className={`rounded-lg px-3 py-2 text-sm border ${selected.includes(p.key) ? "border-neon text-neon" : "border-line text-neutral-400"}`}>
+                className={`rounded-lg px-3 py-2 text-sm border ${selected.includes(p.key) ? "border-neon text-neon" : "border-line text-muted"}`}>
                 {p.label} {isAuto(p.key) ? "· auto" : "· manual"}
               </button>
             ))}
@@ -131,7 +131,7 @@ export default function SocialHub() {
             placeholder="Your post text (generate it above or write your own)" />
           <div className="grid md:grid-cols-3 gap-3 items-end">
             <div>
-              <span className="text-xs text-neutral-400 uppercase tracking-wider">Schedule (optional)</span>
+              <span className="text-xs text-muted uppercase tracking-wider">Schedule (optional)</span>
               <input type="datetime-local" className={`${input} mt-1`} value={schedule} onChange={(e) => setSchedule(e.target.value)} />
             </div>
             <button onClick={() => createPost()} disabled={posting || !content.trim() || !selected.length}
@@ -142,7 +142,7 @@ export default function SocialHub() {
               className="border border-neon text-neon font-bold rounded-lg py-2 tracking-wide disabled:opacity-50">SCHEDULE</button>
           </div>
           {accounts && accounts.manual.some((m) => selected.includes(m)) && (
-            <div className="text-xs text-neutral-400 space-y-1">
+            <div className="text-xs text-muted space-y-1">
               <p>Manual platforms in this post (copy the text, then open):</p>
               {selected.filter((s) => accounts.manual.includes(s)).map((s) => (
                 <a key={s} href={accounts.composerLinks[s]} target="_blank" className="block text-neon underline">{s} composer →</a>
@@ -156,13 +156,13 @@ export default function SocialHub() {
           {posts.map((p) => (
             <div key={p.id} className="border-t border-line px-4 py-3 text-sm">
               <div className="flex justify-between items-center">
-                <span className={`font-bold ${p.status === "published" ? "text-neon" : p.status === "failed" ? "text-red-400" : "text-neutral-400"}`}>
+                <span className={`font-bold ${p.status === "published" ? "text-neon" : p.status === "failed" ? "text-alert" : "text-muted"}`}>
                   {p.status.toUpperCase()}
                 </span>
-                <span className="text-neutral-500 text-xs">{new Date(p.createdAt).toLocaleString()}</span>
+                <span className="text-muted text-xs">{new Date(p.createdAt).toLocaleString()}</span>
               </div>
               <p className="mt-1 whitespace-pre-wrap">{p.content.slice(0, 200)}{p.content.length > 200 ? "…" : ""}</p>
-              <p className="text-neutral-500 text-xs mt-1">{p.platforms.join(" · ")}
+              <p className="text-muted text-xs mt-1">{p.platforms.join(" · ")}
                 {p.results && Object.entries(p.results).map(([k, v]) => ` · ${k}: ${v.status}`).join("")}
               </p>
               {p.status !== "published" && (
@@ -170,7 +170,7 @@ export default function SocialHub() {
               )}
             </div>
           ))}
-          {!posts.length && <p className="px-4 py-6 text-center text-neutral-500 text-sm">No posts yet.</p>}
+          {!posts.length && <p className="px-4 py-6 text-center text-muted text-sm">No posts yet.</p>}
         </section>
       </main>
     </>

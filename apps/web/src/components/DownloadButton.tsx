@@ -9,7 +9,7 @@ export function DownloadButton({
   path,
   filename,
   label,
-  className = "text-neutral-300 underline text-xs",
+  className = "text-fg underline text-xs",
 }: {
   path: string;
   filename: string;

@@ -65,8 +65,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: import("react").ReactNode }) {
   return (
-    <html lang="en" className={`dark ${cinzel.variable} ${montserrat.variable}`}>
-      <body className="bg-bg text-white min-h-screen font-sans">
+    <html lang="en" className={`${cinzel.variable} ${montserrat.variable}`}>
+      <body className="bg-bg text-fg min-h-screen font-sans">
         <AuthProvider>
           <PageTitle />
           {children}

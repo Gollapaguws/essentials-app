@@ -59,13 +59,13 @@ export default function Simulcast() {
       <TopNav />
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
         <h1 className="text-2xl font-black tracking-wide">MULTI-PLATFORM STREAMING</h1>
-        <p className="text-neutral-500 text-sm">
+        <p className="text-muted text-sm">
           When you GO LIVE on the front page, the stream is automatically pushed to every enabled
           platform below. Stream keys stay on the server and are never shown again.
           {status?.live && <span className="text-neon font-bold"> ● BROADCAST IS LIVE — pushing to {Object.values(status.simulcast ?? {}).filter(Boolean).length} platform(s)</span>}
         </p>
         {loadError && (
-          <p role="alert" className="text-red-400 text-sm">
+          <p role="alert" className="text-alert text-sm">
             {loadError}
           </p>
         )}
@@ -73,30 +73,30 @@ export default function Simulcast() {
         <form onSubmit={add} className="border border-line bg-surface rounded-xl p-4 space-y-3">
           <div className="grid md:grid-cols-3 gap-3">
             <div>
-              <span className="text-xs text-neutral-400 uppercase tracking-wider">Platform</span>
+              <span className="text-xs text-muted uppercase tracking-wider">Platform</span>
               <select className={`${input} mt-1`} value={form.platform} onChange={(e) => setForm({ ...form, platform: e.target.value })}>
                 {PLATFORMS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
               </select>
             </div>
             <div className="md:col-span-2">
-              <span className="text-xs text-neutral-400 uppercase tracking-wider">Full RTMP(S) push URL (incl. stream key)</span>
+              <span className="text-xs text-muted uppercase tracking-wider">Full RTMP(S) push URL (incl. stream key)</span>
               <input required className={`${input} mt-1 font-mono text-xs`} placeholder="rtmp://a.rtmp.youtube.com/live2/xxxx-xxxx-…" value={form.url}
                 onChange={(e) => setForm({ ...form, url: e.target.value })} />
             </div>
           </div>
           <div className="grid md:grid-cols-3 gap-3 items-end">
             <div>
-              <span className="text-xs text-neutral-400 uppercase tracking-wider">Label (optional)</span>
+              <span className="text-xs text-muted uppercase tracking-wider">Label (optional)</span>
               <input className={`${input} mt-1`} placeholder="Main channel" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
             </div>
             <button className="bg-neon text-bg font-black rounded-lg py-2 tracking-widest md:col-span-2">ADD TARGET</button>
           </div>
-          <p className="text-neutral-500 text-xs">{PLATFORMS.find((p) => p.key === form.platform)?.hint}</p>
+          <p className="text-muted text-xs">{PLATFORMS.find((p) => p.key === form.platform)?.hint}</p>
         </form>
 
         <div className="border border-line rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-surface text-neutral-400 uppercase text-xs">
+            <thead className="bg-surface text-muted uppercase text-xs">
               <tr>
                 <th className="text-left px-4 py-3">Platform</th>
                 <th className="text-left px-4 py-3">Push URL</th>
@@ -108,16 +108,16 @@ export default function Simulcast() {
             <tbody>
               {targets.map((t) => (
                 <tr key={t.id} className="border-t border-line">
-                  <td className="px-4 py-3 font-bold">{labelFor(t.platform)}{t.label ? <span className="text-neutral-500 font-normal"> · {t.label}</span> : null}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-neutral-400">{t.url}</td>
+                  <td className="px-4 py-3 font-bold">{labelFor(t.platform)}{t.label ? <span className="text-muted font-normal"> · {t.label}</span> : null}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted">{t.url}</td>
                   <td className="px-4 py-3">
-                    <button onClick={() => toggle(t.id)} className={t.enabled ? "text-neon font-bold" : "text-neutral-500"}>{t.enabled ? "ON" : "OFF"}</button>
+                    <button onClick={() => toggle(t.id)} className={t.enabled ? "text-neon font-bold" : "text-muted"}>{t.enabled ? "ON" : "OFF"}</button>
                   </td>
-                  <td className="px-4 py-3">{t.live ? <span className="text-red-400 font-bold">● LIVE</span> : "—"}</td>
-                  <td className="px-4 py-3"><button onClick={() => remove(t.id)} className="text-red-400 underline text-xs">Delete</button></td>
+                  <td className="px-4 py-3">{t.live ? <span className="text-alert font-bold">● LIVE</span> : "—"}</td>
+                  <td className="px-4 py-3"><button onClick={() => remove(t.id)} className="text-alert underline text-xs">Delete</button></td>
                 </tr>
               ))}
-              {!targets.length && <tr><td colSpan={5} className="px-4 py-6 text-center text-neutral-500">No targets yet — add YouTube, TikTok, Mixcloud, Facebook or a custom RTMP.</td></tr>}
+              {!targets.length && <tr><td colSpan={5} className="px-4 py-6 text-center text-muted">No targets yet — add YouTube, TikTok, Mixcloud, Facebook or a custom RTMP.</td></tr>}
             </tbody>
           </table>
         </div>

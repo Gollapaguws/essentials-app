@@ -63,14 +63,14 @@ export function WhatsNew() {
             localStorage.setItem(KEY, "1");
             setHidden(true);
           }}
-          className="text-neutral-500 hover:text-neutral-300 text-xs font-bold"
+          className="text-muted hover:text-fg text-xs font-bold"
           aria-label="Dismiss what's new"
         >
           GOT IT
         </button>
       </div>
-      <p className="text-neutral-300">{note.lead}</p>
-      <ul className="space-y-1.5 text-xs text-neutral-400">
+      <p className="text-fg">{note.lead}</p>
+      <ul className="space-y-1.5 text-xs text-muted">
         {note.points.map((p) => (
           <li key={p} className="flex gap-2">
             <span className="text-neon">·</span>

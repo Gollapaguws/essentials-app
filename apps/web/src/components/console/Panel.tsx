@@ -21,7 +21,7 @@ export function Panel({
         <div className="console-panel-head">
           <div className="min-w-0 space-y-1">
             {title && <h2 className="console-section-title">{title}</h2>}
-            {description && <p className="text-xs leading-5 text-neutral-500">{description}</p>}
+            {description && <p className="text-xs leading-5 text-muted">{description}</p>}
           </div>
           {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
         </div>

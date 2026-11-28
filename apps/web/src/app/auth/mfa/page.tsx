@@ -118,17 +118,17 @@ export default function MfaPage() {
     <main className="min-h-screen grid place-items-center px-6 py-10">
       <div className="w-full max-w-md border border-line bg-surface rounded-2xl p-8 space-y-4">
         <h1 className="text-neon text-2xl font-black tracking-widest">TWO-STEP VERIFICATION</h1>
-        <p className="text-neutral-400 text-sm">
+        <p className="text-muted text-sm">
           Privileged accounts need an authenticator app before reaching the dashboard.
         </p>
 
         {qr && (
           <div className="space-y-2">
             {/* data: URL from the qrcode package — next/image cannot optimise it */}
-            <img src={qr} alt="TOTP QR code" className="mx-auto rounded-lg bg-white p-2" />
-            <div className="flex items-center gap-2 text-neutral-500 text-xs break-all">
+            <img src={qr} alt="TOTP QR code" className="mx-auto rounded-lg bg-surface p-2" />
+            <div className="flex items-center gap-2 text-muted text-xs break-all">
               <span>
-                Manual key: <span className="font-mono text-neutral-300">{secret}</span>
+                Manual key: <span className="font-mono text-fg">{secret}</span>
               </span>
               <InfoTip label="Use this if the camera cannot scan the QR code: type the key into your authenticator app by hand." />
             </div>
@@ -137,7 +137,7 @@ export default function MfaPage() {
 
         {!showRecovery ? (
           <form className="space-y-3" onSubmit={verify}>
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-muted">
               <label htmlFor="totp">Authenticator code</label>
               <InfoTip label="The 6 digits your authenticator app (Google Authenticator, 1Password, Authy) shows for SONUS. It changes every 30 seconds." />
             </div>
@@ -160,7 +160,7 @@ export default function MfaPage() {
           </form>
         ) : (
           <form className="space-y-3" onSubmit={useRecovery}>
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-neutral-500">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-muted">
               <label htmlFor="recovery">Recovery code</label>
               <InfoTip label="A single-use backup code you saved when you set up two-step verification. Each code works once." />
             </div>
@@ -184,16 +184,16 @@ export default function MfaPage() {
         <button
           type="button"
           onClick={() => { setShowRecovery((v) => !v); setError(null); }}
-          className="w-full text-[11px] uppercase tracking-widest text-neutral-500 hover:text-neutral-300"
+          className="w-full text-[11px] uppercase tracking-widest text-muted hover:text-fg"
         >
           {showRecovery ? "Use authenticator code instead" : "Lost your authenticator? Use a recovery code"}
         </button>
 
         <div className="border-t border-line pt-4 space-y-2">
-          <p className="text-[11px] uppercase tracking-widest text-neutral-500">
+          <p className="text-[11px] uppercase tracking-widest text-muted">
             Recovery codes {remaining !== null ? `· ${remaining} left` : ""}
           </p>
-          <p className="text-neutral-500 text-xs">
+          <p className="text-muted text-xs">
             Each code works once if you lose your authenticator. Generate or replace them from{" "}
             <Link href="/account" className="text-neon hover:underline">
               Account
@@ -202,7 +202,7 @@ export default function MfaPage() {
           </p>
         </div>
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="text-alert text-sm">{error}</p>}
       </div>
     </main>
   );

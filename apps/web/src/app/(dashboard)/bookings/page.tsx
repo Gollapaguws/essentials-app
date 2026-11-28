@@ -156,7 +156,7 @@ export default function BookingCalendar() {
         <TopNav />
         <main className="max-w-4xl mx-auto px-6 py-8 space-y-4">
           <h1 className="text-2xl font-black tracking-wide">LIVE CALENDAR</h1>
-          <p className="border border-line bg-surface rounded-xl p-4 text-neutral-400 text-sm">
+          <p className="border border-line bg-surface rounded-xl p-4 text-muted text-sm">
             Admin accounts broadcast without a booking, so there is no calendar to keep here.
             DJs book their own stream windows, and Go Live is refused outside them.
           </p>
@@ -174,8 +174,8 @@ export default function BookingCalendar() {
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
         <div>
           <h1 className="text-2xl font-black tracking-wide">LIVE CALENDAR</h1>
-          <p className="text-neutral-500 text-xs mt-1">
-            Book the windows you will broadcast in. <strong className="text-neutral-300">Go Live is
+          <p className="text-muted text-xs mt-1">
+            Book the windows you will broadcast in. <strong className="text-fg">Go Live is
             refused outside a booked session</strong>, so create one before your set starts. Each
             session can be up to 12 hours, and two of your sessions cannot overlap. The shared
             schedule below shows every DJ&apos;s upcoming live windows.
@@ -184,13 +184,13 @@ export default function BookingCalendar() {
 
         {notice && <p className="text-neon text-sm">{notice}</p>}
         {(error ?? loadError) && (
-          <p role="alert" className="text-red-400 text-sm">
+          <p role="alert" className="text-alert text-sm">
             {error ?? loadError}
           </p>
         )}
 
         {noProfile && (
-          <p className="border border-line bg-surface rounded-xl p-4 text-neutral-400 text-sm">
+          <p className="border border-line bg-surface rounded-xl p-4 text-muted text-sm">
             Live sessions belong to a DJ profile. Create one on{" "}
             <Link href="/artist/profile" className="text-neon hover:underline">
               My Profile
@@ -205,7 +205,7 @@ export default function BookingCalendar() {
               <button
                 type="button"
                 onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-                className="border border-line rounded-lg px-2 py-1 text-xs text-neutral-400 hover:text-white"
+                className="border border-line rounded-lg px-2 py-1 text-xs text-muted hover:text-fg"
                 aria-label="Previous month"
               >
                 ←
@@ -216,14 +216,14 @@ export default function BookingCalendar() {
               <button
                 type="button"
                 onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-                className="border border-line rounded-lg px-2 py-1 text-xs text-neutral-400 hover:text-white"
+                className="border border-line rounded-lg px-2 py-1 text-xs text-muted hover:text-fg"
                 aria-label="Next month"
               >
                 →
               </button>
             </div>
 
-            <div className="grid grid-cols-7 gap-1 text-center text-[10px] tracking-widest text-neutral-500">
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] tracking-widest text-muted">
               {WEEKDAYS.map((day) => (
                 <span key={day} className="py-1">
                   {day}
@@ -253,9 +253,9 @@ export default function BookingCalendar() {
                       selected
                         ? "border-neon text-neon font-bold"
                         : key === todayKey
-                          ? "border-neutral-500 text-white"
-                          : "border-transparent text-neutral-300 hover:border-line"
-                    } disabled:text-neutral-700 disabled:hover:border-transparent`}
+                          ? "border-line text-fg"
+                          : "border-transparent text-fg hover:border-line"
+                    } disabled:text-muted disabled:hover:border-transparent`}
                   >
                     {day}
                     {count > 0 && (
@@ -270,7 +270,7 @@ export default function BookingCalendar() {
               })}
             </div>
 
-            <p className="text-neutral-600 text-[11px]">
+            <p className="text-muted text-[11px]">
               Dots mark days with a booked session. Pick a day to load it into the form.
             </p>
           </section>
@@ -279,7 +279,7 @@ export default function BookingCalendar() {
             <h2 className="text-sm font-bold uppercase tracking-wider">Book a session</h2>
             <form onSubmit={book} className="space-y-3">
               <label className="block">
-                <span className="text-[10px] uppercase tracking-widest text-neutral-500">Date</span>
+                <span className="text-[10px] uppercase tracking-widest text-muted">Date</span>
                 <input
                   type="date"
                   required
@@ -291,7 +291,7 @@ export default function BookingCalendar() {
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block">
-                  <span className="text-[10px] uppercase tracking-widest text-neutral-500">Starts</span>
+                  <span className="text-[10px] uppercase tracking-widest text-muted">Starts</span>
                   <input
                     type="time"
                     required
@@ -301,7 +301,7 @@ export default function BookingCalendar() {
                   />
                 </label>
                 <label className="block">
-                  <span className="text-[10px] uppercase tracking-widest text-neutral-500">Ends</span>
+                  <span className="text-[10px] uppercase tracking-widest text-muted">Ends</span>
                   <input
                     type="time"
                     required
@@ -312,7 +312,7 @@ export default function BookingCalendar() {
                 </label>
               </div>
               <label className="block">
-                <span className="text-[10px] uppercase tracking-widest text-neutral-500">
+                <span className="text-[10px] uppercase tracking-widest text-muted">
                   Title (optional)
                 </span>
                 <input
@@ -323,7 +323,7 @@ export default function BookingCalendar() {
                   className="w-full mt-1 bg-bg border border-line rounded-lg px-3 py-2 text-sm"
                 />
               </label>
-              <p className="text-neutral-600 text-[11px]">
+              <p className="text-muted text-[11px]">
                 An end time earlier than the start is treated as the next day, so 20:00–02:00
                 works.
               </p>
@@ -346,7 +346,7 @@ export default function BookingCalendar() {
           </div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-widest text-neutral-500">
+              <tr className="text-left text-[11px] uppercase tracking-widest text-muted">
                 <th className="px-4 py-2">When</th>
                 <th className="px-4 py-2">Session</th>
                 <th className="px-4 py-2">Status</th>
@@ -362,18 +362,18 @@ export default function BookingCalendar() {
                   <tr key={booking.id} className="border-t border-line align-top">
                     <td className="px-4 py-3">
                       <p className="font-bold">{dayLabel(booking.startsAt)}</p>
-                      <p className="text-neutral-500 text-xs">
+                      <p className="text-muted text-xs">
                         {timeLabel(booking.startsAt)}–{timeLabel(booking.endsAt)}
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-neutral-300">
-                      {booking.title || <span className="text-neutral-600">Live session</span>}
+                    <td className="px-4 py-3 text-fg">
+                      {booking.title || <span className="text-muted">Live session</span>}
                     </td>
                     <td className="px-4 py-3">
                       {liveNow ? (
                         <span className="text-neon font-bold text-xs">● LIVE NOW</span>
                       ) : (
-                        <span className="text-neutral-500 text-xs">
+                        <span className="text-muted text-xs">
                           in{" "}
                           {Math.max(1, Math.round((start.getTime() - now) / 3_600_000))}h
                         </span>
@@ -383,7 +383,7 @@ export default function BookingCalendar() {
                       <button
                         type="button"
                         onClick={() => void cancel(booking)}
-                        className="text-red-400 underline text-xs"
+                        className="text-alert underline text-xs"
                       >
                         Cancel
                       </button>
@@ -393,7 +393,7 @@ export default function BookingCalendar() {
               })}
               {!loading && !bookings.length && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
+                  <td colSpan={4} className="px-4 py-8 text-center text-muted">
                     No sessions booked yet. Pick a day on the calendar and book a window — without
                     one, Go Live will refuse to start.
                   </td>
@@ -401,7 +401,7 @@ export default function BookingCalendar() {
               )}
               {loading && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
+                  <td colSpan={4} className="px-4 py-8 text-center text-muted">
                     Loading…
                   </td>
                 </tr>
@@ -416,18 +416,18 @@ export default function BookingCalendar() {
               <h2 className="text-sm font-bold uppercase tracking-wider">
                 All DJs — upcoming live sessions
               </h2>
-              <p className="text-neutral-500 text-xs mt-1">
+              <p className="text-muted text-xs mt-1">
                 The shared calendar. Only stage names, session titles and times are visible — not
                 fees, bank details or anyone&apos;s applications.
               </p>
             </div>
             {schedule?.live && (
-              <span className="text-red-400 font-bold text-xs tracking-widest">● ON AIR</span>
+              <span className="text-alert font-bold text-xs tracking-widest">● ON AIR</span>
             )}
           </div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-widest text-neutral-500">
+              <tr className="text-left text-[11px] uppercase tracking-widest text-muted">
                 <th className="px-4 py-2">When</th>
                 <th className="px-4 py-2">DJ</th>
                 <th className="px-4 py-2">Session</th>
@@ -447,22 +447,22 @@ export default function BookingCalendar() {
                         {session.startsAt ? dayLabel(session.startsAt) : "On air"}
                       </p>
                       {session.startsAt && session.endsAt && (
-                        <p className="text-neutral-500 text-xs">
+                        <p className="text-muted text-xs">
                           {timeLabel(session.startsAt)}–{timeLabel(session.endsAt)}
                         </p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-neutral-200 font-bold">{session.stageName}</td>
-                    <td className="px-4 py-3 text-neutral-300">
-                      {session.title || <span className="text-neutral-600">Live session</span>}
+                    <td className="px-4 py-3 text-fg font-bold">{session.stageName}</td>
+                    <td className="px-4 py-3 text-fg">
+                      {session.title || <span className="text-muted">Live session</span>}
                     </td>
                     <td className="px-4 py-3">
                       {isLive ? (
-                        <span className="text-red-400 font-bold text-xs">● LIVE NOW</span>
+                        <span className="text-alert font-bold text-xs">● LIVE NOW</span>
                       ) : isNext ? (
                         <span className="text-neon font-bold text-xs">NEXT</span>
                       ) : (
-                        <span className="text-neutral-500 text-xs">
+                        <span className="text-muted text-xs">
                           {hoursAway === null ? "Scheduled" : `in ${hoursAway}h`}
                         </span>
                       )}
@@ -472,14 +472,14 @@ export default function BookingCalendar() {
               })}
               {!schedule && loading && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
+                  <td colSpan={4} className="px-4 py-8 text-center text-muted">
                     Loading shared schedule…
                   </td>
                 </tr>
               )}
               {schedule && !schedule.upcoming.length && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-neutral-500">
+                  <td colSpan={4} className="px-4 py-8 text-center text-muted">
                     No live sessions are booked yet. Be the first on the shared calendar.
                   </td>
                 </tr>

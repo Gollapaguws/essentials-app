@@ -63,7 +63,7 @@ export default function Dashboard() {
         }
       />
       <PromoterOnboarding />
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-alert text-sm">{error}</p>}
         {data && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -76,7 +76,7 @@ export default function Dashboard() {
             </div>
             {pacing.length > 0 && (
               <div className="border border-red-500/40 bg-red-500/5 rounded-xl p-4">
-                <h2 className="text-sm font-bold text-red-400 uppercase tracking-wider mb-2">PACING ALERTS - RSVPs ahead of previous event x2</h2>
+                <h2 className="text-sm font-bold text-alert uppercase tracking-wider mb-2">PACING ALERTS - RSVPs ahead of previous event x2</h2>
                 {pacing.map((r) => (
                   <p key={r.eventId} className="text-sm">{r.title}: {r.rsvps} vs {r.previousRsvps} last time ({r.ratio}x)</p>
                 ))}

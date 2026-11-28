@@ -189,11 +189,11 @@ export default function Applications() {
       />
 
       {(error ?? appsSource.error) && (
-        <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-2.5 text-sm text-red-300">
+        <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-2.5 text-sm text-alert">
           {error ?? appsSource.error}
         </div>
       )}
-      {appsSource.loading && <p className="text-neutral-500 text-xs">Loading applications…</p>}
+      {appsSource.loading && <p className="text-muted text-xs">Loading applications…</p>}
 
       <Panel
         title="Application queue"
@@ -208,26 +208,26 @@ export default function Applications() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-line bg-white/[0.03] text-[10px] font-black tracking-wider text-neon">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-line bg-fg/[0.03] text-[10px] font-black tracking-wider text-neon">
                       {initials(a.artist.stageName)}
                     </span>
                     <Link
                       href={`/artists/${a.artist.id}`}
-                      className="font-bold text-white underline decoration-line underline-offset-4 hover:text-neon"
+                      className="font-bold text-fg underline decoration-line underline-offset-4 hover:text-neon"
                       title="Full profile and booking history"
                     >
                       {a.artist.stageName}
                     </Link>
                     <Badge tone={bookingTone(a.status)}>{a.status}</Badge>
                   </div>
-                  <p className="mt-2 text-xs text-neutral-500">
+                  <p className="mt-2 text-xs text-muted">
                     {a.event.title} · {new Date(a.event.date).toLocaleDateString()} · {a.artist.user.email}
                   </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] text-neutral-500">
-                    <span className="rounded-md border border-line/70 bg-white/[0.02] px-2 py-1 text-neutral-300">
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] text-muted">
+                    <span className="rounded-md border border-line/70 bg-fg/[0.02] px-2 py-1 text-fg">
                       {a.slot ?? "slot TBA"}
                     </span>
-                    <span className="rounded-md border border-line/70 bg-white/[0.02] px-2 py-1 text-neutral-300">
+                    <span className="rounded-md border border-line/70 bg-fg/[0.02] px-2 py-1 text-fg">
                       R{a.performanceFee.toLocaleString()}
                     </span>
                     {!a.slot && (
@@ -242,10 +242,10 @@ export default function Applications() {
                     )}
                   </div>
                   {a.status === "cancelled" && a.declineReason && (
-                    <p className="mt-2 text-xs text-neutral-500">declined — told the DJ: {a.declineReason}</p>
+                    <p className="mt-2 text-xs text-muted">declined — told the DJ: {a.declineReason}</p>
                   )}
                   {overBudget && a.status === "pending" && (
-                    <p className="mt-2 text-xs text-red-400">
+                    <p className="mt-2 text-xs text-alert">
                       Confirming this would go R{(a.event.committed + a.performanceFee - a.event.budget).toLocaleString()} over the R{a.event.budget.toLocaleString()} budget; raise it on Events.
                     </p>
                   )}
@@ -270,22 +270,22 @@ export default function Applications() {
                           >
                             {noteBusy ? "SAVING…" : "SAVE"}
                           </button>
-                          <button onClick={() => setEditing(null)} className="text-neutral-500 hover:text-neon">CANCEL</button>
-                          {!editing.body.trim() && <span className="text-neutral-500">An empty note clears it.</span>}
-                          {noteError && <span className="text-red-400">{noteError}</span>}
+                          <button onClick={() => setEditing(null)} className="text-muted hover:text-neon">CANCEL</button>
+                          {!editing.body.trim() && <span className="text-muted">An empty note clears it.</span>}
+                          {noteError && <span className="text-alert">{noteError}</span>}
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-baseline gap-2">
                         {a.note && (
-                          <p className="text-xs text-amber-300/90">
-                            <span className="text-[9px] uppercase tracking-widest text-neutral-600">your note</span>{" "}
+                          <p className="text-xs text-warn/90">
+                            <span className="text-[9px] uppercase tracking-widest text-muted">your note</span>{" "}
                             {a.note.body}
                           </p>
                         )}
                         <button
                           onClick={() => openNote(a)}
-                          className="text-[9px] uppercase tracking-widest text-neutral-600 hover:text-neon"
+                          className="text-[9px] uppercase tracking-widest text-muted hover:text-neon"
                         >
                           {a.note ? "edit note" : "add note"}
                         </button>
@@ -381,7 +381,7 @@ export default function Applications() {
                           GIG PLAYED
                         </button>
                       ) : (
-                        <span className="self-center text-[10px] uppercase tracking-wider text-neutral-600">confirm after the set</span>
+                        <span className="self-center text-[10px] uppercase tracking-wider text-muted">confirm after the set</span>
                       )}
                     </>
                   )}

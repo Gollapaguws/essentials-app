@@ -81,11 +81,11 @@ export function DoorApplicationsPanel() {
       flush
     >
       {(error ?? source.error) && (
-        <p role="alert" className="border-b border-line/70 px-4 py-2 text-sm text-red-400">
+        <p role="alert" className="border-b border-line/70 px-4 py-2 text-sm text-alert">
           {error ?? source.error}
         </p>
       )}
-      {source.loading && <p className="px-4 py-2 text-xs text-neutral-500">Loading door applications…</p>}
+      {source.loading && <p className="px-4 py-2 text-xs text-muted">Loading door applications…</p>}
 
       {applications.map((a) => {
         const overBudget = a.event.budget > 0 && a.event.committed + a.fee > a.event.budget;
@@ -95,20 +95,20 @@ export function DoorApplicationsPanel() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-line bg-white/[0.03] text-[10px] font-black tracking-wider text-neon">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-line bg-surface text-[10px] font-black tracking-wider text-neon">
                     {(a.host.name ?? a.host.email).slice(0, 2).toUpperCase()}
                   </span>
-                  <span className="font-bold text-white">{a.host.name ?? a.host.email}</span>
+                  <span className="font-bold text-fg">{a.host.name ?? a.host.email}</span>
                   <Badge tone={bookingTone(a.status)}>{a.status}</Badge>
                 </div>
-                <p className="mt-2 text-xs text-neutral-500">
+                <p className="mt-2 text-xs text-muted">
                   {a.event.title} · {new Date(a.event.date).toLocaleDateString()} · {a.host.email}
                 </p>
-                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] text-neutral-500">
-                  <span className="rounded-md border border-line/70 bg-white/[0.02] px-2 py-1 text-neutral-300">
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] text-muted">
+                  <span className="rounded-md border border-line/70 bg-surface px-2 py-1 text-muted">
                     R{a.fee.toLocaleString()} door fee
                   </span>
-                  <span className="rounded-md border border-line/70 bg-white/[0.02] px-2 py-1 text-neutral-400">
+                  <span className="rounded-md border border-line/70 bg-surface px-2 py-1 text-muted">
                     travel R{a.host.travelRatePerKm.toFixed(2)}/km on invoice
                   </span>
                   {a.appliedAt && (
@@ -118,10 +118,10 @@ export function DoorApplicationsPanel() {
                   )}
                 </div>
                 {a.status === "cancelled" && a.declineReason && (
-                  <p className="mt-2 text-xs text-neutral-500">declined — told the host: {a.declineReason}</p>
+                  <p className="mt-2 text-xs text-muted">declined — told the host: {a.declineReason}</p>
                 )}
                 {overBudget && a.status === "pending" && (
-                  <p className="mt-2 text-xs text-red-400">
+                  <p className="mt-2 text-xs text-alert">
                     Confirming this would go R
                     {(a.event.committed + a.fee - a.event.budget).toLocaleString()} over the R
                     {a.event.budget.toLocaleString()} budget; raise it on Events.
@@ -169,7 +169,7 @@ export function DoorApplicationsPanel() {
                       {busyId === a.id ? "SAVING…" : "SHIFT WORKED"}
                     </button>
                   ) : (
-                    <span className="self-center text-[10px] uppercase tracking-wider text-neutral-600">
+                    <span className="self-center text-[10px] uppercase tracking-wider text-faint">
                       confirm after the night
                     </span>
                   ))}

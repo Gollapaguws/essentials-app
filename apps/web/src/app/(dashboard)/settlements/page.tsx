@@ -65,13 +65,13 @@ export default function Settlements() {
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <Badge tone="info">{totals?.nights ?? 0} nights</Badge>
-            <label className="text-[10px] uppercase tracking-widest text-neutral-500">
+            <label className="text-[10px] uppercase tracking-widest text-muted">
               Statement month
               <input
                 type="month"
                 value={month}
                 onChange={(e) => setMonth(e.target.value || month)}
-                className="ml-2 bg-bg border border-line rounded-lg px-2 py-1 text-xs text-neutral-200"
+                className="ml-2 bg-bg border border-line rounded-lg px-2 py-1 text-xs text-muted"
               />
             </label>
             <DownloadButton
@@ -84,11 +84,11 @@ export default function Settlements() {
       />
 
       {error && (
-        <p role="alert" className="text-red-400 text-sm">
+        <p role="alert" className="text-alert text-sm">
           {error}
         </p>
       )}
-      {loading && <p className="text-neutral-500 text-xs">Loading settlements…</p>}
+      {loading && <p className="text-muted text-xs">Loading settlements…</p>}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Committed" value={rand(totals?.committed ?? 0)} />
@@ -100,7 +100,7 @@ export default function Settlements() {
       <Panel flush>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
-            <thead className="bg-surface text-neutral-400 uppercase text-xs">
+            <thead className="bg-surface text-muted uppercase text-xs">
               <tr>
                 <th className="text-left px-4 py-3">Night</th>
                 <th className="text-right px-4 py-3">Committed</th>
@@ -114,25 +114,25 @@ export default function Settlements() {
                 <tr key={e.id} className="border-t border-line align-top">
                   <td className="px-4 py-3">
                     <p className="font-bold">{e.title}</p>
-                    <p className="text-neutral-500 text-xs">
+                    <p className="text-muted text-xs">
                       {e.venue} · {new Date(e.date).toLocaleDateString()}
                       {e.budget > 0 ? ` · budget ${rand(e.budget)}` : ""}
-                      {e.overBudget && <span className="text-red-400"> · over budget</span>}
+                      {e.overBudget && <span className="text-alert"> · over budget</span>}
                     </p>
                     {e.gigs.map((g) => (
-                      <p key={g.id} className="text-neutral-500 text-xs mt-1">
+                      <p key={g.id} className="text-muted text-xs mt-1">
                         {g.artist} · {g.slot ?? "slot TBA"} · {rand(g.fee)} ·{" "}
                         {g.invoice ? (
-                          <span className={g.invoice.status === "paid" ? "text-neon" : g.invoice.status === "overdue" ? "text-red-400" : "text-neutral-300"}>
+                          <span className={g.invoice.status === "paid" ? "text-neon" : g.invoice.status === "overdue" ? "text-alert" : "text-fg"}>
                             {g.invoice.number} {g.invoice.status}
                           </span>
                         ) : (
-                          <span className="text-yellow-400">not invoiced</span>
+                          <span className="text-warn">not invoiced</span>
                         )}
                         {g.status === "completed" ? "" : " · not yet played"}
                       </p>
                     ))}
-                    {!e.gigs.length && <p className="text-neutral-600 text-xs mt-1">No confirmed DJs yet.</p>}
+                    {!e.gigs.length && <p className="text-muted text-xs mt-1">No confirmed DJs yet.</p>}
                   </td>
                   <td className="px-4 py-3 text-right">{rand(e.committed)}</td>
                   <td className="px-4 py-3 text-right">{rand(e.invoiced)}</td>
@@ -142,7 +142,7 @@ export default function Settlements() {
               ))}
               {data && !data.events.length && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-neutral-500">
+                  <td colSpan={5} className="px-4 py-6 text-center text-muted">
                     No confirmed DJ fees yet.
                   </td>
                 </tr>
