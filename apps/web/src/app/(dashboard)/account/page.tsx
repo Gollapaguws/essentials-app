@@ -244,7 +244,7 @@ export default function Account() {
                 {mailbox.address.split("@")[1]} port 993 (SSL). Outgoing: port 587 (STARTTLS).
               </p>
               {mailbox.aliases.length > 0 && (
-                <p className="text-faint text-xs mt-1">
+                <p className="text-muted text-xs mt-1">
                   Also receives:{" "}
                   {mailbox.aliases
                     .map((alias) => `${alias}@${mailbox.address.split("@")[1]}`)
@@ -295,7 +295,7 @@ export default function Account() {
               </p>
             )}
 
-            <p className="text-faint text-[11px]">
+            <p className="text-muted text-[11px]">
               Changing this replaces the old password immediately; mail apps still using the old one
               will ask for the new one. The password is never emailed.
             </p>

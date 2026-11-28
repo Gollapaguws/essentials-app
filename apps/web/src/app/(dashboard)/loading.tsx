@@ -11,7 +11,7 @@ export default function DashboardLoading() {
       </div>
       <div className="h-40 animate-pulse rounded-xl border border-line bg-surface/60" />
       <div className="h-40 animate-pulse rounded-xl border border-line bg-surface/60" />
-      <p className="text-center text-[10px] uppercase tracking-[0.3em] text-faint">Loading…</p>
+      <p className="text-center text-[10px] uppercase tracking-[0.3em] text-muted">Loading…</p>
     </main>
   );
 }

@@ -349,7 +349,7 @@ export function DoorGigs() {
             </label>
           </div>
 
-          <p className="text-[11px] text-faint">
+          <p className="text-[11px] text-muted">
             Travel is paid at R{(profileSource.data?.travelRatePerKm ?? 4.95).toFixed(2)}/km, return
             from this address to the venue. Bank details only appear on your invoices.
           </p>
@@ -434,7 +434,7 @@ export function DoorGigs() {
                 </button>
               )}
               {shift.status === "confirmed" && (
-                <span className="text-[10px] uppercase tracking-wider text-faint">
+                <span className="text-[10px] uppercase tracking-wider text-muted">
                   the promoter confirms after the night
                 </span>
               )}

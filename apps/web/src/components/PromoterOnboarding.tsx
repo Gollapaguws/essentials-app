@@ -81,7 +81,7 @@ export function PromoterOnboarding() {
     >
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.18em] text-faint">
+          <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.18em] text-muted">
             <span>Setup progress</span>
             <span className="tabular-nums">{percent}%</span>
           </div>
@@ -143,7 +143,7 @@ export function PromoterOnboarding() {
           })}
         </ol>
 
-        <p className="text-[11px] text-faint">
+        <p className="text-[11px] text-muted">
           Want the longer version?{" "}
           <Link href="/help" className="text-muted underline hover:text-neon">
             Read the first-night walkthrough

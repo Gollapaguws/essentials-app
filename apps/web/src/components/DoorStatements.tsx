@@ -140,7 +140,7 @@ export function DoorStatementsMine() {
           ? `${totals.shifts} shift${totals.shifts === 1 ? "" : "s"} across ${totals.months} month${totals.months === 1 ? "" : "s"}`
           : "Loading…"}
       </p>
-      <p className="text-faint text-[11px]">
+      <p className="text-muted text-[11px]">
         Travel on uninvoiced shifts is estimated from your home base at the platform rate; invoiced
         shifts show the amount that was billed.
       </p>
@@ -186,7 +186,7 @@ export function DoorStatementsMine() {
                     <td className="px-1 py-2 text-right text-muted">
                       {rand(shift.travel)}
                       {shift.travelEstimated && (
-                        <span className="block text-[10px] text-faint">estimated</span>
+                        <span className="block text-[10px] text-muted">estimated</span>
                       )}
                     </td>
                     <td className="px-1 py-2 text-right">{rand(shift.invoiced)}</td>

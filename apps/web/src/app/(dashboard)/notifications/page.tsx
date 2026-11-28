@@ -200,7 +200,7 @@ export default function Notifications() {
             <div key={row.id} className={`px-4 py-3 flex flex-wrap items-start gap-3 ${row.read ? "opacity-60" : ""}`}>
               <span
                 aria-label={row.read ? "read" : "unread"}
-                className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${row.read ? "bg-fg/10" : "bg-neon"}`}
+                className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${row.read ? "bg-faint" : "bg-neon"}`}
               />
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] uppercase tracking-widest text-muted">

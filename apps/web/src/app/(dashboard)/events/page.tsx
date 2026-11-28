@@ -874,7 +874,7 @@ export default function EventManager() {
                                     {s.label}
                                     {s.role && (
                                       <span
-                                        className="block text-[10px] text-faint"
+                                        className="block text-[10px] text-muted"
                                         title={s.genres ?? undefined}
                                       >
                                         {s.role}

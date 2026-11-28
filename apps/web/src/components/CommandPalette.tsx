@@ -202,7 +202,7 @@ export function CommandPalette() {
           <span>↑↓ MOVE</span>
           <span>↵ OPEN</span>
           <span>ESC CLOSE</span>
-          {busy && <span className="ml-auto text-neon/70">…</span>}
+          {busy && <span className="ml-auto text-neon">…</span>}
         </div>
       </div>
     </div>

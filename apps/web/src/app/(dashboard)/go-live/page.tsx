@@ -135,7 +135,7 @@ function AudioMeter({
           return (
             <span
               key={i}
-              className={`flex-1 rounded-sm ${level >= position ? colour : "bg-fg/10 h-1/3"}`}
+              className={`flex-1 rounded-sm ${level >= position ? colour : "bg-line h-1/3"}`}
             />
           );
         })}
@@ -556,7 +556,7 @@ export default function GoLive() {
     ok: "bg-neon",
     warn: "bg-yellow-400",
     fail: "bg-red-500",
-    wait: "bg-fg/10",
+    wait: "bg-faint",
   } as const;
 
   return (

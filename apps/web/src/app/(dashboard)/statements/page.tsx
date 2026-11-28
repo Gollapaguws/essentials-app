@@ -219,7 +219,7 @@ export default function Statements() {
             ? `${totals.gigs} gig${totals.gigs === 1 ? "" : "s"} across ${totals.months} month${totals.months === 1 ? "" : "s"}`
             : "Loading…"}
         </p>
-        <p className="text-faint text-[11px]">
+        <p className="text-muted text-[11px]">
           Travel on uninvoiced gigs is estimated from your home base at the platform rate; invoiced
           gigs show the amount that was billed. Add or fix your home base in My Profile to make the
           estimate accurate.
@@ -267,7 +267,7 @@ export default function Statements() {
                       <td className="px-1 py-2 text-right text-muted">
                         {rand(gig.travel)}
                         {gig.travelEstimated && (
-                          <span className="block text-[10px] text-faint">estimated</span>
+                          <span className="block text-[10px] text-muted">estimated</span>
                         )}
                       </td>
                       <td className="px-1 py-2 text-right">{rand(gig.invoiced)}</td>

@@ -719,7 +719,7 @@ export default function Users() {
                       SAVE ALIASES
                     </button>
                   </div>
-                  <p className="text-faint text-[11px]">
+                  <p className="text-muted text-[11px]">
                     Extra @{mailboxState.domain} addresses that deliver to this mailbox.
                     {" "}
                     A sign-in address on this domain reaches the mailbox automatically.
@@ -754,7 +754,7 @@ export default function Users() {
                       </button>
                     )}
                   </div>
-                  <p className="text-faint text-[11px]">
+                  <p className="text-muted text-[11px]">
                     {catchAll
                       ? `Unknown @${mailboxState.domain} addresses currently go to ${catchAll}.`
                       : "Off — unknown addresses are rejected, as before."}
@@ -882,17 +882,17 @@ export default function Users() {
                           )}
                         </p>
                       )}
-                      <p className="text-faint text-[11px] mt-0.5">
+                      <p className="text-muted text-[11px] mt-0.5">
                         {u.linked ? "signed in" : "not signed in yet"} · joined{" "}
                         {new Date(u.createdAt).toLocaleDateString()} ·{" "}
-                        <span className={u.telegram ? "text-neon/80" : "text-muted"}>
+                        <span className={u.telegram ? "text-neon" : "text-muted"}>
                           {u.telegram ? "telegram linked" : "no telegram"}
                         </span>
                         {u.mfaDisabled && <span className="text-warn"> · 2FA off</span>}
                       </p>
-                      {u.stageName && <p className="text-neon/80 text-[11px] mt-1">DJ · {u.stageName}</p>}
+                      {u.stageName && <p className="text-neon text-[11px] mt-1">DJ · {u.stageName}</p>}
                       {u.venue && (
-                        <p className="text-neon/80 text-[11px] mt-1">
+                        <p className="text-neon text-[11px] mt-1">
                           Venue · {u.venue.name} ({u.venue.capacity})
                         </p>
                       )}

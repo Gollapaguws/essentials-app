@@ -80,7 +80,7 @@ function barClass(used: number, limit: number | null): string {
 }
 
 function UsageCell({ rows }: { rows: UsageRow[] }) {
-  if (!rows.length) return <span className="text-faint text-xs">No metered use yet</span>;
+  if (!rows.length) return <span className="text-muted text-xs">No metered use yet</span>;
   return (
     <div className="space-y-1.5 min-w-40">
       {rows.map((row) => (
@@ -182,7 +182,7 @@ export default function PlanAndUsage() {
                     <tr key={ws.organisation?.id ?? ws.organisation?.slug} className="border-t border-line align-top">
                       <td className="px-4 py-3">
                         <span className="font-bold">{ws.organisation?.name ?? "—"}</span>
-                        <span className="block text-faint text-xs font-mono">
+                        <span className="block text-muted text-xs font-mono">
                           {ws.organisation?.slug}
                           {ws.organisation?.hub ? ` · ${ws.organisation.hub}` : ""}
                         </span>
@@ -194,10 +194,10 @@ export default function PlanAndUsage() {
                         {ws.plan ? (
                           <>
                             <span className="text-muted">{ws.plan.name}</span>
-                            <span className="block text-faint font-mono">{ws.plan.key}</span>
+                            <span className="block text-muted font-mono">{ws.plan.key}</span>
                           </>
                         ) : (
-                          <span className="text-faint">No plan</span>
+                          <span className="text-muted">No plan</span>
                         )}
                       </td>
                       <td
@@ -207,7 +207,7 @@ export default function PlanAndUsage() {
                       >
                         {ws.subscription?.status ?? "—"}
                         {ws.subscription?.provider && (
-                          <span className="block text-faint font-normal">{ws.subscription.provider}</span>
+                          <span className="block text-muted font-normal">{ws.subscription.provider}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
@@ -242,7 +242,7 @@ export default function PlanAndUsage() {
                       <span className="font-bold">{plan.name}</span>
                       <span className="font-mono text-sm text-neon">{rand(plan.priceZar)}</span>
                     </div>
-                    <div className="text-faint text-xs font-mono">{plan.key}</div>
+                    <div className="text-muted text-xs font-mono">{plan.key}</div>
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {Object.entries(plan.entitlements).map(([metric, limit]) => (
                         <span
@@ -253,7 +253,7 @@ export default function PlanAndUsage() {
                         </span>
                       ))}
                       {!Object.keys(plan.entitlements).length && (
-                        <span className="text-faint text-xs">No metered allowances</span>
+                        <span className="text-muted text-xs">No metered allowances</span>
                       )}
                     </div>
                   </div>

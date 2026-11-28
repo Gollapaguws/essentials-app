@@ -365,9 +365,9 @@ export function TopNav() {
         <div className="border-b border-line/70 px-4 pb-4 pt-5">
           <Link href="/" className="group flex items-baseline gap-2">
             <span className="text-[15px] font-black tracking-[0.2em] text-neon transition group-hover:opacity-80">SONUS</span>
-            <span className="text-[8px] font-black tracking-[0.22em] text-faint">/ EDM</span>
+            <span className="text-[8px] font-black tracking-[0.22em] text-muted">/ EDM</span>
           </Link>
-          <p className="mt-1 text-[9px] font-bold tracking-[0.3em] text-faint">CONTROL ROOM</p>
+          <p className="mt-1 text-[9px] font-bold tracking-[0.3em] text-muted">CONTROL ROOM</p>
           <a
             href="https://essentialsedm.com"
             title="Open the public essentialsedm.com site in a new tab."
@@ -402,7 +402,7 @@ export function TopNav() {
             <span className="h-px w-4 bg-current" />
           </button>
           <Link href="/" className="text-sm font-black tracking-[0.18em] text-neon">SONUS</Link>
-          <span className="rounded-full border border-line px-2 py-0.5 text-[8px] font-black tracking-[0.18em] text-faint">CONSOLE</span>
+          <span className="rounded-full border border-line px-2 py-0.5 text-[8px] font-black tracking-[0.18em] text-muted">CONSOLE</span>
           <button
             onClick={search}
             aria-label="Search events, DJs and guests"
@@ -420,7 +420,7 @@ export function TopNav() {
             <div className="flex items-center justify-between border-b border-line/70 px-4 py-4">
               <div>
                 <Link href="/" onClick={() => setOpen(false)} className="text-sm font-black tracking-[0.18em] text-neon">SONUS</Link>
-                <p className="mt-0.5 text-[8px] font-bold tracking-[0.28em] text-faint">CONTROL ROOM</p>
+                <p className="mt-0.5 text-[8px] font-bold tracking-[0.28em] text-muted">CONTROL ROOM</p>
               </div>
               <button
                 onClick={() => setOpen(false)}

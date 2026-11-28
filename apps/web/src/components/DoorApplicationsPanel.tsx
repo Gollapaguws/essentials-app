@@ -169,7 +169,7 @@ export function DoorApplicationsPanel() {
                       {busyId === a.id ? "SAVING…" : "SHIFT WORKED"}
                     </button>
                   ) : (
-                    <span className="self-center text-[10px] uppercase tracking-wider text-faint">
+                    <span className="self-center text-[10px] uppercase tracking-wider text-muted">
                       confirm after the night
                     </span>
                   ))}
