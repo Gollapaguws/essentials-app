@@ -306,17 +306,12 @@ export function TopNav() {
                     onClick={onNavigate}
                     title={link.hint}
                     aria-current={active ? "page" : undefined}
-                    className={`group relative flex items-center rounded-lg px-3 py-2 text-[12px] font-semibold transition ${
+                    className={`group relative flex items-center rounded-lg border px-3 py-2 text-[10.5px] font-black uppercase tracking-[0.1em] transition ${
                       active
-                        ? "bg-white/[0.065] text-white"
-                        : "text-neutral-500 hover:bg-white/[0.035] hover:text-neutral-200"
+                        ? "border-neon bg-neon text-bg shadow-sm"
+                        : "border-line bg-surface text-neutral-500 hover:border-neon hover:text-neon"
                     }`}
                   >
-                    <span
-                      className={`absolute left-0 h-4 w-0.5 rounded-r-full transition ${
-                        active ? "bg-neon" : "bg-transparent group-hover:bg-line"
-                      }`}
-                    />
                     <span className="truncate">{link.label}</span>
                     {(active || badge > 0) && (
                       <span className="ml-auto flex items-center gap-1.5">
@@ -328,7 +323,6 @@ export function TopNav() {
                             {badge > 99 ? "99+" : badge}
                           </span>
                         )}
-                        {active && <span className="h-1 w-1 rounded-full bg-neon" />}
                       </span>
                     )}
                   </Link>
@@ -366,7 +360,7 @@ export function TopNav() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-line/80 bg-[#0b0b0b]/95 backdrop-blur-xl lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[17rem] flex-col border-r border-line/80 bg-surface/95 backdrop-blur-xl lg:flex">
         <div className="border-b border-line/70 px-4 pb-4 pt-5">
           <Link href="/" className="group flex items-baseline gap-2">
             <span className="text-[15px] font-black tracking-[0.2em] text-neon transition group-hover:opacity-80">SONUS</span>
