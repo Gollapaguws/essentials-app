@@ -1,12 +1,30 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0b0b0d;
-  --color-surface: #141216;
-  --color-line: #2a2419;
-  --color-neon: #d4af37;
+  /* Light console (phase 1): paper desk, ink type, brass accent. */
+  --color-bg: #f4ede2;
+  --color-surface: #fffdf8;
+  --color-line: #ddd2bd;
+  --color-neon: #8a6a12;
+  --color-fg: #191512;
+  --color-muted: #6b6152;
   --font-sans: var(--font-montserrat), Montserrat, Inter, Helvetica, sans-serif;
   --font-display: var(--font-cinzel), Cinzel, Georgia, serif;
+
+  /* The dashboard was built on a dark ground, so screens still ask for
+     text-white and the neutral scale directly. Those steps are remapped to
+     ink-on-paper here, which flips every existing page in one place. Phase 2
+     sweeps pages onto --color-fg / --color-muted and drops this block. */
+  --color-white: #191512;
+  --color-neutral-100: #191512;
+  --color-neutral-200: #2c2519;
+  --color-neutral-300: #4a4133;
+  --color-neutral-400: #5d5344;
+  --color-neutral-500: #6b6152;
+  --color-neutral-600: #7c7160;
+  --color-neutral-700: #8b8172;
+  --color-neutral-800: #a9a08f;
+  --color-neutral-900: #c4bba9;
 }
 
 /* Tailwind v4 defaults bare borders to currentColor; keep the v3 gray so
@@ -16,7 +34,7 @@
   ::before,
   ::after,
   ::backdrop {
-    border-color: #e5e7eb;
+    border-color: #ddd2bd;
   }
 }
 
@@ -42,7 +60,7 @@
   }
 
   .console-panel {
-    @apply overflow-hidden rounded-2xl border border-line/80 bg-surface/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)];
+    @apply overflow-hidden rounded-xl border border-line bg-surface shadow-[0_1px_0_rgba(25,21,18,0.04)];
   }
 
   .console-panel-head {
@@ -87,18 +105,18 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   scroll-behavior: smooth;
 }
 
 body {
   min-height: 100vh;
-  color: #f5efe0;
-  background-color: #0b0b0d;
+  color: #191512;
+  background-color: #f4ede2;
   background-image:
-    radial-gradient(ellipse 70rem 34rem at 12% -8%, rgba(212, 175, 55, 0.08), transparent),
-    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+    radial-gradient(ellipse 70rem 34rem at 12% -8%, rgba(138, 106, 18, 0.1), transparent),
+    linear-gradient(rgba(25, 21, 18, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(25, 21, 18, 0.022) 1px, transparent 1px);
   background-size: auto, 72px 72px, 72px 72px;
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
@@ -106,18 +124,18 @@ body {
 }
 
 ::selection {
-  background: rgba(212, 175, 55, 0.3);
-  color: #ffffff;
+  background: rgba(138, 106, 18, 0.22);
+  color: #191512;
 }
 
 :focus-visible {
-  outline: 2px solid rgba(212, 175, 55, 0.85);
+  outline: 2px solid rgba(138, 106, 18, 0.9);
   outline-offset: 2px;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2a2419 #0b0b0d;
+  scrollbar-color: #d8cdb8 #f4ede2;
 }
 
 .nav-scroll {
@@ -152,11 +170,11 @@ body {
 }
 
 .console-shell main thead {
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(25, 21, 18, 0.035);
 }
 
 .console-shell main th {
-  color: #737373;
+  color: #7c7160;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -167,7 +185,7 @@ body {
 }
 
 .console-shell main tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(25, 21, 18, 0.03);
 }
 
 @media (prefers-reduced-motion: reduce) {
